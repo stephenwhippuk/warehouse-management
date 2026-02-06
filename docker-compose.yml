@@ -1,0 +1,231 @@
+version: '3.8'
+
+services:
+  # Database per Service Pattern
+  # Each microservice has its own database instance for independence and scalability
+  
+  # Inventory Service Database
+  inventory-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: inventory_user
+      POSTGRES_PASSWORD: inventory_dev
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - inventory_db_data:/var/lib/postgresql/data
+    networks:
+      - warehouse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventory_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Order Service Database
+  order-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_dev
+      POSTGRES_DB: order_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+    networks:
+      - warehouse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Warehouse Service Database
+  warehouse-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: warehouse_user
+      POSTGRES_PASSWORD: warehouse_dev
+      POSTGRES_DB: warehouse_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - warehouse_db_data:/var/lib/postgresql/data
+    networks:
+      - warehouse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse_user -d warehouse_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Reporting Service Database (with read replica example)
+  reporting-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: reporting_user
+      POSTGRES_PASSWORD: reporting_dev
+      POSTGRES_DB: reporting_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - reporting_db_data:/var/lib/postgresql/data
+    networks:
+      - warehouse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reporting_user -d reporting_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - warehouse_network
+
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: warehouse
+      RABBITMQ_DEFAULT_PASS: warehouse_dev
+    networks:
+      - warehouse_network
+
+  # API Gateway (placeholder for future implementation)
+  # api-gateway:
+  #   build: ./services/cpp/api-gateway
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - redis
+  #     - rabbitmq
+  #   networks:
+  #     - warehouse_network
+
+  # C++ Microservices (examples - to be implemented)
+  # Each service connects to its own database instance
+  # inventory-service:
+  #   build: ./services/cpp/inventory-service
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     DB_HOST: inventory-db
+  #     DB_PORT: 5432
+  #     DB_NAME: inventory_db
+  #     DB_USER: inventory_user
+  #     DB_PASSWORD: inventory_dev
+  #     RABBITMQ_HOST: rabbitmq
+  #     REDIS_HOST: redis
+  #   depends_on:
+  #     inventory-db:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_started
+  #     redis:
+  #       condition: service_started
+  #   networks:
+  #     - warehouse_network
+
+  # order-service:
+  #   build: ./services/cpp/order-service
+  #   ports:
+  #     - "8082:8082"
+  #   environment:
+  #     DB_HOST: order-db
+  #     DB_PORT: 5432
+  #     DB_NAME: order_db
+  #     DB_USER: order_user
+  #     DB_PASSWORD: order_dev
+  #     RABBITMQ_HOST: rabbitmq
+  #     REDIS_HOST: redis
+  #   depends_on:
+  #     order-db:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_started
+  #     redis:
+  #       condition: service_started
+  #   networks:
+  #     - warehouse_network
+
+  # warehouse-service:
+  #   build: ./services/cpp/warehouse-service
+  #   ports:
+  #     - "8083:8083"
+  #   environment:
+  #     DB_HOST: warehouse-db
+  #     DB_PORT: 5432
+  #     DB_NAME: warehouse_db
+  #     DB_USER: warehouse_user
+  #     DB_PASSWORD: warehouse_dev
+  #     RABBITMQ_HOST: rabbitmq
+  #     REDIS_HOST: redis
+  #   depends_on:
+  #     warehouse-db:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_started
+  #     redis:
+  #       condition: service_started
+  #   networks:
+  #     - warehouse_network
+
+  # C# Microservices (examples - to be implemented)
+  # reporting-service:
+  #   build: ./services/csharp/reporting-service
+  #   ports:
+  #     - "8091:8091"
+  #   environment:
+  #     DB_HOST: reporting-db
+  #     DB_PORT: 5432
+  #     DB_NAME: reporting_db
+  #     DB_USER: reporting_user
+  #     DB_PASSWORD: reporting_dev
+  #     RABBITMQ_HOST: rabbitmq
+  #     REDIS_HOST: redis
+  #   depends_on:
+  #     reporting-db:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_started
+  #   networks:
+  #     - warehouse_network
+
+  # Frontend applications (development mode)
+  # tablet-pwa:
+  #   build: ./apps/tablet-pwa
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./apps/tablet-pwa:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - warehouse_network
+
+  # office-web:
+  #   build: ./apps/office-web
+  #   ports:
+  #     - "3001:3001"
+  #   volumes:
+  #     - ./apps/office-web:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - warehouse_network
+
+volumes:
+  inventory_db_data:
+  order_db_data:
+  warehouse_db_data:
+  reporting_db_data:
+
+networks:
+  warehouse_network:
+    driver: bridge
