@@ -82,6 +82,164 @@ The Warehouse Management Solution is a microservices-based system designed for s
 - Prevents tight coupling
 - Allows independent scaling
 
+#### Database Scaling and High Availability
+
+**Per-Service Database Instances**
+
+Each microservice has its own dedicated database instance or schema:
+
+```
+Inventory Service → inventory_db (PostgreSQL)
+Order Service     → order_db (PostgreSQL)
+Warehouse Service → warehouse_db (PostgreSQL)
+Reporting Service → reporting_db (PostgreSQL + read replicas)
+```
+
+**Handling Database as Single Point of Failure**
+
+1. **Primary-Replica Replication (Read Scaling)**
+   - Each service database has a primary (write) and multiple replicas (read)
+   - Write operations go to primary
+   - Read operations distributed across replicas
+   - Automatic failover if primary fails
+   - Example: PostgreSQL streaming replication with Patroni
+
+2. **Database Clustering**
+   - Multi-master setups for write scalability
+   - Examples: PostgreSQL with Citus, CockroachDB, YugabyteDB
+   - Provides both high availability and horizontal write scaling
+   - No single point of failure
+
+3. **Database Connection Pooling**
+   - PgBouncer or built-in connection pooling
+   - Prevents connection exhaustion
+   - Improves performance and reliability
+
+4. **Automated Failover**
+   - Health checks detect primary database failure
+   - Automatic promotion of replica to primary
+   - Kubernetes StatefulSets with operators (e.g., Zalando Postgres Operator)
+   - Cloud-managed databases (AWS RDS Multi-AZ, Azure Database for PostgreSQL)
+
+**Production Database Architecture Per Service:**
+
+```
+Service → Connection Pool → Load Balancer → Primary DB (writes)
+                                         └→ Replica 1 (reads)
+                                         └→ Replica 2 (reads)
+```
+
+#### Handling Eventual Consistency
+
+**Challenge**: When data is split across service databases, maintaining consistency is complex.
+
+**Strategies Employed:**
+
+1. **Event-Driven Architecture (Primary Strategy)**
+   - Services publish domain events to message queue (RabbitMQ)
+   - Other services subscribe and update their local data
+   - Each service maintains denormalized data it needs
+   - Example:
+     ```
+     Order Service creates order → publishes OrderCreated event
+     Inventory Service subscribes → reserves stock in its DB
+     Reporting Service subscribes → updates its read model
+     ```
+
+2. **Saga Pattern for Distributed Transactions**
+   - Choreography-based sagas: Services react to events
+   - Orchestration-based sagas: Central coordinator manages flow
+   - Compensating transactions for rollback
+   - Example: Order fulfillment saga
+     ```
+     1. Create Order → Success
+     2. Reserve Inventory → Success
+     3. Process Payment → Failure
+     4. Compensate: Release Inventory → Success
+     5. Compensate: Cancel Order → Success
+     ```
+
+3. **CQRS with Event Sourcing**
+   - All state changes stored as events
+   - Current state derived by replaying events
+   - Reporting Service builds read models from event stream
+   - Provides complete audit trail
+   - Enables time-travel debugging
+
+4. **Optimistic Locking**
+   - Version numbers on entities
+   - Concurrent updates detected and handled
+   - Retry logic with exponential backoff
+
+5. **Idempotent Operations**
+   - All operations designed to be safely retried
+   - Idempotency keys for duplicate detection
+   - Prevents double-processing of events
+
+**Eventual Consistency Trade-offs:**
+
+✅ **Benefits:**
+- Better availability (services don't block on each other)
+- Better performance (no distributed transactions)
+- Easier to scale horizontally
+- Services remain independent
+
+⚠️ **Challenges:**
+- Stale reads possible (data not immediately consistent)
+- More complex error handling
+- Requires careful business process design
+
+**Mitigating Eventual Consistency Issues:**
+
+1. **Bounded Staleness**
+   - Define acceptable staleness windows (e.g., <100ms)
+   - Monitor replication lag
+   - Alert if consistency SLA violated
+
+2. **Read-Your-Writes Consistency**
+   - After write, reads go to primary briefly
+   - Session affinity to same replica
+   - Client-side caching with cache invalidation
+
+3. **Conflict Resolution Strategies**
+   - Last-Write-Wins (with timestamps)
+   - Application-specific merge logic
+   - Manual conflict resolution for critical data
+
+4. **Business Process Adaptation**
+   - Design UI to show "processing" states
+   - Use optimistic UI updates
+   - Clear communication about async operations
+   - Example: "Your order is being processed..."
+
+**Monitoring Consistency:**
+
+- Track event processing latency
+- Monitor replication lag across databases
+- Alert on failed event deliveries
+- Dashboard showing cross-service consistency metrics
+
+**Example: Inventory Update Flow**
+
+```
+1. Tablet PWA: Picker confirms item picked
+   ├─→ Order Service: Update pick status (local DB)
+   ├─→ Publish: ItemPicked event
+   
+2. Inventory Service: Subscribes to ItemPicked
+   ├─→ Update stock level (local DB)
+   ├─→ Publish: InventoryUpdated event
+   
+3. Reporting Service: Subscribes to both events
+   ├─→ Update dashboard read model (local DB)
+   
+4. Notification Service: Subscribes to OrderCompleted
+   ├─→ Send customer notification
+
+Timeline: 0-50ms for event propagation
+Consistency: Eventually consistent within 100ms
+```
+
 ## Technology Choices
 
 ### Backend: C++ for Performance-Critical Services

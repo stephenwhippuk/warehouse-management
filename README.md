@@ -154,10 +154,11 @@ npm run test
 
 ## Documentation
 
-- [Architecture Documentation](./docs/architecture.md)
-- [API Documentation](./docs/api.md)
-- [Deployment Guide](./docs/deployment.md)
-- [Contributing Guidelines](./docs/contributing.md)
+- [Architecture Documentation](./docs/architecture.md) - System design, technology choices, data flows
+- [Database Scaling & Consistency](./docs/database-scaling-consistency.md) - Database-per-service pattern, HA strategies, eventual consistency
+- [API Documentation](./docs/api.md) - API endpoints, authentication, WebSocket protocol
+- [Deployment Guide](./docs/deployment.md) - Local, Docker, Kubernetes, and cloud deployment
+- [Contributing Guidelines](./docs/contributing.md) - Development workflow, coding standards, PR process
 
 ## Contributing
 
