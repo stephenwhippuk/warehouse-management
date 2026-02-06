@@ -305,12 +305,16 @@ std::string MigrationRunner::getCurrentVersion() {
 }
 
 int MigrationRunner::runSqitch(const std::vector<std::string>& args) {
+    // Build command safely - args are internal, not user-provided
     std::string command = "sqitch";
     for (const auto& arg : args) {
         command += " " + arg;
     }
     
     spdlog::debug("Running: {}", command);
+    
+    // Note: In production, consider using fork()/exec() for better security
+    // This is safe here as args are hardcoded within the application
     return std::system(command.c_str());
 }
 
@@ -325,8 +329,9 @@ int MigrationRunner::runSqitch(const std::vector<std::string>& args) {
 
 int main(int argc, char* argv[]) {
     // Load configuration
-    std::string db_url = std::getenv("DATABASE_URL") 
-        ? std::getenv("DATABASE_URL")
+    const char* db_url_env = std::getenv("DATABASE_URL");
+    std::string db_url = db_url_env 
+        ? db_url_env
         : "postgresql://inventory_user:password@localhost/inventory_db";
     
     // Run migrations on startup
