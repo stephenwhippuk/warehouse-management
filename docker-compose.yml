@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # Database services
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: warehouse_dev
+      POSTGRES_DB: warehouse_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - warehouse_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - warehouse_network
+
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: warehouse
+      RABBITMQ_DEFAULT_PASS: warehouse_dev
+    networks:
+      - warehouse_network
+
+  # API Gateway (placeholder for future implementation)
+  # api-gateway:
+  #   build: ./services/cpp/api-gateway
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - rabbitmq
+  #   networks:
+  #     - warehouse_network
+
+  # C++ Microservices (examples - to be implemented)
+  # inventory-service:
+  #   build: ./services/cpp/inventory-service
+  #   ports:
+  #     - "8081:8081"
+  #   networks:
+  #     - warehouse_network
+
+  # order-service:
+  #   build: ./services/cpp/order-service
+  #   ports:
+  #     - "8082:8082"
+  #   networks:
+  #     - warehouse_network
+
+  # C# Microservices (examples - to be implemented)
+  # reporting-service:
+  #   build: ./services/csharp/reporting-service
+  #   ports:
+  #     - "8091:8091"
+  #   networks:
+  #     - warehouse_network
+
+  # Frontend applications (development mode)
+  # tablet-pwa:
+  #   build: ./apps/tablet-pwa
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./apps/tablet-pwa:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - warehouse_network
+
+  # office-web:
+  #   build: ./apps/office-web
+  #   ports:
+  #     - "3001:3001"
+  #   volumes:
+  #     - ./apps/office-web:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - warehouse_network
+
+volumes:
+  postgres_data:
+
+networks:
+  warehouse_network:
+    driver: bridge
