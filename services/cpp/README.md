@@ -173,9 +173,96 @@ Services expose metrics via:
 2. Update CMakeLists.txt
 3. Implement service logic
 4. Add tests
-5. Create Dockerfile
-6. Update docker-compose.yml
-7. Document API endpoints
+5. Set up database migrations (see below)
+6. Create Dockerfile
+7. Update docker-compose.yml
+8. Document API endpoints
+
+## Database Migrations
+
+C++ services use **Sqitch** for database schema migrations, providing a code-first agile development experience similar to Entity Framework.
+
+### Quick Start
+
+```bash
+cd services/cpp/{service-name}
+
+# Initialize Sqitch
+sqitch init service_name --engine pg
+
+# Create a migration
+sqitch add 001_initial_schema -n "Create initial tables"
+
+# Edit the migration files:
+# - migrations/deploy/001_initial_schema.sql
+# - migrations/revert/001_initial_schema.sql  
+# - migrations/verify/001_initial_schema.sql
+
+# Apply migrations
+sqitch deploy
+
+# Check status
+sqitch status
+```
+
+### Example Migration
+
+**deploy/001_initial_schema.sql:**
+```sql
+BEGIN;
+
+CREATE TABLE items (
+    id BIGSERIAL PRIMARY KEY,
+    sku VARCHAR(100) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_items_sku ON items(sku);
+
+COMMIT;
+```
+
+**revert/001_initial_schema.sql:**
+```sql
+BEGIN;
+
+DROP INDEX IF EXISTS idx_items_sku;
+DROP TABLE IF EXISTS items;
+
+COMMIT;
+```
+
+### Integration in C++ Code
+
+Services automatically run migrations on startup:
+
+```cpp
+#include "database/migration_runner.hpp"
+
+int main() {
+    warehouse::database::MigrationRunner migrator(db_url);
+    
+    if (migrator.needsMigration()) {
+        migrator.applyMigrations();
+    }
+    
+    // Continue service startup...
+}
+```
+
+### Key Features
+
+- **Version Control**: Migrations tracked in Git
+- **Rollback Support**: Every migration has a revert script
+- **Dependency Tracking**: Migrations can depend on others
+- **Verification**: Test scripts ensure migrations applied correctly
+- **CI/CD Integration**: Automated migration in deployment pipeline
+
+For complete migration guide including alternative tools (Flyway, custom frameworks) and code-first approaches, see:
+
+📖 **[C++ Database Migrations Guide](../../docs/cpp-database-migrations.md)**
 
 ## Resources
 

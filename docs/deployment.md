@@ -422,7 +422,27 @@ deploy-production:
 
 ## Database Migrations
 
-### PostgreSQL Migrations
+### C++ Services - Sqitch Migrations
+
+C++ services use Sqitch for code-first database migrations. See the comprehensive guide:
+
+📖 **[C++ Database Migrations Guide](./cpp-database-migrations.md)**
+
+**Quick Example:**
+```bash
+cd services/cpp/inventory-service
+
+# Initialize
+sqitch init inventory_service --engine pg
+
+# Create migration
+sqitch add 001_initial_schema -n "Create initial tables"
+
+# Deploy
+sqitch deploy
+```
+
+### PostgreSQL Migrations (Alternative Tools)
 
 ```bash
 # Using Flyway

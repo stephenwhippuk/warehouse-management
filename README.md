@@ -156,6 +156,7 @@ npm run test
 
 - [Architecture Documentation](./docs/architecture.md) - System design, technology choices, data flows
 - [Database Scaling & Consistency](./docs/database-scaling-consistency.md) - Database-per-service pattern, HA strategies, eventual consistency
+- [C++ Database Migrations](./docs/cpp-database-migrations.md) - Code-first schema migrations for C++ services using Sqitch
 - [API Documentation](./docs/api.md) - API endpoints, authentication, WebSocket protocol
 - [Deployment Guide](./docs/deployment.md) - Local, Docker, Kubernetes, and cloud deployment
 - [Contributing Guidelines](./docs/contributing.md) - Development workflow, coding standards, PR process
