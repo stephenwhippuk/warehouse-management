@@ -3,9 +3,32 @@
 #include "inventory/utils/Logger.hpp"
 #include <Poco/Net/HTTPServerParams.h>
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
+#include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/ServerSocket.h>
+#include <atomic>
+#include <csignal>
+#include <chrono>
+#include <thread>
 
 namespace inventory {
+
+namespace {
+
+std::atomic_bool g_running{true};
+
+void signalHandler(int) {
+    g_running = false;
+}
+
+void waitForTerminationRequest() {
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
+    while (g_running) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
+} // namespace
 
 class RequestHandlerFactory : public Poco::Net::HTTPRequestHandlerFactory {
 public:

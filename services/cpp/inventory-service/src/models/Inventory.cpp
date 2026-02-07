@@ -193,7 +193,9 @@ Inventory Inventory::fromJson(const json& j) {
     if (j.contains("lastCountedBy")) inv.setLastCountedBy(j["lastCountedBy"].get<std::string>());
     if (j.contains("costPerUnit")) inv.setCostPerUnit(j["costPerUnit"].get<double>());
     if (j.contains("notes")) inv.setNotes(j["notes"].get<std::string>());
-    if (j.contains("metadata")) inv.setMetadata(j["metadata"]);
+    if (j.contains("metadata")) {
+        inv.setMetadata(std::optional<json>{j["metadata"]});
+    }
     
     if (j.contains("status")) {
         inv.setStatus(inventoryStatusFromString(j["status"].get<std::string>()));

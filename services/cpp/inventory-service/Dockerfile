@@ -32,17 +32,17 @@ RUN mkdir build && cd build && \
 FROM ubuntu:22.04
 
 # Install runtime dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libboost-system1.74.0 \
     libboost-thread1.74.0 \
-    libpoco-net80 \
-    libpoco-util80 \
-    libpoco-foundation80 \
+    libpoco-dev \
     libpq5 \
-    libpqxx-6.4 \
+    libpqxx-dev \
     sqitch \
     libdbd-pg-perl \
     postgresql-client \
+    libspdlog1 \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
@@ -54,12 +54,14 @@ WORKDIR /app
 COPY --from=builder /app/migrations /app/migrations
 COPY --from=builder /app/sqitch.conf /app/
 COPY --from=builder /app/sqitch.plan /app/
+COPY --from=builder /app/seed /app/seed
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
-# Copy binary and config from builder
+# Copy binary, tests, and config from builder
 COPY --from=builder /app/build/bin/inventory-service /app/
+COPY --from=builder /app/build/bin/inventory-service-tests /app/
 COPY --from=builder /app/config /app/config
 
 # Change ownership

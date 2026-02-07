@@ -2,6 +2,9 @@
 
 #include "inventory/services/InventoryService.hpp"
 #include <Poco/Net/HTTPRequestHandler.h>
+#include <Poco/Net/HTTPServerRequest.h>
+#include <Poco/Net/HTTPServerResponse.h>
+#include <Poco/Net/HTTPResponse.h>
 #include <memory>
 
 namespace inventory {

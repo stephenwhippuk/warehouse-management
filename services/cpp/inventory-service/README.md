@@ -113,6 +113,13 @@ cd build
 ctest --output-on-failure
 ```
 
+To run DB-backed repository tests, point to a test database with the inventory-service Sqitch migrations applied:
+
+```bash
+export INVENTORY_TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/inventory_test"
+ctest --output-on-failure
+```
+
 ## Docker
 
 ### Build Image

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "inventory/models/Inventory.hpp"
+#include <pqxx/pqxx>
 #include <memory>
 #include <vector>
 #include <string>

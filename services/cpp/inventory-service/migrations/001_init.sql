@@ -137,7 +137,7 @@ CREATE TRIGGER log_inventory_movement_trigger
 -- Insert sample data (optional, for testing)
 INSERT INTO inventory (product_id, warehouse_id, location_id, quantity, available_quantity, batch_number, status) VALUES
     (uuid_generate_v4(), uuid_generate_v4(), uuid_generate_v4(), 100, 100, 'BATCH001', 'available'),
-    (uuid_generate_v4(), uuid_generate_v4(), uuid_generate_v4(), 50, 40, 'BATCH002', 'available');
+    (uuid_generate_v4(), uuid_generate_v4(), uuid_generate_v4(), 40, 40, 'BATCH002', 'available');
 
 -- Grant permissions
 GRANT ALL PRIVILEGES ON TABLE inventory TO inventory_user;

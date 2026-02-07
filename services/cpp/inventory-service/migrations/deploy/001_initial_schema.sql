@@ -143,7 +143,7 @@ COMMENT ON TABLE inventory_movements IS 'Audit trail of inventory changes - mana
 -- Insert sample data (optional, for testing in development only)
 INSERT INTO inventory (product_id, warehouse_id, location_id, quantity, available_quantity, batch_number, status) VALUES
     (uuid_generate_v4(), uuid_generate_v4(), uuid_generate_v4(), 100, 100, 'BATCH001', 'available'),
-    (uuid_generate_v4(), uuid_generate_v4(), uuid_generate_v4(), 50, 40, 'BATCH002', 'available')
+    (uuid_generate_v4(), uuid_generate_v4(), uuid_generate_v4(), 40, 40, 'BATCH002', 'available')
 ON CONFLICT DO NOTHING;
 
 COMMIT;

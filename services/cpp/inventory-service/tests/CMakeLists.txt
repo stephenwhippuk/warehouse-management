@@ -16,14 +16,14 @@ endif()
 
 # Test executable
 add_executable(inventory-service-tests
-    test_main.cpp
     InventoryTests.cpp
+    InventoryRepositoryTests.cpp
 )
 
 # Link libraries
 target_link_libraries(inventory-service-tests
     PRIVATE
-    Catch2::Catch2
+    Catch2::Catch2WithMain
     ${Boost_LIBRARIES}
     Poco::Net
     Poco::Util
@@ -44,6 +44,8 @@ target_include_directories(inventory-service-tests
 target_sources(inventory-service-tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/models/Inventory.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/Logger.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/Database.cpp
+    ${PROJECT_SOURCE_DIR}/src/repositories/InventoryRepository.cpp
 )
 
 # Discover tests

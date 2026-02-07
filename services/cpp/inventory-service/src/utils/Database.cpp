@@ -19,9 +19,8 @@ std::shared_ptr<pqxx::connection> Database::connect(const std::string& connectio
 }
 
 void Database::disconnect() {
-    if (connection_ && connection_->is_open()) {
-        connection_->close();
-    }
+    // In modern libpqxx, explicit close() is protected; simply
+    // resetting the shared_ptr will cleanly close the connection.
     connection_.reset();
 }
 

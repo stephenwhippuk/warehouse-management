@@ -1,5 +1,6 @@
 #include "inventory/controllers/InventoryController.hpp"
 #include <Poco/URI.h>
+#include <Poco/StringTokenizer.h>
 #include <nlohmann/json.hpp>
 #include <sstream>
 
@@ -16,27 +17,71 @@ void InventoryController::handleRequest(Poco::Net::HTTPServerRequest& request,
     std::string method = request.getMethod();
     Poco::URI uri(request.getURI());
     std::string path = uri.getPath();
+    auto queryParams = uri.getQueryParameters();
     
     try {
-        // TODO: Implement proper routing logic
-        // Routes:
-        // GET    /api/v1/inventory - Get all
-        // GET    /api/v1/inventory/:id - Get by ID
-        // GET    /api/v1/inventory/product/:productId - Get by product
-        // GET    /api/v1/inventory/warehouse/:warehouseId - Get by warehouse
-        // GET    /api/v1/inventory/location/:locationId - Get by location
-        // GET    /api/v1/inventory/low-stock?threshold=N - Get low stock
-        // GET    /api/v1/inventory/expired - Get expired
-        // POST   /api/v1/inventory - Create
-        // PUT    /api/v1/inventory/:id - Update
-        // DELETE /api/v1/inventory/:id - Delete
-        // POST   /api/v1/inventory/:id/reserve - Reserve quantity
-        // POST   /api/v1/inventory/:id/release - Release quantity
-        // POST   /api/v1/inventory/:id/allocate - Allocate quantity
-        // POST   /api/v1/inventory/:id/deallocate - Deallocate quantity
-        // POST   /api/v1/inventory/:id/adjust - Adjust quantity
-        
-        sendJsonResponse(response, R"({"message": "Inventory Controller - TODO: Implement routing"})");
+        // Split path into segments
+        std::vector<std::string> segments;
+        Poco::StringTokenizer tokenizer(path, "/", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
+        for (const auto& token : tokenizer) {
+            segments.push_back(token);
+        }
+
+        // Expect paths starting with /api/v1/inventory
+        if (segments.size() >= 3 && segments[0] == "api" && segments[1] == "v1" && segments[2] == "inventory") {
+            // GET /api/v1/inventory
+            if (method == "GET" && segments.size() == 3) {
+                handleGetAll(response);
+                return;
+            }
+
+            // GET /api/v1/inventory/low-stock?threshold=N
+            if (method == "GET" && segments.size() == 4 && segments[3] == "low-stock") {
+                int threshold = 0;
+                for (const auto& param : queryParams) {
+                    if (param.first == "threshold") {
+                        threshold = std::stoi(param.second);
+                        break;
+                    }
+                }
+                handleGetLowStock(threshold, response);
+                return;
+            }
+
+            // GET /api/v1/inventory/expired
+            if (method == "GET" && segments.size() == 4 && segments[3] == "expired") {
+                handleGetExpired(response);
+                return;
+            }
+
+            // GET /api/v1/inventory/product/:productId
+            if (method == "GET" && segments.size() == 5 && segments[3] == "product") {
+                handleGetByProduct(segments[4], response);
+                return;
+            }
+
+            // GET /api/v1/inventory/warehouse/:warehouseId
+            if (method == "GET" && segments.size() == 5 && segments[3] == "warehouse") {
+                handleGetByWarehouse(segments[4], response);
+                return;
+            }
+
+            // GET /api/v1/inventory/location/:locationId
+            if (method == "GET" && segments.size() == 5 && segments[3] == "location") {
+                handleGetByLocation(segments[4], response);
+                return;
+            }
+
+            // GET /api/v1/inventory/:id
+            if (method == "GET" && segments.size() == 4) {
+                handleGetById(segments[3], response);
+                return;
+            }
+
+            // Other methods (create/update/delete/operations) will be wired later
+        }
+
+        sendErrorResponse(response, "Not Found", Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
     } catch (const std::exception& e) {
         sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
     }

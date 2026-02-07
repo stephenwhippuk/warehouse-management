@@ -44,6 +44,18 @@ fi
 CURRENT_VERSION=$(sqitch status "$DB_URL" | grep "Nothing to deploy" || echo "Migrations applied")
 echo "==> Database schema status: $CURRENT_VERSION"
 
+# Optional seed data (only when configured and inventory table is empty)
+if [ -n "$INVENTORY_SEED_SQL" ] && [ -f "$INVENTORY_SEED_SQL" ]; then
+  echo "==> Checking if seed data is required..."
+  SEED_COUNT=$(PGPASSWORD=$DATABASE_PASSWORD psql -h "$DATABASE_HOST" -U "$DATABASE_USER" -d "$DATABASE_NAME" -At -c "SELECT COUNT(*) FROM inventory" || echo "0")
+  if [ "$SEED_COUNT" = "0" ]; then
+    echo "==> Seeding inventory data from $INVENTORY_SEED_SQL"
+    PGPASSWORD=$DATABASE_PASSWORD psql -h "$DATABASE_HOST" -U "$DATABASE_USER" -d "$DATABASE_NAME" -f "$INVENTORY_SEED_SQL"
+  else
+    echo "==> Inventory table already has data ($SEED_COUNT rows), skipping seed"
+  fi
+fi
+
 echo "==> Starting Inventory Service..."
 
 # Execute the main command
