@@ -21,7 +21,8 @@ This warehouse management solution provides comprehensive tools for warehouse op
 
 ```
 warehouse-management/
-├── services/               # Backend microservices
+├── contracts/             # Business entity contracts (JSON Schema)
+├── services/              # Backend microservices
 │   ├── cpp/               # C++ 20 microservices (performance-critical)
 │   └── csharp/            # C# microservices (business logic, reporting)
 ├── apps/                  # Frontend applications
@@ -30,6 +31,18 @@ warehouse-management/
 ├── docs/                  # Documentation
 └── scripts/               # Build and deployment scripts
 ```
+
+## Business Entity Contracts
+
+All business entities (Product, Order, Inventory, etc.) are defined using **JSON Schema** in the `contracts/` directory. These schemas serve as the single source of truth across all services and applications.
+
+**Key Benefits**:
+- **Consistency**: Same entity definitions across C++, C#, and TypeScript
+- **Validation**: Static type checking and runtime validation
+- **Documentation**: Self-documenting contracts with examples
+- **Versioning**: Backward-compatible schema evolution
+
+See [contracts/README.md](./contracts/README.md) for detailed usage instructions.
 
 ## Services
 
@@ -106,23 +119,28 @@ Detailed setup instructions for each component:
 
 ```
 .
+├── contracts/               # Business entity contracts
+│   ├── schemas/
+│   │   └── v1/             # Version 1 JSON schemas
+│   ├── examples/           # Example entity instances
+│   └── README.md
 ├── apps/
-│   ├── tablet-pwa/          # Vue 3 PWA for tablets
-│   └── office-web/          # Vue 3 web application
+│   ├── tablet-pwa/         # Vue 3 PWA for tablets
+│   └── office-web/         # Vue 3 web application
 ├── services/
-│   ├── cpp/                 # C++ microservices
+│   ├── cpp/                # C++ microservices
 │   │   ├── api-gateway/
 │   │   ├── inventory-service/
 │   │   ├── order-service/
 │   │   └── warehouse-service/
-│   └── csharp/              # C# microservices
+│   └── csharp/             # C# microservices
 │       ├── reporting-service/
 │       ├── notification-service/
 │       └── integration-service/
-├── docs/                    # Documentation
-├── scripts/                 # Build and deployment scripts
-├── docker-compose.yml       # Docker orchestration
-└── README.md               # This file
+├── docs/                   # Documentation
+├── scripts/                # Build and deployment scripts
+├── docker-compose.yml      # Docker orchestration
+└── README.md              # This file
 ```
 
 ## Development Workflow
@@ -154,6 +172,7 @@ npm run test
 
 ## Documentation
 
+- [Business Entity Contracts](./contracts/README.md) - JSON Schema contracts for all business entities
 - [Architecture Documentation](./docs/architecture.md) - System design, technology choices, data flows
 - [Database Scaling & Consistency](./docs/database-scaling-consistency.md) - Database-per-service pattern, HA strategies, eventual consistency
 - [C++ Database Migrations](./docs/cpp-database-migrations.md) - Code-first schema migrations for C++ services using Sqitch

@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/shipment.schema.json",
+  "title": "Shipment",
+  "description": "Outbound shipment/delivery for one or more orders",
+  "type": "object",
+  "required": ["id", "shipmentNumber", "warehouseId", "status"],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Unique shipment identifier"
+    },
+    "shipmentNumber": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "pattern": "^[A-Z0-9-]+$",
+      "description": "Human-readable shipment number"
+    },
+    "warehouseId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Origin warehouse"
+    },
+    "orderIds": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/uuid"
+      },
+      "description": "Orders included in this shipment"
+    },
+    "shipmentDate": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Date shipment was created"
+    },
+    "scheduledPickupDate": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Scheduled carrier pickup date"
+    },
+    "actualPickupDate": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Actual carrier pickup date"
+    },
+    "estimatedDeliveryDate": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Estimated delivery date"
+    },
+    "actualDeliveryDate": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Actual delivery date"
+    },
+    "carrier": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Shipping carrier name"
+    },
+    "carrierService": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Carrier service level"
+    },
+    "trackingNumber": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Carrier tracking number"
+    },
+    "trackingUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "Carrier tracking URL"
+    },
+    "shippingAddress": {
+      "$ref": "common.schema.json#/$defs/address",
+      "description": "Destination address"
+    },
+    "returnAddress": {
+      "$ref": "common.schema.json#/$defs/address",
+      "description": "Return address"
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["packageNumber"],
+        "properties": {
+          "packageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Package number within shipment"
+          },
+          "trackingNumber": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Package tracking number"
+          },
+          "dimensions": {
+            "$ref": "common.schema.json#/$defs/dimensions"
+          },
+          "weight": {
+            "$ref": "common.schema.json#/$defs/weight"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["productId", "quantity"],
+              "properties": {
+                "productId": {
+                  "$ref": "common.schema.json#/$defs/uuid"
+                },
+                "sku": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "serialNumbers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Packages in this shipment"
+    },
+    "totalWeight": {
+      "$ref": "common.schema.json#/$defs/weight",
+      "description": "Total shipment weight"
+    },
+    "shippingCost": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Shipping cost"
+    },
+    "insuranceValue": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Declared insurance value"
+    },
+    "isInternational": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether shipment is international"
+    },
+    "customsDeclaration": {
+      "type": "object",
+      "properties": {
+        "declarationNumber": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "customsValue": {
+          "$ref": "common.schema.json#/$defs/money"
+        },
+        "dutyPaid": {
+          "$ref": "common.schema.json#/$defs/money"
+        },
+        "hsCode": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Harmonized System code"
+        }
+      },
+      "description": "Customs information for international shipments"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "packed",
+        "labeled",
+        "manifested",
+        "picked_up",
+        "in_transit",
+        "out_for_delivery",
+        "delivered",
+        "exception",
+        "returned",
+        "cancelled"
+      ],
+      "description": "Shipment status"
+    },
+    "signature": {
+      "type": "object",
+      "properties": {
+        "signedBy": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Name of person who signed"
+        },
+        "signedAt": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "signatureImageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to signature image"
+        }
+      },
+      "description": "Delivery signature information"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["timestamp", "status", "location"],
+        "properties": {
+          "timestamp": {
+            "$ref": "common.schema.json#/$defs/timestamp"
+          },
+          "status": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Tracking events"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Shipment notes"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional custom attributes",
+      "additionalProperties": true
+    },
+    "audit": {
+      "$ref": "common.schema.json#/$defs/auditInfo"
+    }
+  },
+  "additionalProperties": false
+}

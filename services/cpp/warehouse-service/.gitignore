@@ -1,0 +1,47 @@
+# Build artifacts
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Config with secrets
+config/application.json
+config/.env
+.env
+
+# Dependencies
+vcpkg_installed/
+_deps/
+
+# Testing
+Testing/
+test_results/
+
+# Coverage
+coverage/
+*.gcda
+*.gcno
+*.gcov
+
+# Database
+*.db
+*.sqlite
+
+# Other
+.cache/
+compile_commands.json

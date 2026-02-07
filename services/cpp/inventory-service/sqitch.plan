@@ -1,0 +1,5 @@
+%syntax-version=1.0.0
+%project=inventory-service
+%uri=https://github.com/stephenwhippuk/warehouse-management
+
+001_initial_schema 2026-02-07T00:00:00Z System <system@inventory.local> # Create initial inventory and movements tables

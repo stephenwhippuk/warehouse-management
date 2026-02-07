@@ -57,30 +57,145 @@ The Warehouse Management Solution is a microservices-based system designed for s
 
 ## Design Principles
 
-### 1. Microservices Architecture
+### 1. Contract-First Design
+- **Business Entity Contracts**: Centralized JSON Schema definitions serve as the single source of truth
+- **Cross-Service Consistency**: All services validate against the same entity schemas
+- **Static Validation**: Type-safe validation in C++, C#, and TypeScript
+- **Versioned Evolution**: Schema versioning supports backward compatibility
+- See [contracts/README.md](../contracts/README.md) for details
+
+### 2. Microservices Architecture
 - **Single Responsibility**: Each service has a specific business domain
 - **Independence**: Services can be developed, deployed, and scaled independently
 - **Technology Diversity**: Use the best tool for each job (C++ for performance, C# for business logic)
 
-### 2. API Gateway Pattern
+### 3. API Gateway Pattern
 - Centralized entry point for all client requests
 - Handles cross-cutting concerns (auth, logging, rate limiting)
 - Simplifies client-side logic
 
-### 3. Event-Driven Communication
+### 4. Event-Driven Communication
 - Services communicate via message queue (RabbitMQ)
 - Asynchronous processing for non-critical operations
 - Event sourcing for audit trails
 
-### 4. CQRS (Command Query Responsibility Segregation)
+### 5. CQRS (Command Query Responsibility Segregation)
 - Separate read and write operations
 - Optimized read models for reporting
 - Better performance and scalability
 
-### 5. Database Per Service
+### 6. Database Per Service
 - Each microservice owns its data
 - Prevents tight coupling
 - Allows independent scaling
+
+## Business Entity Contracts
+
+### Overview
+
+The system uses **centralized JSON Schema contracts** as the single source of truth for all business entities. These contracts ensure consistency across all services and applications, regardless of the programming language used.
+
+**Location**: `contracts/schemas/v1/`
+
+**Core Entities**:
+- **Product**: Product/SKU master data
+- **Inventory**: Stock levels and tracking
+- **Order**: Customer orders and line items
+- **Warehouse**: Warehouse facility information
+- **Location**: Storage locations within warehouses
+- **User**: System users and permissions
+- **Shipment**: Outbound shipments and deliveries
+- **Common**: Shared types (UUID, Money, Address, etc.)
+
+### Benefits
+
+1. **Cross-Language Consistency**
+   - Same entity definitions across C++, C#, and TypeScript
+   - Validation libraries available for all languages
+   - Reduces integration bugs
+
+2. **Static Validation**
+   - C++ services validate JSON against schemas at runtime
+   - C# services can generate strongly-typed classes
+   - TypeScript types generated from schemas
+
+3. **Documentation**
+   - Self-documenting API contracts
+   - Examples provided for each entity
+   - Clear field descriptions and constraints
+
+4. **Versioning**
+   - Schema versions tracked (v1, v2, etc.)
+   - Breaking changes require new version
+   - Services can support multiple versions during migration
+
+### Usage in Services
+
+**C++ Services (Inventory, Order, Warehouse)**:
+```cpp
+// Use nlohmann/json-schema-validator
+#include <nlohmann/json-schema.hpp>
+
+json_validator validator;
+validator.set_root_schema(product_schema);
+validator.validate(product_data); // Throws if invalid
+```
+
+**C# Services (Reporting, Notification, Integration)**:
+```csharp
+// Use NJsonSchema for validation or code generation
+var schema = await JsonSchema.FromFileAsync("product.schema.json");
+var errors = schema.Validate(productData);
+
+// Or generate C# classes
+var generator = new CSharpGenerator(schema);
+var code = generator.GenerateFile("Product");
+```
+
+**Vue 3 Applications (Tablet PWA, Office Web)**:
+```typescript
+// Use ajv for validation
+import Ajv from 'ajv';
+import productSchema from '@/contracts/schemas/v1/product.schema.json';
+
+const ajv = new Ajv();
+const validate = ajv.compile(productSchema);
+
+// Generate TypeScript types
+// npx json-schema-to-typescript contracts/schemas/v1/*.schema.json
+```
+
+### Service-Specific Extensions
+
+Services may extend contracts with additional fields but **must not** modify or remove core fields:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Extended Product (Inventory Service)",
+  "allOf": [
+    { "$ref": "../../contracts/schemas/v1/product.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "binLocations": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  ]
+}
+```
+
+### Contract Evolution
+
+- **Minor changes** (adding optional fields): Update existing version
+- **Breaking changes** (removing fields, changing types): Create new version
+- Deprecate old versions gradually with migration period
+- Document all changes in contract README
+
+For detailed usage and examples, see [contracts/README.md](../contracts/README.md).
 
 #### Database Scaling and High Availability
 

@@ -32,10 +32,10 @@ Most C++ services use:
 
 ```
 cpp/
-├── api-gateway/           # API Gateway service
-├── inventory-service/     # Inventory management
-├── order-service/         # Order processing
-├── warehouse-service/     # Warehouse layout and locations
+├── warehouse-service/     # ✅ Warehouse and location management
+├── inventory-service/     # ✅ Stock levels and inventory tracking
+├── order-service/         # 🚧 Order processing
+├── api-gateway/           # 🚧 API Gateway service
 ├── common/                # Shared libraries and utilities
 └── CMakeLists.txt        # Root CMake configuration
 ```
@@ -167,16 +167,44 @@ Services expose metrics via:
 - Health check endpoint (`/health`)
 - Readiness endpoint (`/ready`)
 
+## API Documentation
+
+All C++ services expose OpenAPI 3.0 specifications at `/api/swagger.json` for API documentation and client generation:
+
+```bash
+# Access Swagger JSON
+curl http://localhost:8080/api/swagger.json
+
+# View in Swagger UI
+docker run -p 8080:8080 -e SWAGGER_JSON_URL=http://host.docker.internal:8080/api/swagger.json swaggerapi/swagger-ui
+```
+
+**Key Features:**
+- **Contract-First Development**: OpenAPI specs generated from C++ models
+- **Client Generation**: Generate TypeScript, C#, Python, etc. clients
+- **Interactive Testing**: Works with Swagger UI, Postman, Bruno
+- **Service Integration**: Services can consume each other's APIs
+
+**Implementation:**
+- `SwaggerGenerator` utility generates OpenAPI 3.0 JSON
+- `SwaggerController` serves specification at `/api/swagger.json`
+- Schemas match JSON Schema contracts in `/contracts/schemas/v1/`
+
+See [docs/cpp-swagger-openapi.md](../../docs/cpp-swagger-openapi.md) for detailed usage guide.
+
 ## Creating a New Service
 
 1. Copy the service template
-2. Update CMakeLists.txt
-3. Implement service logic
-4. Add tests
-5. Set up database migrations (see below)
-6. Create Dockerfile
-7. Update docker-compose.yml
-8. Document API endpoints
+2. Update CMakeLists.txt with source files
+3. Implement models matching JSON Schemas
+4. Implement service logic (repositories, services, controllers)
+5. Add SwaggerGenerator and SwaggerController
+6. Document API with OpenAPI endpoint
+7. Add unit and integration tests
+8. Set up database migrations (see below)
+9. Create Dockerfile with Sqitch
+10. Update docker-compose.yml
+11. Document service in README
 
 ## Database Migrations
 

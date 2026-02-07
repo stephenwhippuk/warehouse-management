@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/common.schema.json",
+  "title": "Common Definitions",
+  "description": "Shared types and definitions used across all entity schemas",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "UUID v4 format"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 datetime with timezone"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date (YYYY-MM-DD)"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Valid email address"
+    },
+    "phoneNumber": {
+      "type": "string",
+      "pattern": "^\\+?[1-9]\\d{1,14}$",
+      "description": "E.164 format phone number"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "ISO 4217 currency code",
+      "examples": ["USD", "EUR", "GBP"]
+    },
+    "money": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Monetary amount"
+        },
+        "currency": {
+          "$ref": "#/$defs/currency"
+        }
+      }
+    },
+    "address": {
+      "type": "object",
+      "required": ["street", "city", "postalCode", "country"],
+      "properties": {
+        "street": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "street2": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Additional address line"
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "state": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "State/Province/Region"
+        },
+        "postalCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$",
+          "description": "ISO 3166-1 alpha-2 country code"
+        }
+      }
+    },
+    "coordinates": {
+      "type": "object",
+      "required": ["latitude", "longitude"],
+      "properties": {
+        "latitude": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "required": ["length", "width", "height", "unit"],
+      "properties": {
+        "length": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMinimum": true
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMinimum": true
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMinimum": true
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["mm", "cm", "m", "in", "ft"]
+        }
+      }
+    },
+    "weight": {
+      "type": "object",
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMinimum": true
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["g", "kg", "oz", "lb"]
+        }
+      }
+    },
+    "auditInfo": {
+      "type": "object",
+      "required": ["createdAt", "createdBy"],
+      "properties": {
+        "createdAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User ID who created the entity"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User ID who last updated the entity"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive", "archived"],
+      "description": "Generic status field"
+    }
+  }
+}

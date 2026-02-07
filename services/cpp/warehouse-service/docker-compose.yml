@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  warehouse-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: warehouse-service
+    ports:
+      - "8080:8080"
+    environment:
+      - WAREHOUSE_HOST=0.0.0.0
+      - WAREHOUSE_PORT=8080
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=warehouse_db
+      - DATABASE_USER=warehouse
+      - DATABASE_PASSWORD=warehouse_password
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=warehouse_db
+      - DB_USER=warehouse
+      - DB_PASSWORD=warehouse_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_ENABLED=false
+    depends_on:
+      - postgres
+    networks:
+      - warehouse-network
+    volumes:
+      - ./logs:/app/logs
+      - ./config:/app/config
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: warehouse-postgres
+    environment:
+      - POSTGRES_DB=warehouse_db
+      - POSTGRES_USER=warehouse
+      - POSTGRES_PASSWORD=warehouse_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - warehouse-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: warehouse-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - warehouse-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  warehouse-network:
+    driver: bridge

@@ -1,0 +1,43 @@
+# Build directories
+build/
+cmake-build-*/
+bin/
+lib/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled files
+*.o
+*.so
+*.a
+*.out
+*.exe
+
+# Logs
+*.log
+
+# Environment variables
+.env
+config/.env
+
+# Database
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/
+third_party/
+
+# Test results
+Testing/
+test-results/
+coverage/

@@ -1,0 +1,28 @@
+{
+  "id": "660e8400-e29b-41d4-a716-446655440002",
+  "productId": "550e8400-e29b-41d4-a716-446655440001",
+  "warehouseId": "770e8400-e29b-41d4-a716-446655440003",
+  "locationId": "880e8400-e29b-41d4-a716-446655440004",
+  "quantity": 342,
+  "availableQuantity": 297,
+  "reservedQuantity": 45,
+  "allocatedQuantity": 0,
+  "batchNumber": "BATCH-2024-Q2-001",
+  "manufactureDate": "2024-04-15",
+  "receivedDate": "2024-05-10T09:15:00Z",
+  "lastCountedDate": "2026-02-01T14:30:00Z",
+  "lastCountedBy": "user-picker-012",
+  "costPerUnit": {
+    "amount": 35.50,
+    "currency": "USD"
+  },
+  "status": "available",
+  "qualityStatus": "passed",
+  "notes": "Regular stock in prime picking location",
+  "audit": {
+    "createdAt": "2024-05-10T09:15:00Z",
+    "createdBy": "user-receiver-005",
+    "updatedAt": "2026-02-01T14:30:00Z",
+    "updatedBy": "user-picker-012"
+  }
+}

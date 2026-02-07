@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/location.schema.json",
+  "title": "Location",
+  "description": "Storage location within a warehouse (bin, shelf, rack, etc.)",
+  "type": "object",
+  "required": ["id", "warehouseId", "code", "type", "status"],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Unique location identifier"
+    },
+    "warehouseId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Parent warehouse ID"
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "pattern": "^[A-Z0-9-]+$",
+      "description": "Location code (e.g., A-01-02-03 for Aisle-Rack-Shelf-Bin)"
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Human-readable location name"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "bin",
+        "shelf",
+        "rack",
+        "pallet",
+        "floor",
+        "staging",
+        "receiving",
+        "shipping",
+        "picking",
+        "returns"
+      ],
+      "description": "Location type"
+    },
+    "zone": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Warehouse zone (e.g., A, B, C or Fast-Moving, Slow-Moving)"
+    },
+    "aisle": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Aisle identifier"
+    },
+    "rack": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Rack identifier"
+    },
+    "shelf": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Shelf/level identifier"
+    },
+    "bin": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Bin/position identifier"
+    },
+    "parentLocationId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Parent location (for hierarchical locations)"
+    },
+    "dimensions": {
+      "$ref": "common.schema.json#/$defs/dimensions",
+      "description": "Location physical dimensions"
+    },
+    "maxWeight": {
+      "$ref": "common.schema.json#/$defs/weight",
+      "description": "Maximum weight capacity"
+    },
+    "maxVolume": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Maximum volume in cubic meters"
+    },
+    "isPickable": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether items can be picked from this location"
+    },
+    "isReceivable": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether items can be received into this location"
+    },
+    "requiresEquipment": {
+      "type": "string",
+      "enum": ["none", "forklift", "ladder", "cherry_picker", "pallet_jack"],
+      "description": "Special equipment required to access location"
+    },
+    "temperatureControlled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether location is temperature controlled"
+    },
+    "temperatureRange": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "number",
+          "description": "Minimum temperature in Celsius"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum temperature in Celsius"
+        }
+      }
+    },
+    "barcode": {
+      "type": "string",
+      "description": "Location barcode for scanning"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive", "full", "reserved", "damaged", "maintenance"],
+      "description": "Location status"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional custom attributes",
+      "additionalProperties": true
+    },
+    "audit": {
+      "$ref": "common.schema.json#/$defs/auditInfo"
+    }
+  },
+  "additionalProperties": false
+}

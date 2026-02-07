@@ -1,0 +1,5 @@
+%syntax-version=1.0.0
+%project=warehouse-service
+%uri=https://github.com/stephenwhippuk/warehouse-management
+
+001_initial_schema 2026-02-07T00:00:00Z System <system@warehouse.local> # Create initial warehouse and location tables

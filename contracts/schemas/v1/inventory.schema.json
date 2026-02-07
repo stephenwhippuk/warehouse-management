@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/inventory.schema.json",
+  "title": "Inventory",
+  "description": "Inventory stock levels and tracking information",
+  "type": "object",
+  "required": ["id", "productId", "warehouseId", "locationId", "quantity"],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Unique inventory record identifier"
+    },
+    "productId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Reference to product"
+    },
+    "warehouseId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Reference to warehouse"
+    },
+    "locationId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Reference to storage location"
+    },
+    "quantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current quantity on hand"
+    },
+    "availableQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Quantity available for allocation (quantity - reserved)"
+    },
+    "reservedQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Quantity reserved for orders"
+    },
+    "allocatedQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Quantity allocated to picks/shipments"
+    },
+    "serialNumber": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Serial number (for serialized items)"
+    },
+    "batchNumber": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Batch/lot number"
+    },
+    "expirationDate": {
+      "$ref": "common.schema.json#/$defs/date",
+      "description": "Expiration date (for perishable items)"
+    },
+    "manufactureDate": {
+      "$ref": "common.schema.json#/$defs/date",
+      "description": "Manufacture/production date"
+    },
+    "receivedDate": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Date received into inventory"
+    },
+    "lastCountedDate": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Date of last physical count"
+    },
+    "lastCountedBy": {
+      "type": "string",
+      "description": "User ID who performed last count"
+    },
+    "costPerUnit": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Unit cost at receipt time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "available",
+        "reserved",
+        "allocated",
+        "quarantine",
+        "damaged",
+        "expired",
+        "recalled"
+      ],
+      "description": "Inventory status"
+    },
+    "qualityStatus": {
+      "type": "string",
+      "enum": ["passed", "failed", "pending", "not_tested"],
+      "default": "not_tested",
+      "description": "Quality control status"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Additional notes"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional custom attributes",
+      "additionalProperties": true
+    },
+    "audit": {
+      "$ref": "common.schema.json#/$defs/auditInfo"
+    }
+  },
+  "additionalProperties": false
+}

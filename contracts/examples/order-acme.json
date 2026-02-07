@@ -1,0 +1,85 @@
+{
+  "id": "990e8400-e29b-41d4-a716-446655440005",
+  "orderNumber": "ORD-2024-00123",
+  "customerId": "CUST-001",
+  "customerName": "Acme Manufacturing Inc.",
+  "customerEmail": "orders@acme-mfg.example.com",
+  "warehouseId": "770e8400-e29b-41d4-a716-446655440003",
+  "orderDate": "2026-02-05T10:23:45Z",
+  "requestedShipDate": "2026-02-06",
+  "requestedDeliveryDate": "2026-02-08",
+  "priority": "high",
+  "type": "standard",
+  "shippingAddress": {
+    "street": "123 Industrial Parkway",
+    "city": "Chicago",
+    "state": "Illinois",
+    "postalCode": "60601",
+    "country": "US"
+  },
+  "billingAddress": {
+    "street": "123 Industrial Parkway",
+    "city": "Chicago",
+    "state": "Illinois",
+    "postalCode": "60601",
+    "country": "US"
+  },
+  "shippingMethod": "two_day",
+  "lineItems": [
+    {
+      "lineNumber": 1,
+      "productId": "550e8400-e29b-41d4-a716-446655440001",
+      "sku": "WH-WIDGET-001",
+      "productName": "Premium Widget",
+      "quantity": 25,
+      "quantityPicked": 0,
+      "quantityShipped": 0,
+      "unitPrice": {
+        "amount": 49.99,
+        "currency": "USD"
+      },
+      "totalPrice": {
+        "amount": 1249.75,
+        "currency": "USD"
+      },
+      "discount": {
+        "amount": 0,
+        "currency": "USD"
+      },
+      "tax": {
+        "amount": 112.48,
+        "currency": "USD"
+      },
+      "notes": "Handle with care"
+    }
+  ],
+  "subtotal": {
+    "amount": 1249.75,
+    "currency": "USD"
+  },
+  "shippingCost": {
+    "amount": 25.00,
+    "currency": "USD"
+  },
+  "tax": {
+    "amount": 114.73,
+    "currency": "USD"
+  },
+  "discount": {
+    "amount": 0,
+    "currency": "USD"
+  },
+  "total": {
+    "amount": 1389.48,
+    "currency": "USD"
+  },
+  "status": "confirmed",
+  "notes": "Customer requested expedited processing",
+  "tags": ["high-value", "repeat-customer"],
+  "audit": {
+    "createdAt": "2026-02-05T10:23:45Z",
+    "createdBy": "system-api",
+    "updatedAt": "2026-02-05T10:25:12Z",
+    "updatedBy": "user-manager-003"
+  }
+}

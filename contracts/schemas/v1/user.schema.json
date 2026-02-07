@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/user.schema.json",
+  "title": "User",
+  "description": "System user account with roles and permissions",
+  "type": "object",
+  "required": ["id", "username", "email", "role", "status"],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Unique user identifier"
+    },
+    "username": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 50,
+      "pattern": "^[a-z0-9_-]+$",
+      "description": "Unique username (lowercase, alphanumeric, dashes, underscores)"
+    },
+    "email": {
+      "$ref": "common.schema.json#/$defs/email",
+      "description": "User email address"
+    },
+    "firstName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "First name"
+    },
+    "lastName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Last name"
+    },
+    "displayName": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Display name (calculated or custom)"
+    },
+    "phone": {
+      "$ref": "common.schema.json#/$defs/phoneNumber",
+      "description": "Phone number"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "warehouse_manager",
+        "inventory_manager",
+        "picker",
+        "receiver",
+        "shipper",
+        "quality_control",
+        "reporting_analyst",
+        "viewer"
+      ],
+      "description": "Primary user role"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "product:read",
+          "product:write",
+          "inventory:read",
+          "inventory:write",
+          "inventory:adjust",
+          "order:read",
+          "order:write",
+          "order:cancel",
+          "shipment:read",
+          "shipment:write",
+          "warehouse:read",
+          "warehouse:write",
+          "location:read",
+          "location:write",
+          "user:read",
+          "user:write",
+          "reports:view",
+          "reports:export",
+          "settings:manage"
+        ]
+      },
+      "description": "Granular permissions"
+    },
+    "warehouseIds": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/uuid"
+      },
+      "description": "Warehouses this user has access to (empty = all)"
+    },
+    "defaultWarehouseId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Default warehouse for this user"
+    },
+    "employeeId": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Employee ID"
+    },
+    "department": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Department"
+    },
+    "locale": {
+      "type": "string",
+      "pattern": "^[a-z]{2}-[A-Z]{2}$",
+      "default": "en-US",
+      "description": "User locale (e.g., en-US, es-ES)"
+    },
+    "timezone": {
+      "type": "string",
+      "default": "UTC",
+      "description": "IANA timezone identifier"
+    },
+    "avatarUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "Profile picture URL"
+    },
+    "lastLoginAt": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Last login timestamp"
+    },
+    "lastLoginIp": {
+      "type": "string",
+      "format": "ipv4",
+      "description": "Last login IP address"
+    },
+    "passwordChangedAt": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Last password change timestamp"
+    },
+    "mfaEnabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether multi-factor authentication is enabled"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive", "suspended", "pending_activation"],
+      "description": "User account status"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Administrative notes"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional custom attributes",
+      "additionalProperties": true
+    },
+    "audit": {
+      "$ref": "common.schema.json#/$defs/auditInfo"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/order.schema.json",
+  "title": "Order",
+  "description": "Customer order with line items",
+  "type": "object",
+  "required": ["id", "orderNumber", "customerId", "warehouseId", "status", "lineItems"],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Unique order identifier"
+    },
+    "orderNumber": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "pattern": "^[A-Z0-9-]+$",
+      "description": "Human-readable order number"
+    },
+    "customerId": {
+      "type": "string",
+      "description": "Customer identifier"
+    },
+    "customerName": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Customer name"
+    },
+    "customerEmail": {
+      "$ref": "common.schema.json#/$defs/email",
+      "description": "Customer email"
+    },
+    "warehouseId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Fulfilling warehouse"
+    },
+    "orderDate": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "Date order was placed"
+    },
+    "requestedShipDate": {
+      "$ref": "common.schema.json#/$defs/date",
+      "description": "Requested ship date"
+    },
+    "requestedDeliveryDate": {
+      "$ref": "common.schema.json#/$defs/date",
+      "description": "Requested delivery date"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high", "urgent"],
+      "default": "normal",
+      "description": "Order priority"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["standard", "rush", "backorder", "preorder", "sample"],
+      "default": "standard",
+      "description": "Order type"
+    },
+    "shippingAddress": {
+      "$ref": "common.schema.json#/$defs/address",
+      "description": "Shipping address"
+    },
+    "billingAddress": {
+      "$ref": "common.schema.json#/$defs/address",
+      "description": "Billing address"
+    },
+    "shippingMethod": {
+      "type": "string",
+      "enum": ["ground", "express", "next_day", "two_day", "freight", "pickup"],
+      "description": "Shipping method"
+    },
+    "lineItems": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["lineNumber", "productId", "quantity", "unitPrice"],
+        "properties": {
+          "lineNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Line item number"
+          },
+          "productId": {
+            "$ref": "common.schema.json#/$defs/uuid",
+            "description": "Product being ordered"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Product SKU (denormalized for convenience)"
+          },
+          "productName": {
+            "type": "string",
+            "description": "Product name (denormalized for convenience)"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Quantity ordered"
+          },
+          "quantityPicked": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Quantity picked"
+          },
+          "quantityShipped": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Quantity shipped"
+          },
+          "unitPrice": {
+            "$ref": "common.schema.json#/$defs/money",
+            "description": "Unit price"
+          },
+          "totalPrice": {
+            "$ref": "common.schema.json#/$defs/money",
+            "description": "Line item total (quantity * unitPrice)"
+          },
+          "discount": {
+            "$ref": "common.schema.json#/$defs/money",
+            "description": "Discount amount"
+          },
+          "tax": {
+            "$ref": "common.schema.json#/$defs/money",
+            "description": "Tax amount"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Line item notes"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Order subtotal"
+    },
+    "shippingCost": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Shipping cost"
+    },
+    "tax": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Total tax"
+    },
+    "discount": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Total discount"
+    },
+    "total": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Order total"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "allocated",
+        "picking",
+        "picked",
+        "packing",
+        "packed",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "on_hold"
+      ],
+      "description": "Order status"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Order notes"
+    },
+    "internalNotes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Internal notes (not visible to customer)"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 50
+      },
+      "description": "Order tags"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional custom attributes",
+      "additionalProperties": true
+    },
+    "audit": {
+      "$ref": "common.schema.json#/$defs/auditInfo"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "sku": "WH-WIDGET-001",
+  "name": "Premium Widget",
+  "description": "High-quality widget for industrial applications",
+  "category": "Industrial Tools",
+  "barcode": "1234567890123",
+  "dimensions": {
+    "length": 25.4,
+    "width": 15.2,
+    "height": 10.0,
+    "unit": "cm"
+  },
+  "weight": {
+    "value": 2.5,
+    "unit": "kg"
+  },
+  "unitPrice": {
+    "amount": 49.99,
+    "currency": "USD"
+  },
+  "minStockLevel": 50,
+  "maxStockLevel": 500,
+  "reorderPoint": 100,
+  "reorderQuantity": 200,
+  "isPerishable": false,
+  "requiresSerialNumber": false,
+  "requiresBatchNumber": true,
+  "imageUrls": [
+    "https://cdn.warehouse-mgmt.example.com/products/widget-001-front.jpg",
+    "https://cdn.warehouse-mgmt.example.com/products/widget-001-side.jpg"
+  ],
+  "status": "active",
+  "tags": ["industrial", "tools", "premium"],
+  "metadata": {
+    "manufacturer": "WidgetCorp",
+    "warranty_months": 24
+  },
+  "audit": {
+    "createdAt": "2024-01-15T10:30:00Z",
+    "createdBy": "user-admin-001",
+    "updatedAt": "2024-06-20T14:22:00Z",
+    "updatedBy": "user-manager-003"
+  }
+}

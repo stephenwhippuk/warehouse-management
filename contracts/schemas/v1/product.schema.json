@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/product.schema.json",
+  "title": "Product",
+  "description": "Product/SKU master data representing items managed in the warehouse",
+  "type": "object",
+  "required": ["id", "sku", "name", "status"],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Unique product identifier"
+    },
+    "sku": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[A-Z0-9-]+$",
+      "description": "Stock Keeping Unit - unique product code"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Product name"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Detailed product description"
+    },
+    "category": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Product category"
+    },
+    "barcode": {
+      "type": "string",
+      "pattern": "^[0-9]{8,14}$",
+      "description": "UPC/EAN barcode"
+    },
+    "dimensions": {
+      "$ref": "common.schema.json#/$defs/dimensions",
+      "description": "Product physical dimensions"
+    },
+    "weight": {
+      "$ref": "common.schema.json#/$defs/weight",
+      "description": "Product weight"
+    },
+    "unitPrice": {
+      "$ref": "common.schema.json#/$defs/money",
+      "description": "Base unit price"
+    },
+    "minStockLevel": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Minimum stock level before reorder alert"
+    },
+    "maxStockLevel": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Maximum stock level"
+    },
+    "reorderPoint": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Reorder point threshold"
+    },
+    "reorderQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Quantity to reorder when below reorder point"
+    },
+    "isPerishable": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether product is perishable"
+    },
+    "shelfLife": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Shelf life in days (for perishable items)"
+    },
+    "requiresSerialNumber": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether product requires serial number tracking"
+    },
+    "requiresBatchNumber": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether product requires batch number tracking"
+    },
+    "imageUrls": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      },
+      "description": "Product image URLs"
+    },
+    "status": {
+      "$ref": "common.schema.json#/$defs/status"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 50
+      },
+      "description": "Searchable tags"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional custom attributes",
+      "additionalProperties": true
+    },
+    "audit": {
+      "$ref": "common.schema.json#/$defs/auditInfo"
+    }
+  },
+  "additionalProperties": false
+}

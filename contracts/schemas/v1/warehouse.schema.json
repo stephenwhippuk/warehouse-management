@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/warehouse.schema.json",
+  "title": "Warehouse",
+  "description": "Warehouse facility information",
+  "type": "object",
+  "required": ["id", "code", "name", "address", "status"],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Unique warehouse identifier"
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "pattern": "^[A-Z0-9-]+$",
+      "description": "Warehouse code (e.g., WH-001)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Warehouse name"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Warehouse description"
+    },
+    "address": {
+      "$ref": "common.schema.json#/$defs/address",
+      "description": "Physical address"
+    },
+    "coordinates": {
+      "$ref": "common.schema.json#/$defs/coordinates",
+      "description": "GPS coordinates"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["distribution", "fulfillment", "storage", "cold_storage", "cross_dock"],
+      "description": "Warehouse type"
+    },
+    "totalArea": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMinimum": true,
+      "description": "Total area in square meters"
+    },
+    "storageCapacity": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Storage capacity in cubic meters"
+    },
+    "contactPerson": {
+      "type": "object",
+      "required": ["name", "email"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "email": {
+          "$ref": "common.schema.json#/$defs/email"
+        },
+        "phone": {
+          "$ref": "common.schema.json#/$defs/phoneNumber"
+        }
+      }
+    },
+    "operatingHours": {
+      "type": "object",
+      "properties": {
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone identifier (e.g., America/New_York)"
+        },
+        "schedule": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["dayOfWeek", "openTime", "closeTime"],
+            "properties": {
+              "dayOfWeek": {
+                "type": "string",
+                "enum": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+              },
+              "openTime": {
+                "type": "string",
+                "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
+                "description": "Opening time (HH:MM)"
+              },
+              "closeTime": {
+                "type": "string",
+                "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
+                "description": "Closing time (HH:MM)"
+              }
+            }
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "refrigeration",
+          "freezer",
+          "hazmat",
+          "climate_controlled",
+          "high_bay",
+          "dock_doors",
+          "rail_access",
+          "cross_docking"
+        ]
+      },
+      "description": "Special capabilities of the warehouse"
+    },
+    "status": {
+      "$ref": "common.schema.json#/$defs/status"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional custom attributes",
+      "additionalProperties": true
+    },
+    "audit": {
+      "$ref": "common.schema.json#/$defs/auditInfo"
+    }
+  },
+  "additionalProperties": false
+}
