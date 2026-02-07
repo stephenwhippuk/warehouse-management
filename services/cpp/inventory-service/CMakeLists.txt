@@ -18,6 +18,12 @@ find_package(PostgreSQL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(spdlog REQUIRED)
 
+# RabbitMQ C client (installed via apt: librabbitmq-dev)
+find_library(RABBITMQ_LIBRARY NAMES rabbitmq)
+if(NOT RABBITMQ_LIBRARY)
+    message(FATAL_ERROR "rabbitmq-c library not found. Please install librabbitmq-dev.")
+endif()
+
 # Include directories
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
@@ -32,12 +38,15 @@ set(SOURCES
     src/Server.cpp
     src/models/Inventory.cpp
     src/controllers/InventoryController.cpp
+    src/controllers/HealthController.cpp
     src/controllers/SwaggerController.cpp
     src/repositories/InventoryRepository.cpp
     src/services/InventoryService.cpp
     src/utils/Database.cpp
     src/utils/Logger.cpp
     src/utils/Config.cpp
+    src/utils/Auth.cpp
+    src/utils/RabbitMqMessageBus.cpp
     src/utils/JsonValidator.cpp
     src/utils/SwaggerGenerator.cpp
 )
@@ -56,6 +65,7 @@ target_link_libraries(${PROJECT_NAME}
     pqxx
     nlohmann_json::nlohmann_json
     spdlog::spdlog
+    ${RABBITMQ_LIBRARY}
 )
 
 # Compiler options

@@ -3,8 +3,27 @@
 #include "inventory/services/InventoryService.hpp"
 #include <Poco/Net/HTTPServer.h>
 #include <memory>
+#include <string>
 
 namespace inventory {
+
+enum class RouteTarget {
+    Inventory,
+    Health,
+    Swagger
+};
+
+// Pure helper used by the HTTP server routing logic; exposed so
+// tests can verify that individual paths map to the expected targets.
+inline RouteTarget resolveRoute(const std::string& path) {
+    if (path == "/health") {
+        return RouteTarget::Health;
+    }
+    if (path == "/api/swagger.json") {
+        return RouteTarget::Swagger;
+    }
+    return RouteTarget::Inventory;
+}
 
 class Server {
 public:

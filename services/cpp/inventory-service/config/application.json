@@ -13,9 +13,21 @@
     "connectionString": "redis://localhost:6379",
     "ttl": 3600
   },
+  "auth": {
+    "serviceApiKey": ""
+  },
   "logging": {
     "level": "info",
     "format": "json"
+  },
+  "messageBus": {
+    "host": "rabbitmq",
+    "port": 5672,
+    "virtualHost": "/",
+    "username": "warehouse",
+    "password": "warehouse_dev",
+    "exchange": "warehouse.events",
+    "routingKeyPrefix": "inventory."
   },
   "inventory": {
     "lowStockThreshold": 10,

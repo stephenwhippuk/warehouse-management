@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libpoco-dev \
     libpq-dev \
     libpqxx-dev \
+    librabbitmq-dev \
     nlohmann-json3-dev \
     libspdlog-dev \
     sqitch \
@@ -23,10 +24,10 @@ WORKDIR /app
 # Copy source code
 COPY . .
 
-# Build application
-RUN mkdir build && cd build && \
+# Build application (clean build directory inside image)
+RUN rm -rf build && mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc)
+    make -j"$(nproc)"
 
 # Runtime stage
 FROM ubuntu:22.04
@@ -38,6 +39,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libpoco-dev \
     libpq5 \
     libpqxx-dev \
+    librabbitmq-dev \
     sqitch \
     libdbd-pg-perl \
     postgresql-client \

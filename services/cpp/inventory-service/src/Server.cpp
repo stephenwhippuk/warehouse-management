@@ -1,10 +1,13 @@
 #include "inventory/Server.hpp"
 #include "inventory/controllers/InventoryController.hpp"
+#include "inventory/controllers/HealthController.hpp"
+#include "inventory/controllers/SwaggerController.hpp"
 #include "inventory/utils/Logger.hpp"
 #include <Poco/Net/HTTPServerParams.h>
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/ServerSocket.h>
+#include <Poco/URI.h>
 #include <atomic>
 #include <csignal>
 #include <chrono>
@@ -37,10 +40,22 @@ public:
     
     Poco::Net::HTTPRequestHandler* createRequestHandler(const Poco::Net::HTTPServerRequest& request) override {
         utils::Logger::info("Incoming request: {} {}", request.getMethod(), request.getURI());
-        
-        // TODO: Implement proper routing
-        // For now, route all requests to InventoryController
-        return new controllers::InventoryController(inventoryService_);
+
+        Poco::URI uri(request.getURI());
+        const std::string path = uri.getPath();
+
+        RouteTarget target = resolveRoute(path);
+        switch (target) {
+            case RouteTarget::Health:
+                return new controllers::HealthController();
+            case RouteTarget::Swagger:
+                return new controllers::SwaggerController();
+            case RouteTarget::Inventory:
+            default:
+                // TODO: Implement more complete routing
+                // Default: route to InventoryController
+                return new controllers::InventoryController(inventoryService_);
+        }
     }
     
 private:

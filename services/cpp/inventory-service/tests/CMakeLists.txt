@@ -18,6 +18,10 @@ endif()
 add_executable(inventory-service-tests
     InventoryTests.cpp
     InventoryRepositoryTests.cpp
+    InventoryServiceBusTests.cpp
+    RabbitMqIntegrationTests.cpp
+    AuthTests.cpp
+    RoutingTests.cpp
 )
 
 # Link libraries
@@ -32,6 +36,7 @@ target_link_libraries(inventory-service-tests
     pqxx
     nlohmann_json::nlohmann_json
     spdlog::spdlog
+    ${RABBITMQ_LIBRARY}
 )
 
 # Include directories
@@ -45,7 +50,11 @@ target_sources(inventory-service-tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/models/Inventory.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/Logger.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/Database.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/Config.cpp
     ${PROJECT_SOURCE_DIR}/src/repositories/InventoryRepository.cpp
+    ${PROJECT_SOURCE_DIR}/src/services/InventoryService.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/RabbitMqMessageBus.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/Auth.cpp
 )
 
 # Discover tests

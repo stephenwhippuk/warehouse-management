@@ -1,11 +1,14 @@
 #include "inventory/services/InventoryService.hpp"
+#include "inventory/utils/Logger.hpp"
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 
 namespace inventory {
 namespace services {
 
-InventoryService::InventoryService(std::shared_ptr<repositories::InventoryRepository> repository)
-    : repository_(repository) {}
+InventoryService::InventoryService(std::shared_ptr<repositories::InventoryRepository> repository,
+                                   std::shared_ptr<utils::MessageBus> messageBus)
+    : repository_(repository), messageBus_(std::move(messageBus)) {}
 
 std::optional<models::Inventory> InventoryService::getById(const std::string& id) {
     return repository_->findById(id);
@@ -42,7 +45,17 @@ models::Inventory InventoryService::create(const models::Inventory& inventory) {
     if (!isValidInventory(inventory)) {
         throw std::invalid_argument("Invalid inventory data");
     }
-    return repository_->create(inventory);
+    auto created = repository_->create(inventory);
+
+    if (messageBus_) {
+        try {
+            messageBus_->publish("created", created.toJson());
+        } catch (const std::exception& ex) {
+            utils::Logger::warn("Failed to publish inventory.created event: {}", ex.what());
+        }
+    }
+
+    return created;
 }
 
 models::Inventory InventoryService::update(const models::Inventory& inventory) {
@@ -54,8 +67,18 @@ models::Inventory InventoryService::update(const models::Inventory& inventory) {
     if (!existing) {
         throw std::runtime_error("Inventory not found: " + inventory.getId());
     }
-    
-    return repository_->update(inventory);
+
+    auto updated = repository_->update(inventory);
+
+    if (messageBus_) {
+        try {
+            messageBus_->publish("updated", updated.toJson());
+        } catch (const std::exception& ex) {
+            utils::Logger::warn("Failed to publish inventory.updated event: {}", ex.what());
+        }
+    }
+
+    return updated;
 }
 
 bool InventoryService::remove(const std::string& id) {
@@ -68,8 +91,22 @@ bool InventoryService::remove(const std::string& id) {
     if (existing->getReservedQuantity() > 0 || existing->getAllocatedQuantity() > 0) {
         throw std::runtime_error("Cannot delete inventory with reserved or allocated quantities");
     }
-    
-    return repository_->deleteById(id);
+
+    bool deleted = repository_->deleteById(id);
+
+    if (deleted && messageBus_) {
+        try {
+            nlohmann::json payload = {
+                {"id", id},
+                {"event", "deleted"}
+            };
+            messageBus_->publish("deleted", payload);
+        } catch (const std::exception& ex) {
+            utils::Logger::warn("Failed to publish inventory.deleted event: {}", ex.what());
+        }
+    }
+
+    return deleted;
 }
 
 void InventoryService::reserve(const std::string& id, int quantity) {
@@ -79,7 +116,18 @@ void InventoryService::reserve(const std::string& id, int quantity) {
     }
     
     inventory->reserve(quantity);
-    repository_->update(*inventory);
+    auto updated = repository_->update(*inventory);
+
+    if (messageBus_) {
+        try {
+            nlohmann::json payload = updated.toJson();
+            payload["action"] = "reserve";
+            payload["quantity"] = quantity;
+            messageBus_->publish("reserved", payload);
+        } catch (const std::exception& ex) {
+            utils::Logger::warn("Failed to publish inventory.reserved event: {}", ex.what());
+        }
+    }
 }
 
 void InventoryService::release(const std::string& id, int quantity) {
@@ -89,7 +137,18 @@ void InventoryService::release(const std::string& id, int quantity) {
     }
     
     inventory->release(quantity);
-    repository_->update(*inventory);
+    auto updated = repository_->update(*inventory);
+
+    if (messageBus_) {
+        try {
+            nlohmann::json payload = updated.toJson();
+            payload["action"] = "release";
+            payload["quantity"] = quantity;
+            messageBus_->publish("released", payload);
+        } catch (const std::exception& ex) {
+            utils::Logger::warn("Failed to publish inventory.released event: {}", ex.what());
+        }
+    }
 }
 
 void InventoryService::allocate(const std::string& id, int quantity) {
@@ -99,7 +158,18 @@ void InventoryService::allocate(const std::string& id, int quantity) {
     }
     
     inventory->allocate(quantity);
-    repository_->update(*inventory);
+    auto updated = repository_->update(*inventory);
+
+    if (messageBus_) {
+        try {
+            nlohmann::json payload = updated.toJson();
+            payload["action"] = "allocate";
+            payload["quantity"] = quantity;
+            messageBus_->publish("allocated", payload);
+        } catch (const std::exception& ex) {
+            utils::Logger::warn("Failed to publish inventory.allocated event: {}", ex.what());
+        }
+    }
 }
 
 void InventoryService::deallocate(const std::string& id, int quantity) {
@@ -109,7 +179,18 @@ void InventoryService::deallocate(const std::string& id, int quantity) {
     }
     
     inventory->deallocate(quantity);
-    repository_->update(*inventory);
+    auto updated = repository_->update(*inventory);
+
+    if (messageBus_) {
+        try {
+            nlohmann::json payload = updated.toJson();
+            payload["action"] = "deallocate";
+            payload["quantity"] = quantity;
+            messageBus_->publish("deallocated", payload);
+        } catch (const std::exception& ex) {
+            utils::Logger::warn("Failed to publish inventory.deallocated event: {}", ex.what());
+        }
+    }
 }
 
 void InventoryService::adjust(const std::string& id, int quantityChange, const std::string& reason) {
@@ -123,7 +204,19 @@ void InventoryService::adjust(const std::string& id, int quantityChange, const s
     }
     
     inventory->adjust(quantityChange, reason);
-    repository_->update(*inventory);
+    auto updated = repository_->update(*inventory);
+
+    if (messageBus_) {
+        try {
+            nlohmann::json payload = updated.toJson();
+            payload["action"] = "adjust";
+            payload["quantityChange"] = quantityChange;
+            payload["reason"] = reason;
+            messageBus_->publish("adjusted", payload);
+        } catch (const std::exception& ex) {
+            utils::Logger::warn("Failed to publish inventory.adjusted event: {}", ex.what());
+        }
+    }
 }
 
 bool InventoryService::isValidInventory(const models::Inventory& inventory) const {

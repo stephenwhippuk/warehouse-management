@@ -1,4 +1,5 @@
 #include "inventory/controllers/InventoryController.hpp"
+#include "inventory/utils/Auth.hpp"
 #include <Poco/URI.h>
 #include <Poco/StringTokenizer.h>
 #include <nlohmann/json.hpp>
@@ -14,6 +15,17 @@ InventoryController::InventoryController(std::shared_ptr<services::InventoryServ
 
 void InventoryController::handleRequest(Poco::Net::HTTPServerRequest& request,
                                        Poco::Net::HTTPServerResponse& response) {
+    // Service-to-service authentication
+    auto authStatus = utils::Auth::authorizeServiceRequest(request);
+    if (authStatus == utils::AuthStatus::MissingToken) {
+        sendErrorResponse(response, "Missing service authentication", Poco::Net::HTTPResponse::HTTP_UNAUTHORIZED);
+        return;
+    }
+    if (authStatus == utils::AuthStatus::InvalidToken) {
+        sendErrorResponse(response, "Invalid service authentication", Poco::Net::HTTPResponse::HTTP_FORBIDDEN);
+        return;
+    }
+
     std::string method = request.getMethod();
     Poco::URI uri(request.getURI());
     std::string path = uri.getPath();

@@ -5,8 +5,8 @@
 ```
 inventory-service/
 ├── CMakeLists.txt                   # Main CMake configuration
-├── Dockerfile                       # Docker image build
-├── docker-compose.yml              # Docker compose with PostgreSQL/Redis
+├── Dockerfile                       # Docker image build (service + tests)
+├── docker-compose.yml              # Docker compose with PostgreSQL/Redis/RabbitMQ for app + tests
 ├── README.md                       # Comprehensive documentation
 ├── .gitignore                      # Git ignore rules
 │
@@ -28,13 +28,15 @@ inventory-service/
 │   │   └── InventoryRepository.hpp # Inventory database operations
 │   │
 │   ├── services/                  # Business logic layer
-│   │   └── InventoryService.hpp   # Inventory business logic
+│   │   └── InventoryService.hpp   # Inventory business logic + event publishing
 │   │
 │   └── utils/                     # Utility classes
 │       ├── Database.hpp           # PostgreSQL connection
 │       ├── Logger.hpp             # Logging wrapper (spdlog)
 │       ├── Config.hpp             # Configuration management
-│       └── JsonValidator.hpp      # JSON Schema validation
+│       ├── JsonValidator.hpp      # JSON Schema validation
+│       ├── MessageBus.hpp         # Abstract message bus interface
+│       └── RabbitMqMessageBus.hpp # RabbitMQ implementation (rabbitmq-c)
 │
 ├── src/                           # Implementation files
 │   ├── main.cpp                   # Entry point
@@ -52,18 +54,22 @@ inventory-service/
 │   │   └── InventoryRepository.cpp # Inventory repository (stub)
 │   │
 │   ├── services/
-│   │   └── InventoryService.cpp   # Inventory service (complete)
+│   │   └── InventoryService.cpp   # Inventory service (complete, publishes events)
 │   │
 │   └── utils/
 │       ├── Database.cpp           # Database implementation (partial)
 │       ├── Logger.cpp             # Logger implementation (complete)
 │       ├── Config.cpp             # Config implementation (complete)
-│       └── JsonValidator.cpp      # Validator implementation (partial)
+│       ├── JsonValidator.cpp      # Validator implementation (partial)
+│       └── RabbitMqMessageBus.cpp # RabbitMQ-backed MessageBus implementation
 │
 ├── tests/                         # Test files
 │   ├── CMakeLists.txt            # Test configuration
 │   ├── test_main.cpp             # Catch2 main entry point
-│   └── InventoryTests.cpp        # Inventory model tests
+│   ├── InventoryTests.cpp        # Inventory model tests
+│   ├── InventoryRepositoryTests.cpp # Repository + DB integration tests
+│   ├── InventoryServiceBusTests.cpp # Service wiring with MessageBus stub
+│   └── RabbitMqIntegrationTests.cpp # Real RabbitMQ publish integration test
 │
 └── migrations/                    # Database migrations
     └── 001_init.sql              # Initial schema with triggers

@@ -2,6 +2,7 @@
 
 #include "inventory/models/Inventory.hpp"
 #include "inventory/repositories/InventoryRepository.hpp"
+#include "inventory/utils/MessageBus.hpp"
 #include <memory>
 #include <vector>
 #include <string>
@@ -12,7 +13,8 @@ namespace services {
 
 class InventoryService {
 public:
-    explicit InventoryService(std::shared_ptr<repositories::InventoryRepository> repository);
+    explicit InventoryService(std::shared_ptr<repositories::InventoryRepository> repository,
+                             std::shared_ptr<utils::MessageBus> messageBus);
     
     // Inventory operations
     std::optional<models::Inventory> getById(const std::string& id);
@@ -43,6 +45,7 @@ public:
     
 private:
     std::shared_ptr<repositories::InventoryRepository> repository_;
+    std::shared_ptr<utils::MessageBus> messageBus_;
     
     void validateQuantities(int quantity, int available, int reserved, int allocated) const;
 };

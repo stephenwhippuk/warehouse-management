@@ -3,6 +3,7 @@
 #include "inventory/controllers/InventoryController.hpp"
 #include "inventory/services/InventoryService.hpp"
 #include "inventory/repositories/InventoryRepository.hpp"
+#include "inventory/utils/MessageBus.hpp"
 #include <memory>
 #include <string>
 
@@ -26,11 +27,13 @@ private:
     // Services
     std::shared_ptr<repositories::InventoryRepository> inventoryRepository_;
     std::shared_ptr<services::InventoryService> inventoryService_;
+    std::shared_ptr<utils::MessageBus> messageBus_;
     
     // Configuration
     std::string dbConnectionString_;
     int serverPort_;
     std::string logLevel_;
+    utils::MessageBus::Config messageBusConfig_;
     
     bool initialized_;
 };

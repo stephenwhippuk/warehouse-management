@@ -139,6 +139,29 @@ Services:
 - **PostgreSQL**: `localhost:5433`
 - **Redis**: `localhost:6380`
 
+### Running Integration Tests with Docker
+
+The inventory-service includes integration tests that exercise:
+- Repository operations against a real PostgreSQL database
+- Message bus publishing against a real RabbitMQ broker
+
+Use the service-specific docker-compose to run the full test stack:
+
+```bash
+cd services/cpp/inventory-service
+docker-compose up --build inventory-tests
+```
+
+This will start:
+- `postgres` (inventory test database)
+- `redis` (for future caching features)
+- `rabbitmq` (service bus for message bus integration tests)
+- `inventory-tests` container, which builds and runs `./inventory-service-tests`
+
+RabbitMQ and DB connection details for tests are configured via environment variables in
+`docker-compose.yml` (e.g. `INVENTORY_TEST_DATABASE_URL`, `INVENTORY_RABBITMQ_INTEGRATION`,
+`RABBITMQ_HOST`, `RABBITMQ_USER`, etc.).
+
 ## Configuration
 
 ### Environment Variables
@@ -149,11 +172,29 @@ SERVER_PORT=8080
 LOG_LEVEL=info
 REDIS_URL=redis://localhost:6379
 LOW_STOCK_THRESHOLD=10
+SERVICE_API_KEY=your_internal_service_key   # Optional: enables service-to-service auth
 ```
 
 ### Configuration File
 
 See `config/application.json` for full configuration options.
+
+Authentication settings:
+
+```json
+"auth": {
+  "serviceApiKey": "your_internal_service_key"
+}
+```
+
+When `SERVICE_API_KEY` (env) or `auth.serviceApiKey` (config) is set, the
+inventory-service enforces service-to-service authentication:
+
+- Requests must include either:
+  - `X-Service-Api-Key: <key>`
+  - `Authorization: ApiKey <key>`
+- Missing credentials → `401 Unauthorized`
+- Invalid credentials → `403 Forbidden`
 
 ## Database Schema
 
