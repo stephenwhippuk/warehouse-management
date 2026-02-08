@@ -55,6 +55,17 @@ POST   /api/v1/inventory/:id/deallocate     - Deallocate from shipment
 POST   /api/v1/inventory/:id/adjust         - Adjust quantity (cycle count)
 ```
 
+### Health & Diagnostics
+
+```
+GET    /health                              - Service health and auth metrics
+```
+
+The health endpoint returns a simple JSON payload including:
+- Overall service status (e.g. `"ok"`)
+- Service name
+- In-memory counters for auth outcomes (authorized, missingToken, invalidToken)
+
 ### API Documentation
 
 ```
@@ -144,6 +155,7 @@ Services:
 The inventory-service includes integration tests that exercise:
 - Repository operations against a real PostgreSQL database
 - Message bus publishing against a real RabbitMQ broker
+ - Full HTTP API behaviour against a running inventory-service instance
 
 Use the service-specific docker-compose to run the full test stack:
 
@@ -156,11 +168,23 @@ This will start:
 - `postgres` (inventory test database)
 - `redis` (for future caching features)
 - `rabbitmq` (service bus for message bus integration tests)
-- `inventory-tests` container, which builds and runs `./inventory-service-tests`
+- `inventory-tests` container, which:
+  - builds and runs `./inventory-service-tests`
+  - starts `./inventory-service` in the same container when `INVENTORY_HTTP_INTEGRATION=1`
+  - runs HTTP integration tests against `http://localhost:8080`
 
 RabbitMQ and DB connection details for tests are configured via environment variables in
 `docker-compose.yml` (e.g. `INVENTORY_TEST_DATABASE_URL`, `INVENTORY_RABBITMQ_INTEGRATION`,
-`RABBITMQ_HOST`, `RABBITMQ_USER`, etc.).
+`RABBITMQ_HOST`, `RABBITMQ_USER`, etc.). HTTP integration tests are enabled via:
+
+- `INVENTORY_HTTP_INTEGRATION=1`
+- `INVENTORY_HTTP_HOST=localhost`
+- `INVENTORY_HTTP_PORT=8080`
+
+When these variables are set, the test binary will:
+- use a short retry loop when calling `/health` and `/api/swagger.json`
+- send `X-Service-Api-Key` using the `SERVICE_API_KEY` environment variable
+- exercise create/read/filter/stock operation/delete flows end-to-end over HTTP
 
 ## Configuration
 
@@ -195,6 +219,9 @@ inventory-service enforces service-to-service authentication:
   - `Authorization: ApiKey <key>`
 - Missing credentials → `401 Unauthorized`
 - Invalid credentials → `403 Forbidden`
+
+The `/health` and `/api/swagger.json` endpoints are intentionally left
+unauthenticated to support monitoring and API discovery.
 
 ## Database Schema
 
@@ -279,11 +306,10 @@ Validates against `/contracts/schemas/v1/inventory.schema.json`:
 curl http://localhost:8080/health
 ```
 
-### Metrics
+### Metrics (Planned)
 
-```bash
-curl http://localhost:8080/metrics
-```
+A dedicated metrics endpoint (for example, Prometheus-style `/metrics`) is planned but
+not yet implemented.
 
 ## Development Status
 
@@ -299,11 +325,11 @@ curl http://localhost:8080/metrics
 
 ### 🚧 TODO
 
-- Database query implementation in repositories
-- HTTP routing logic in controllers
-- JSON Schema validation
-- Metrics and health endpoints
-- Integration tests
+- JSON Schema validation wired to request handling
+- Metrics endpoint exposing existing in-memory counters
+- Expand HTTP integration tests into full HTTP API coverage ✅ (implemented in `tests/HttpIntegrationTests.cpp`)
+- Concurrent operation tests
+- Database connection pooling
 - Authentication/authorization
 
 ## Database Migrations
@@ -344,7 +370,11 @@ cd build
 make inventory-service-tests
 ./bin/inventory-service-tests
 
-# Run specific test
+# Run HTTP integration tests (service must be running and reachable)
+INVENTORY_HTTP_INTEGRATION=1 \
+INVENTORY_HTTP_HOST=localhost \
+INVENTORY_HTTP_PORT=8080 \
+ctest -R http --output-on-failure
 ./bin/inventory-service-tests "[inventory][operations]"
 ```
 

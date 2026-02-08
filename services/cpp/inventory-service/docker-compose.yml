@@ -17,11 +17,14 @@ services:
       - DATABASE_PASSWORD=inventory_pass
       - LOG_LEVEL=info
       - REDIS_URL=redis://redis:6379
+      - SERVICE_API_KEY=warehouse_test_key
     depends_on:
       - postgres
       - redis
     networks:
-      - inventory-network
+      inventory-network:
+        aliases:
+          - inventory-http
     restart: unless-stopped
 
   inventory-tests:
@@ -35,6 +38,7 @@ services:
       - DATABASE_NAME=inventory_db
       - DATABASE_USER=inventory_user
       - DATABASE_PASSWORD=inventory_pass
+      - DATABASE_URL=postgresql://inventory_user:inventory_pass@postgres:5432/inventory_db
       - INVENTORY_TEST_DATABASE_URL=postgresql://inventory_user:inventory_pass@postgres:5432/inventory_db
       - INVENTORY_SEED_SQL=/app/seed/inventory_seed.sql
       - INVENTORY_RABBITMQ_INTEGRATION=1
@@ -44,6 +48,10 @@ services:
       - RABBITMQ_PASSWORD=warehouse_dev
       - RABBITMQ_VHOST=/
       - RABBITMQ_EXCHANGE=warehouse.events
+      - SERVICE_API_KEY=warehouse_test_key
+      - INVENTORY_HTTP_INTEGRATION=1
+      - INVENTORY_HTTP_HOST=localhost
+      - INVENTORY_HTTP_PORT=8080
     depends_on:
       postgres:
         condition: service_healthy

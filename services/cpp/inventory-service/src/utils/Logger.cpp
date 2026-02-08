@@ -7,7 +7,18 @@ namespace utils {
 std::shared_ptr<spdlog::logger> Logger::logger_ = nullptr;
 
 void Logger::init(const std::string& logLevel) {
-    logger_ = spdlog::stdout_color_mt("inventory_service");
+    if (!logger_) {
+        // Reuse existing logger instance if it was already created in this process,
+        // otherwise create a new one. This avoids duplicate logger name errors when
+        // init() is called multiple times (e.g., during configuration loading and
+        // later explicit initialization).
+        auto existing = spdlog::get("inventory_service");
+        if (existing) {
+            logger_ = existing;
+        } else {
+            logger_ = spdlog::stdout_color_mt("inventory_service");
+        }
+    }
     
     // Set log level
     if (logLevel == "trace") logger_->set_level(spdlog::level::trace);

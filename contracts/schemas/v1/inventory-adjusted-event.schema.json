@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/inventory-adjusted-event.schema.json",
+  "title": "InventoryAdjustedEvent",
+  "description": "Event payload for inventory.adjusted messages. Contains updated inventory state after an adjustment.",
+  "type": "object",
+  "required": [
+    "id",
+    "productId",
+    "warehouseId",
+    "locationId",
+    "quantity",
+    "availableQuantity",
+    "reservedQuantity",
+    "allocatedQuantity",
+    "action",
+    "quantityChange",
+    "reason"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Inventory record identifier"
+    },
+    "productId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Product identifier"
+    },
+    "warehouseId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Warehouse identifier"
+    },
+    "locationId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Storage location identifier"
+    },
+    "quantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "New total on-hand quantity after adjustment"
+    },
+    "availableQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "New available quantity after adjustment"
+    },
+    "reservedQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "New reserved quantity after adjustment"
+    },
+    "allocatedQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "New allocated quantity after adjustment"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["adjust"],
+      "description": "Inventory action that produced the event"
+    },
+    "quantityChange": {
+      "type": "integer",
+      "description": "Signed quantity delta applied in this adjustment (positive to increase, negative to decrease)",
+      "not": { "const": 0 }
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000,
+      "description": "Human-readable reason for the adjustment"
+    }
+  },
+  "additionalProperties": true
+}

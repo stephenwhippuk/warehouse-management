@@ -24,60 +24,41 @@ This document tracks the implementation status of stub/partial implementations i
   - ✅ CRUD operations with validation
   - ✅ Stock operations (reserve, release, allocate, deallocate, adjust)
   - ✅ Query methods
-  - ❌ Repositories return stubs, need database implementation
+    - ✅ Uses PostgreSQL-backed repositories with real database implementation
 
 ### Controllers
-- [x] `InventoryController.cpp` - Structure complete, routing TODO
-  - ✅ Method signatures defined
-  - ✅ Error handling structure
-  - ❌ Request parsing not implemented
-  - ❌ Route matching not implemented
-  - ❌ Query parameter extraction not implemented
+- [x] `InventoryController.cpp` - Structure, routing, and handlers complete
+    - ✅ Method signatures defined
+    - ✅ Error handling structure
+    - ✅ Request parsing implemented
+    - ✅ Route matching implemented
+    - ✅ Query parameter extraction implemented
 
 ### Repositories
-- [ ] `InventoryRepository.cpp` - All methods stubbed
-  - ❌ `findById()` - Returns nullopt
-  - ❌ `findAll()` - Returns empty vector
-  - ❌ `findByProductId()` - Returns empty vector
-  - ❌ `findByWarehouseId()` - Returns empty vector
-  - ❌ `findByLocationId()` - Returns empty vector
-  - ❌ `findLowStock()` - Returns empty vector
-  - ❌ `findExpired()` - Returns empty vector
-  - ❌ `findByProductAndLocation()` - Returns nullopt
-  - ❌ `create()` - Returns input unchanged
-  - ❌ `update()` - Returns input unchanged
-  - ❌ `deleteById()` - Returns false
-  - ❌ `getTotalQuantityByProduct()` - Returns 0
-  - ❌ `getAvailableQuantityByProduct()` - Returns 0
+- [x] `InventoryRepository.cpp` - CRUD, query, and aggregate methods implemented
+    - ✅ `findById()`, `findAll()`, filter, and aggregate queries use PostgreSQL (libpqxx)
+    - ✅ Database-backed tests cover create/update/delete and aggregate behaviour
 
 ## 📝 Implementation Priorities
 
+Core repository, controller, and stock operation work has been implemented and is covered by
+unit and DB-backed tests. Remaining items focus on validation, metrics, pooling, and
+higher-level integration tests.
+
 ### High Priority (Core Functionality)
-1. **InventoryRepository queries**
-   - Implement SELECT queries (findById, findAll, findByProduct, etc.)
-   - Implement INSERT (create)
-   - Implement UPDATE (update)
-   - Implement DELETE (deleteById)
-   - Implement aggregate queries
+- [x] **InventoryRepository queries** – SELECT/INSERT/UPDATE/DELETE and aggregate queries
+    implemented against PostgreSQL with tests
+- [x] **InventoryController routing** – URI parsing, request body parsing, handlers, and
+    query parameters wired to `InventoryService`
+- [x] **Stock operation endpoints** – Reserve/release/allocate/deallocate/adjust endpoints
+    parse request bodies and invoke service operations
 
-2. **InventoryController routing**
-   - Parse URI paths and extract parameters
-   - Parse request body JSON
-   - Route to appropriate handler methods
-   - Handle query parameters
-
-### Medium Priority (Operations)
-3. **Stock operation endpoints**
-   - Reserve/release quantity parsing
-   - Allocate/deallocate quantity parsing
-   - Adjustment reason extraction
-
-### Low Priority (Nice to Have)
-4. **Connection pooling** in Database utility
-5. **JSON Schema validation** implementation
-6. **Health check** endpoint
-7. **Metrics** endpoint
-8. **Integration tests**
+### Remaining (Hardening & Ops)
+- [ ] **Connection pooling** in Database utility
+- [ ] **JSON Schema validation** implementation (see `JsonValidator`)
+- [ ] **Metrics** endpoint (e.g. Prometheus-style `/metrics`)
+- [ ] **Full API endpoint integration tests** (HTTP-level)
+- [ ] **Concurrent operation tests**
 
 ## Sample Implementation TODOs
 
@@ -140,12 +121,13 @@ void InventoryController::handleRequest(Request& req, Response& res) {
 - [x] Model serialization tests
 - [x] Business operation tests
 - [x] Enum conversion tests
-- [ ] Repository tests (need mocking)
-- [ ] Service tests (need mocking)
+- [x] Repository tests (DB-backed against PostgreSQL)
+- [x] Service tests (including MessageBus publishing with fake bus)
 
 ### Integration Tests
-- [ ] Full API endpoint tests
-- [ ] Database integration tests
+- [ ] Full API endpoint tests (HTTP server; basic health/Swagger/inventory list
+    HTTP tests exist and should be expanded)
+- [x] Database integration tests (repository + service using real PostgreSQL)
 - [ ] Concurrent operation tests
 
 ## Notes
@@ -153,4 +135,5 @@ void InventoryController::handleRequest(Request& req, Response& res) {
 - All stub methods are marked with `// TODO: Implement` comments
 - Database schema is complete and tested
 - Build system is fully configured
-- Service compiles and runs (returns stub responses)
+- Service compiles and runs with real database-backed repository, controllers, and
+    message bus integration tests

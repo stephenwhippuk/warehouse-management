@@ -1,5 +1,6 @@
 #include "inventory/controllers/InventoryController.hpp"
 #include "inventory/utils/Auth.hpp"
+#include "inventory/models/Inventory.hpp"
 #include <Poco/URI.h>
 #include <Poco/StringTokenizer.h>
 #include <nlohmann/json.hpp>
@@ -41,6 +42,12 @@ void InventoryController::handleRequest(Poco::Net::HTTPServerRequest& request,
 
         // Expect paths starting with /api/v1/inventory
         if (segments.size() >= 3 && segments[0] == "api" && segments[1] == "v1" && segments[2] == "inventory") {
+            // POST /api/v1/inventory
+            if (method == "POST" && segments.size() == 3) {
+                handleCreate(request, response);
+                return;
+            }
+
             // GET /api/v1/inventory
             if (method == "GET" && segments.size() == 3) {
                 handleGetAll(response);
@@ -87,6 +94,48 @@ void InventoryController::handleRequest(Poco::Net::HTTPServerRequest& request,
             // GET /api/v1/inventory/:id
             if (method == "GET" && segments.size() == 4) {
                 handleGetById(segments[3], response);
+                return;
+            }
+
+            // PUT /api/v1/inventory/:id
+            if (method == "PUT" && segments.size() == 4) {
+                handleUpdate(segments[3], request, response);
+                return;
+            }
+
+            // DELETE /api/v1/inventory/:id
+            if (method == "DELETE" && segments.size() == 4) {
+                handleDelete(segments[3], response);
+                return;
+            }
+
+            // POST /api/v1/inventory/:id/reserve
+            if (method == "POST" && segments.size() == 5 && segments[4] == "reserve") {
+                handleReserve(segments[3], request, response);
+                return;
+            }
+
+            // POST /api/v1/inventory/:id/release
+            if (method == "POST" && segments.size() == 5 && segments[4] == "release") {
+                handleRelease(segments[3], request, response);
+                return;
+            }
+
+            // POST /api/v1/inventory/:id/allocate
+            if (method == "POST" && segments.size() == 5 && segments[4] == "allocate") {
+                handleAllocate(segments[3], request, response);
+                return;
+            }
+
+            // POST /api/v1/inventory/:id/deallocate
+            if (method == "POST" && segments.size() == 5 && segments[4] == "deallocate") {
+                handleDeallocate(segments[3], request, response);
+                return;
+            }
+
+            // POST /api/v1/inventory/:id/adjust
+            if (method == "POST" && segments.size() == 5 && segments[4] == "adjust") {
+                handleAdjust(segments[3], request, response);
                 return;
             }
 
@@ -164,62 +213,279 @@ void InventoryController::handleGetExpired(Poco::Net::HTTPServerResponse& respon
 
 void InventoryController::handleCreate(Poco::Net::HTTPServerRequest& request, 
                                       Poco::Net::HTTPServerResponse& response) {
-    // TODO: Parse request body
-    // auto inventory = models::Inventory::fromJson(json::parse(request.stream()));
-    // auto created = service_->create(inventory);
-    // sendJsonResponse(response, created.toJson().dump(), Poco::Net::HTTPResponse::HTTP_CREATED);
+    try {
+        std::istream& bodyStream = request.stream();
+        json body;
+        bodyStream >> body;
+
+        auto inventory = models::Inventory::fromJson(body);
+        auto created = service_->create(inventory);
+
+        sendJsonResponse(
+            response,
+            created.toJson().dump(),
+            Poco::Net::HTTPResponse::HTTP_CREATED
+        );
+    } catch (const json::exception& e) {
+        sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
+                          Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::invalid_argument& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+    }
 }
 
 void InventoryController::handleUpdate(const std::string& id, 
                                       Poco::Net::HTTPServerRequest& request,
                                       Poco::Net::HTTPServerResponse& response) {
-    // TODO: Parse request body and update
+    try {
+        std::istream& bodyStream = request.stream();
+        json body;
+        bodyStream >> body;
+
+        auto inventory = models::Inventory::fromJson(body);
+        if (inventory.getId() != id) {
+            sendErrorResponse(response,
+                              "ID in path does not match ID in body",
+                              Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        auto updated = service_->update(inventory);
+        sendJsonResponse(response, updated.toJson().dump(), Poco::Net::HTTPResponse::HTTP_OK);
+    } catch (const json::exception& e) {
+        sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
+                          Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::invalid_argument& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::runtime_error& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+    }
 }
 
 void InventoryController::handleDelete(const std::string& id, Poco::Net::HTTPServerResponse& response) {
-    bool deleted = service_->remove(id);
-    if (deleted) {
-        sendJsonResponse(response, R"({"message": "Inventory deleted"})", 
-                        Poco::Net::HTTPResponse::HTTP_NO_CONTENT);
-    } else {
-        sendErrorResponse(response, "Failed to delete inventory", 
-                         Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+    try {
+        bool deleted = service_->remove(id);
+        if (deleted) {
+            response.setStatus(Poco::Net::HTTPResponse::HTTP_NO_CONTENT);
+            response.setContentLength(0);
+            response.send();
+        } else {
+            sendErrorResponse(response,
+                              "Failed to delete inventory",
+                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    } catch (const std::runtime_error& e) {
+        // Distinguish not found from other business rule violations
+        std::string message = e.what();
+        if (message.rfind("Inventory not found", 0) == 0) {
+            sendErrorResponse(response, message, Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
+        } else {
+            sendErrorResponse(response, message, Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+        }
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
 
 void InventoryController::handleReserve(const std::string& id,
                                        Poco::Net::HTTPServerRequest& request,
                                        Poco::Net::HTTPServerResponse& response) {
-    // TODO: Parse quantity from request body
-    // service_->reserve(id, quantity);
+    try {
+        std::istream& bodyStream = request.stream();
+        json body;
+        bodyStream >> body;
+
+        if (!body.contains("quantity") || !body["quantity"].is_number_integer()) {
+            sendErrorResponse(response, "Missing or invalid 'quantity' field",
+                              Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        int quantity = body["quantity"].get<int>();
+        service_->reserve(id, quantity);
+
+        auto updated = service_->getById(id);
+        if (!updated) {
+            sendErrorResponse(response, "Inventory not found after reserve",
+                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return;
+        }
+
+        sendJsonResponse(response, updated->toJson().dump(),
+                         Poco::Net::HTTPResponse::HTTP_OK);
+    } catch (const json::exception& e) {
+        sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
+                          Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::invalid_argument& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::runtime_error& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+    }
 }
 
 void InventoryController::handleRelease(const std::string& id,
                                        Poco::Net::HTTPServerRequest& request,
                                        Poco::Net::HTTPServerResponse& response) {
-    // TODO: Parse quantity from request body
-    // service_->release(id, quantity);
+    try {
+        std::istream& bodyStream = request.stream();
+        json body;
+        bodyStream >> body;
+
+        if (!body.contains("quantity") || !body["quantity"].is_number_integer()) {
+            sendErrorResponse(response, "Missing or invalid 'quantity' field",
+                              Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        int quantity = body["quantity"].get<int>();
+        service_->release(id, quantity);
+
+        auto updated = service_->getById(id);
+        if (!updated) {
+            sendErrorResponse(response, "Inventory not found after release",
+                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return;
+        }
+
+        sendJsonResponse(response, updated->toJson().dump(),
+                         Poco::Net::HTTPResponse::HTTP_OK);
+    } catch (const json::exception& e) {
+        sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
+                          Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::invalid_argument& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::runtime_error& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+    }
 }
 
 void InventoryController::handleAllocate(const std::string& id,
                                         Poco::Net::HTTPServerRequest& request,
                                         Poco::Net::HTTPServerResponse& response) {
-    // TODO: Parse quantity from request body
-    // service_->allocate(id, quantity);
+    try {
+        std::istream& bodyStream = request.stream();
+        json body;
+        bodyStream >> body;
+
+        if (!body.contains("quantity") || !body["quantity"].is_number_integer()) {
+            sendErrorResponse(response, "Missing or invalid 'quantity' field",
+                              Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        int quantity = body["quantity"].get<int>();
+        service_->allocate(id, quantity);
+
+        auto updated = service_->getById(id);
+        if (!updated) {
+            sendErrorResponse(response, "Inventory not found after allocate",
+                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return;
+        }
+
+        sendJsonResponse(response, updated->toJson().dump(),
+                         Poco::Net::HTTPResponse::HTTP_OK);
+    } catch (const json::exception& e) {
+        sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
+                          Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::invalid_argument& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::runtime_error& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+    }
 }
 
 void InventoryController::handleDeallocate(const std::string& id,
                                           Poco::Net::HTTPServerRequest& request,
                                           Poco::Net::HTTPServerResponse& response) {
-    // TODO: Parse quantity from request body
-    // service_->deallocate(id, quantity);
+    try {
+        std::istream& bodyStream = request.stream();
+        json body;
+        bodyStream >> body;
+
+        if (!body.contains("quantity") || !body["quantity"].is_number_integer()) {
+            sendErrorResponse(response, "Missing or invalid 'quantity' field",
+                              Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        int quantity = body["quantity"].get<int>();
+        service_->deallocate(id, quantity);
+
+        auto updated = service_->getById(id);
+        if (!updated) {
+            sendErrorResponse(response, "Inventory not found after deallocate",
+                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return;
+        }
+
+        sendJsonResponse(response, updated->toJson().dump(),
+                         Poco::Net::HTTPResponse::HTTP_OK);
+    } catch (const json::exception& e) {
+        sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
+                          Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::invalid_argument& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::runtime_error& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+    }
 }
 
 void InventoryController::handleAdjust(const std::string& id,
                                       Poco::Net::HTTPServerRequest& request,
                                       Poco::Net::HTTPServerResponse& response) {
-    // TODO: Parse quantityChange and reason from request body
-    // service_->adjust(id, quantityChange, reason);
+    try {
+        std::istream& bodyStream = request.stream();
+        json body;
+        bodyStream >> body;
+
+        if (!body.contains("quantityChange") || !body["quantityChange"].is_number_integer()) {
+            sendErrorResponse(response, "Missing or invalid 'quantityChange' field",
+                              Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            return;
+        }
+        if (!body.contains("reason") || !body["reason"].is_string()) {
+            sendErrorResponse(response, "Missing or invalid 'reason' field",
+                              Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        int quantityChange = body["quantityChange"].get<int>();
+        std::string reason = body["reason"].get<std::string>();
+
+        service_->adjust(id, quantityChange, reason);
+
+        auto updated = service_->getById(id);
+        if (!updated) {
+            sendErrorResponse(response, "Inventory not found after adjust",
+                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return;
+        }
+
+        sendJsonResponse(response, updated->toJson().dump(),
+                         Poco::Net::HTTPResponse::HTTP_OK);
+    } catch (const json::exception& e) {
+        sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
+                          Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::invalid_argument& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::runtime_error& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+    }
 }
 
 void InventoryController::sendJsonResponse(Poco::Net::HTTPServerResponse& response,

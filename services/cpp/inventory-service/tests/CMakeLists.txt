@@ -22,6 +22,7 @@ add_executable(inventory-service-tests
     RabbitMqIntegrationTests.cpp
     AuthTests.cpp
     RoutingTests.cpp
+    HttpIntegrationTests.cpp
 )
 
 # Link libraries

@@ -58,13 +58,21 @@ void SwaggerController::addSchemas(json& spec) {
             {"allocatedQuantity", {{"type", "integer"}, {"minimum", 0}, {"description", "Allocated quantity"}}},
             {"batchNumber", {{"type", "string"}, {"description", "Batch or lot number"}}},
             {"serialNumber", {{"type", "string"}, {"description", "Serial number for serialized items"}}},
-            {"expiryDate", {{"type", "string"}, {"format", "date-time"}, {"description", "Expiration date"}}},
+            {"expirationDate", {{"type", "string"}, {"format", "date"}, {"description", "Expiration date"}}},
+            {"manufactureDate", {{"type", "string"}, {"format", "date"}, {"description", "Manufacture date"}}},
             {"receivedDate", {{"type", "string"}, {"format", "date-time"}, {"description", "Date received"}}},
-            {"lastCountDate", {{"type", "string"}, {"format", "date-time"}, {"description", "Last physical count date"}}},
-            {"status", {{"type", "string"}, {"enum", json::array({"available", "reserved", "allocated", "damaged", "expired", "quarantine"})}, {"description", "Inventory status"}}},
+            {"lastCountedDate", {{"type", "string"}, {"format", "date-time"}, {"description", "Last physical count date"}}},
+            {"lastCountedBy", {{"type", "string"}, {"description", "User who performed last count"}}},
+            {"status", {{"type", "string"}, {"enum", json::array({"available", "reserved", "allocated", "damaged", "expired", "quarantine", "recalled"})}, {"description", "Inventory status"}}},
+            {"qualityStatus", {{"type", "string"}, {"enum", json::array({"passed", "failed", "pending", "not_tested"})}, {"description", "Quality control status"}}},
+            {"notes", {{"type", "string"}, {"description", "Additional notes"}}},
             {"metadata", {{"type", "object"}, {"description", "Additional custom metadata"}}},
-            {"createdAt", {{"type", "string"}, {"format", "date-time"}}},
-            {"updatedAt", {{"type", "string"}, {"format", "date-time"}}}
+            {"audit", {{"type", "object"}, {"description", "Audit information"}, {"properties", {
+                {"createdAt", {{"type", "string"}, {"format", "date-time"}}},
+                {"updatedAt", {{"type", "string"}, {"format", "date-time"}}},
+                {"createdBy", {{"type", "string"}}},
+                {"updatedBy", {{"type", "string"}}}
+            }}}}
         }},
         {"example", {
             {"id", "123e4567-e89b-12d3-a456-426614174000"},
@@ -78,9 +86,19 @@ void SwaggerController::addSchemas(json& spec) {
             {"batchNumber", "BATCH-2026-001"},
             {"status", "available"},
             {"receivedDate", "2026-02-01T10:00:00Z"},
-            {"createdAt", "2026-02-01T10:00:00Z"},
-            {"updatedAt", "2026-02-07T15:30:00Z"}
+            {"audit", {
+                {"createdAt", "2026-02-01T10:00:00Z"},
+                {"updatedAt", "2026-02-07T15:30:00Z"},
+                {"createdBy", "system"},
+                {"updatedBy", "system"}
+            }}
         }}
+    });
+
+    // List of inventory records
+    utils::SwaggerGenerator::addSchema(spec, "InventoryList", {
+        {"type", "array"},
+        {"items", {{"$ref", "#/components/schemas/Inventory"}}}
     });
 
     // Inventory adjustment request schema
@@ -128,7 +146,7 @@ void SwaggerController::addEndpoints(json& spec) {
         }),
         json(nullptr),
         {
-            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/Inventory")},
+            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/InventoryList")},
             {"500", {{"$ref", "#/components/responses/InternalError"}}}
         },
         {"Inventory"}
@@ -279,6 +297,140 @@ void SwaggerController::addEndpoints(json& spec) {
             {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/Inventory")},
             {"400", {{"$ref", "#/components/responses/BadRequest"}}},
             {"404", {{"$ref", "#/components/responses/NotFound"}}},
+            {"500", {{"$ref", "#/components/responses/InternalError"}}}
+        },
+        {"Inventory"}
+    );
+
+    // POST /api/v1/inventory/{id}/allocate
+    utils::SwaggerGenerator::addEndpoint(
+        spec,
+        "/api/v1/inventory/{id}/allocate",
+        "post",
+        "Allocate inventory",
+        "Allocate reserved inventory to a pick or shipment",
+        json::array({
+            utils::SwaggerGenerator::createPathParameter("id", "Inventory ID")
+        }),
+        utils::SwaggerGenerator::createRequestBody(
+            "#/components/schemas/ReserveRequest",
+            "Allocate quantity"
+        ),
+        {
+            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/Inventory")},
+            {"400", {{"$ref", "#/components/responses/BadRequest"}}},
+            {"404", {{"$ref", "#/components/responses/NotFound"}}},
+            {"500", {{"$ref", "#/components/responses/InternalError"}}}
+        },
+        {"Inventory"}
+    );
+
+    // POST /api/v1/inventory/{id}/deallocate
+    utils::SwaggerGenerator::addEndpoint(
+        spec,
+        "/api/v1/inventory/{id}/deallocate",
+        "post",
+        "Deallocate inventory",
+        "Move allocated quantity back to available",
+        json::array({
+            utils::SwaggerGenerator::createPathParameter("id", "Inventory ID")
+        }),
+        utils::SwaggerGenerator::createRequestBody(
+            "#/components/schemas/ReserveRequest",
+            "Deallocate quantity"
+        ),
+        {
+            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/Inventory")},
+            {"400", {{"$ref", "#/components/responses/BadRequest"}}},
+            {"404", {{"$ref", "#/components/responses/NotFound"}}},
+            {"500", {{"$ref", "#/components/responses/InternalError"}}}
+        },
+        {"Inventory"}
+    );
+
+    // GET /api/v1/inventory/low-stock
+    utils::SwaggerGenerator::addEndpoint(
+        spec,
+        "/api/v1/inventory/low-stock",
+        "get",
+        "List low stock inventory",
+        "Retrieve inventory records with available quantity below a threshold",
+        json::array({
+            utils::SwaggerGenerator::createQueryParameter("threshold", "Low stock threshold", "integer", false)
+        }),
+        json(nullptr),
+        {
+            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/InventoryList")},
+            {"500", {{"$ref", "#/components/responses/InternalError"}}}
+        },
+        {"Inventory"}
+    );
+
+    // GET /api/v1/inventory/expired
+    utils::SwaggerGenerator::addEndpoint(
+        spec,
+        "/api/v1/inventory/expired",
+        "get",
+        "List expired inventory",
+        "Retrieve inventory records that are past their expiration date",
+        json(nullptr),
+        json(nullptr),
+        {
+            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/InventoryList")},
+            {"500", {{"$ref", "#/components/responses/InternalError"}}}
+        },
+        {"Inventory"}
+    );
+
+    // GET /api/v1/inventory/product/{productId}
+    utils::SwaggerGenerator::addEndpoint(
+        spec,
+        "/api/v1/inventory/product/{productId}",
+        "get",
+        "List inventory by product",
+        "Retrieve inventory records for a specific product across all locations",
+        json::array({
+            utils::SwaggerGenerator::createPathParameter("productId", "Product ID")
+        }),
+        json(nullptr),
+        {
+            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/InventoryList")},
+            {"500", {{"$ref", "#/components/responses/InternalError"}}}
+        },
+        {"Inventory"}
+    );
+
+    // GET /api/v1/inventory/warehouse/{warehouseId}
+    utils::SwaggerGenerator::addEndpoint(
+        spec,
+        "/api/v1/inventory/warehouse/{warehouseId}",
+        "get",
+        "List inventory by warehouse",
+        "Retrieve inventory records for a specific warehouse",
+        json::array({
+            utils::SwaggerGenerator::createPathParameter("warehouseId", "Warehouse ID")
+        }),
+        json(nullptr),
+        {
+            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/InventoryList")},
+            {"500", {{"$ref", "#/components/responses/InternalError"}}}
+        },
+        {"Inventory"}
+    );
+
+    // GET /api/v1/inventory/location/{locationId}
+    utils::SwaggerGenerator::addEndpoint(
+        spec,
+        "/api/v1/inventory/location/{locationId}",
+        "get",
+        "List inventory by location",
+        "Retrieve inventory records for a specific storage location",
+        json::array({
+            utils::SwaggerGenerator::createPathParameter("locationId", "Location ID")
+        }),
+        json(nullptr),
+        {
+            {"200", utils::SwaggerGenerator::createResponse("Success", "#/components/schemas/InventoryList")},
             {"500", {{"$ref", "#/components/responses/InternalError"}}}
         },
         {"Inventory"}

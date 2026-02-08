@@ -1,0 +1,13 @@
+{
+  "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "productId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+  "warehouseId": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+  "locationId": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+  "quantity": 50,
+  "availableQuantity": 50,
+  "reservedQuantity": 0,
+  "allocatedQuantity": 0,
+  "action": "adjust",
+  "quantityChange": -10,
+  "reason": "Cycle count adjustment"
+}

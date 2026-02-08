@@ -331,6 +331,53 @@ TEST_CASE("Inventory operations", "[inventory][operations]") {
 }
 ```
 
+### HTTP Integration Testing Pattern (Template)
+
+All C++ services should follow the same HTTP integration testing approach used by the
+inventory-service:
+
+- **Test binary**: Include a dedicated `HttpIntegrationTests.cpp` that:
+    - Reads `*_HTTP_INTEGRATION`, `*_HTTP_HOST`, `*_HTTP_PORT` from the environment.
+    - Skips cleanly when the integration flag is not set.
+    - Uses Poco HTTP client (`Poco::Net::HTTPClientSession`) and a small retry loop to wait
+        for the service to become healthy.
+    - Sends `X-Service-Api-Key` using the `SERVICE_API_KEY` environment variable when set.
+    - Exercises the full HTTP API: health, swagger, list/filter endpoints, and core
+        business operations (create/update/stock ops/delete) end-to-end.
+
+- **Service-under-test inside tests container**:
+    - The Docker entrypoint should detect when it is running the test binary (e.g.
+        `./<service>-tests`) and, when `*_HTTP_INTEGRATION=1` is set, start the HTTP service
+        binary in the background inside the same container, bound to `0.0.0.0:<PORT>`.
+    - Tests should target `localhost` via `*_HTTP_HOST=localhost` and `*_HTTP_PORT=<PORT>`
+        to avoid cross-container DNS and sequencing issues.
+
+- **Auth and configuration**:
+    - Implement service-to-service auth using a shared API key:
+        - `SERVICE_API_KEY` environment variable takes precedence.
+        - `auth.serviceApiKey` in `config/application.json` is the fallback.
+    - Controllers use `utils::Auth::authorizeServiceRequest` to enforce:
+        - `X-Service-Api-Key: <key>` or `Authorization: ApiKey <key>`.
+        - `401` for missing token, `403` for invalid token.
+    - HTTP integration tests must set `SERVICE_API_KEY` in the tests container and send
+        that key on all authenticated endpoints.
+
+- **Env hygiene in tests**:
+    - When tests need to mutate env vars (e.g. `AuthTests`), use an RAII helper that saves
+        the previous value in the constructor and restores/unsets it in the destructor so
+        subsequent tests (including HTTP tests) still see the container-level configuration.
+
+- **Repository + HTTP test coexistence**:
+    - DB-backed repository tests should:
+        - Use deterministic fixture IDs (product/warehouse/location/inventory IDs).
+        - Explicitly clean up any rows for their test product IDs before and after each
+            test section (DELETE by `product_id` and by known `id`s) so HTTP tests or prior
+            runs cannot affect aggregate assertions.
+    - HTTP tests should:
+        - Use their own dedicated UUIDs that do not overlap with repository fixtures.
+        - Follow the same domain invariants as services (e.g. zero reserved/allocated
+            quantity before DELETE when the service enforces such business rules).
+
 ### Database Migrations
 
 **Always use Sqitch** for database migrations:

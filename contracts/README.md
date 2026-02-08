@@ -195,6 +195,38 @@ When adding or modifying schemas:
 | Shipment | Outbound shipments and deliveries | [shipment.schema.json](schemas/v1/shipment.schema.json) |
 | Common | Shared types and definitions | [common.schema.json](schemas/v1/common.schema.json) |
 
+## Event Contracts
+
+In addition to entity schemas, some services publish domain events on the message bus. These
+event payloads are also described using JSON Schema so that publishers and consumers share a
+stable contract.
+
+For the inventory-service, the following events are defined:
+
+| Event routing key | Description | Payload schema |
+|-------------------|-------------|----------------|
+| `created` | Inventory record created | [inventory.schema.json](schemas/v1/inventory.schema.json) |
+| `updated` | Inventory record updated | [inventory.schema.json](schemas/v1/inventory.schema.json) |
+| `deleted` | Inventory record deleted | [inventory-deleted-event.schema.json](schemas/v1/inventory-deleted-event.schema.json) |
+| `reserved` | Quantity reserved against an inventory record | [inventory-reserved-event.schema.json](schemas/v1/inventory-reserved-event.schema.json) |
+| `released` | Reserved quantity released back to available | [inventory-released-event.schema.json](schemas/v1/inventory-released-event.schema.json) |
+| `allocated` | Quantity allocated to picks/shipments | [inventory-allocated-event.schema.json](schemas/v1/inventory-allocated-event.schema.json) |
+| `deallocated` | Quantity deallocated from picks/shipments | [inventory-deallocated-event.schema.json](schemas/v1/inventory-deallocated-event.schema.json) |
+| `adjusted` | On-hand quantity adjusted (cycle count, correction, etc.) | [inventory-adjusted-event.schema.json](schemas/v1/inventory-adjusted-event.schema.json) |
+
+Notes:
+- The `created` and `updated` events use the canonical [inventory.schema.json](schemas/v1/inventory.schema.json)
+  schema directly; the payload is exactly an Inventory entity.
+- The `deleted` event is a minimal payload containing just the deleted inventory `id` and an
+  `event` field constrained to `"deleted"`.
+- The `reserved`, `released`, `allocated`, and `deallocated` events include the key identifiers
+  and quantity breakdowns plus an `action` field constrained to the corresponding operation.
+- The `adjusted` event includes the updated quantities, an `action` of `"adjust"`, a signed
+  `quantityChange` value (non-zero), and a human-readable `reason` string.
+
+See the example payloads in [contracts/examples](examples) for concrete instances of these
+event messages.
+
 ## Additional Resources
 
 - [JSON Schema Documentation](https://json-schema.org/learn/)

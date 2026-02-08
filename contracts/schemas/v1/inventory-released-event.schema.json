@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warehouse-mgmt.example.com/schemas/v1/inventory-released-event.schema.json",
+  "title": "InventoryReleasedEvent",
+  "description": "Event payload for inventory.released messages. Contains updated inventory state after a release.",
+  "type": "object",
+  "required": [
+    "id",
+    "productId",
+    "warehouseId",
+    "locationId",
+    "quantity",
+    "availableQuantity",
+    "reservedQuantity",
+    "allocatedQuantity",
+    "action"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Inventory record identifier"
+    },
+    "productId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Product identifier"
+    },
+    "warehouseId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Warehouse identifier"
+    },
+    "locationId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Storage location identifier"
+    },
+    "quantity": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Quantity released from reservation in this operation"
+    },
+    "availableQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "New available quantity after release"
+    },
+    "reservedQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "New reserved quantity after release"
+    },
+    "allocatedQuantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "New allocated quantity after release"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["release"],
+      "description": "Inventory action that produced the event"
+    }
+  },
+  "additionalProperties": true
+}

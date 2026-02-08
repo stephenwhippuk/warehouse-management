@@ -56,7 +56,22 @@ if [ -n "$INVENTORY_SEED_SQL" ] && [ -f "$INVENTORY_SEED_SQL" ]; then
   fi
 fi
 
-echo "==> Starting Inventory Service..."
+echo "==> Startup complete"
 
-# Execute the main command
+# If we're running the test binary, optionally start the HTTP service in the same
+# container so HTTP integration tests can target localhost without cross-container DNS.
+if [ "$1" = "./inventory-service-tests" ] || [ "$1" = "inventory-service-tests" ]; then
+  if [ "${INVENTORY_HTTP_INTEGRATION:-0}" = "1" ]; then
+    echo "==> Starting Inventory Service in background for HTTP integration tests..."
+    ./inventory-service config/application.json &
+    SERVICE_PID=$!
+    # Give the service a brief moment to start; the tests also include retry logic
+    sleep 2
+  fi
+
+  echo "==> Running tests: $*"
+  exec "$@"
+fi
+
+echo "==> Starting Inventory Service..."
 exec "$@"

@@ -2,10 +2,14 @@
 
 #include "inventory/repositories/InventoryRepository.hpp"
 #include "inventory/utils/Database.hpp"
+#include "inventory/models/Inventory.hpp"
 
 #include <cstdlib>
 
 using inventory::repositories::InventoryRepository;
+using inventory::models::Inventory;
+using inventory::models::InventoryStatus;
+using inventory::models::QualityStatus;
 
 TEST_CASE("InventoryRepository validates UUID format", "[inventory][repository][validation]") {
     // For invalid UUIDs, the repository should throw before touching the DB
@@ -50,13 +54,17 @@ TEST_CASE("InventoryRepository basic DB-backed operations", "[inventory][reposit
     const std::string locationId        = "44444444-4444-4444-4444-444444444444";
     const std::string lowStockInventory = "55555555-5555-5555-5555-555555555555";
     const std::string expiredInventory  = "66666666-6666-6666-6666-666666666666";
+    const std::string tempInventoryId   = "77777777-7777-7777-7777-777777777777";
 
     // Clean up any existing test row first
     {
         pqxx::work cleanup(*conn);
+        // Remove any existing rows for the test product to ensure a clean fixture
+        cleanup.exec_params("DELETE FROM inventory WHERE product_id = $1", productId);
         cleanup.exec_params("DELETE FROM inventory WHERE id = $1", inventoryId);
         cleanup.exec_params("DELETE FROM inventory WHERE id = $1", lowStockInventory);
         cleanup.exec_params("DELETE FROM inventory WHERE id = $1", expiredInventory);
+        cleanup.exec_params("DELETE FROM inventory WHERE id = $1", tempInventoryId);
         cleanup.commit();
     }
 
@@ -193,12 +201,122 @@ TEST_CASE("InventoryRepository basic DB-backed operations", "[inventory][reposit
         REQUIRE(foundExpired);
     }
 
+    SECTION("aggregate queries return correct totals for product") {
+        int total = repo.getTotalQuantityByProduct(productId);
+        int available = repo.getAvailableQuantityByProduct(productId);
+
+        // 100 (main) + 5 (low stock) + 10 (expired)
+        REQUIRE(total == 115);
+        REQUIRE(available == 115);
+    }
+
+    SECTION("create inserts a new row that can be fetched") {
+        Inventory toCreate;
+        toCreate.setId(tempInventoryId);
+        toCreate.setProductId(productId);
+        toCreate.setWarehouseId(warehouseId);
+        toCreate.setLocationId(locationId);
+        toCreate.setQuantity(20);
+        toCreate.setAvailableQuantity(20);
+        toCreate.setReservedQuantity(0);
+        toCreate.setAllocatedQuantity(0);
+        toCreate.setStatus(InventoryStatus::AVAILABLE);
+        toCreate.setQualityStatus(QualityStatus::NOT_TESTED);
+        toCreate.setNotes(std::optional<std::string>("created via repository test"));
+        toCreate.setCreatedBy(std::optional<std::string>("test-user"));
+        toCreate.setUpdatedBy(std::optional<std::string>("test-user"));
+
+        auto created = repo.create(toCreate);
+
+        REQUIRE(created.getId() == tempInventoryId);
+        REQUIRE(created.getProductId() == productId);
+        REQUIRE(created.getWarehouseId() == warehouseId);
+        REQUIRE(created.getLocationId() == locationId);
+        REQUIRE(created.getQuantity() == 20);
+        REQUIRE(created.getAvailableQuantity() == 20);
+
+        auto fetched = repo.findById(tempInventoryId);
+        REQUIRE(fetched.has_value());
+        REQUIRE(fetched->getId() == tempInventoryId);
+        REQUIRE(fetched->getQuantity() == 20);
+        REQUIRE(fetched->getAvailableQuantity() == 20);
+    }
+
+    SECTION("update modifies an existing row") {
+        Inventory toCreate;
+        toCreate.setId(tempInventoryId);
+        toCreate.setProductId(productId);
+        toCreate.setWarehouseId(warehouseId);
+        toCreate.setLocationId(locationId);
+        toCreate.setQuantity(10);
+        toCreate.setAvailableQuantity(10);
+        toCreate.setReservedQuantity(0);
+        toCreate.setAllocatedQuantity(0);
+        toCreate.setStatus(InventoryStatus::AVAILABLE);
+        toCreate.setQualityStatus(QualityStatus::NOT_TESTED);
+        toCreate.setCreatedBy(std::optional<std::string>("test-user"));
+        toCreate.setUpdatedBy(std::optional<std::string>("test-user"));
+
+        auto created = repo.create(toCreate);
+
+        created.setQuantity(25);
+        created.setAvailableQuantity(25);
+        created.setStatus(InventoryStatus::RESERVED);
+        created.setNotes(std::optional<std::string>("updated via repository test"));
+        created.setUpdatedBy(std::optional<std::string>("updater"));
+
+        auto updated = repo.update(created);
+
+        REQUIRE(updated.getId() == tempInventoryId);
+        REQUIRE(updated.getQuantity() == 25);
+        REQUIRE(updated.getAvailableQuantity() == 25);
+        REQUIRE(updated.getStatus() == InventoryStatus::RESERVED);
+        REQUIRE(updated.getUpdatedBy().has_value());
+        REQUIRE(updated.getUpdatedBy().value() == "updater");
+
+        auto fetched = repo.findById(tempInventoryId);
+        REQUIRE(fetched.has_value());
+        REQUIRE(fetched->getQuantity() == 25);
+        REQUIRE(fetched->getAvailableQuantity() == 25);
+        REQUIRE(fetched->getStatus() == InventoryStatus::RESERVED);
+    }
+
+    SECTION("deleteById removes the row") {
+        Inventory toCreate;
+        toCreate.setId(tempInventoryId);
+        toCreate.setProductId(productId);
+        toCreate.setWarehouseId(warehouseId);
+        toCreate.setLocationId(locationId);
+        toCreate.setQuantity(5);
+        toCreate.setAvailableQuantity(5);
+        toCreate.setReservedQuantity(0);
+        toCreate.setAllocatedQuantity(0);
+        toCreate.setStatus(InventoryStatus::AVAILABLE);
+        toCreate.setQualityStatus(QualityStatus::NOT_TESTED);
+
+        repo.create(toCreate);
+
+        auto beforeDelete = repo.findById(tempInventoryId);
+        REQUIRE(beforeDelete.has_value());
+
+        bool firstDelete = repo.deleteById(tempInventoryId);
+        REQUIRE(firstDelete);
+
+        auto afterDelete = repo.findById(tempInventoryId);
+        REQUIRE_FALSE(afterDelete.has_value());
+
+        bool secondDelete = repo.deleteById(tempInventoryId);
+        REQUIRE_FALSE(secondDelete);
+    }
+
     // Clean up test data
     {
         pqxx::work cleanup(*conn);
+        cleanup.exec_params("DELETE FROM inventory WHERE product_id = $1", productId);
         cleanup.exec_params("DELETE FROM inventory WHERE id = $1", inventoryId);
         cleanup.exec_params("DELETE FROM inventory WHERE id = $1", lowStockInventory);
         cleanup.exec_params("DELETE FROM inventory WHERE id = $1", expiredInventory);
+        cleanup.exec_params("DELETE FROM inventory WHERE id = $1", tempInventoryId);
         cleanup.commit();
     }
 }

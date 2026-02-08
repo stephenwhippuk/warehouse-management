@@ -16,13 +16,15 @@ inventory-service/
 │
 ├── include/inventory/             # Public headers
 │   ├── Application.hpp            # Main application class
-│   ├── Server.hpp                 # HTTP server wrapper
+│   ├── Server.hpp                 # HTTP server wrapper + routing helper
 │   │
 │   ├── models/                    # Domain models
 │   │   └── Inventory.hpp          # Inventory entity with operations
 │   │
 │   ├── controllers/               # HTTP request handlers
-│   │   └── InventoryController.hpp # Inventory endpoints
+│   │   ├── InventoryController.hpp # Inventory endpoints
+│   │   ├── HealthController.hpp    # /health endpoint
+│   │   └── SwaggerController.hpp   # /api/swagger.json endpoint
 │   │
 │   ├── repositories/              # Data access layer
 │   │   └── InventoryRepository.hpp # Inventory database operations
@@ -36,7 +38,9 @@ inventory-service/
 │       ├── Config.hpp             # Configuration management
 │       ├── JsonValidator.hpp      # JSON Schema validation
 │       ├── MessageBus.hpp         # Abstract message bus interface
-│       └── RabbitMqMessageBus.hpp # RabbitMQ implementation (rabbitmq-c)
+│       ├── RabbitMqMessageBus.hpp # RabbitMQ implementation (rabbitmq-c)
+│       ├── Auth.hpp               # Service-to-service API key auth helper
+│       └── SwaggerGenerator.hpp   # OpenAPI/Swagger spec generation
 │
 ├── src/                           # Implementation files
 │   ├── main.cpp                   # Entry point
@@ -48,7 +52,9 @@ inventory-service/
 │   │   └── Inventory.cpp          # Inventory entity implementation
 │   │
 │   ├── controllers/
-│   │   └── InventoryController.cpp # Inventory controller (stub)
+│   │   ├── InventoryController.cpp # Inventory controller
+│   │   ├── HealthController.cpp    # Health endpoint implementation
+│   │   └── SwaggerController.cpp   # Swagger/OpenAPI controller
 │   │
 │   ├── repositories/
 │   │   └── InventoryRepository.cpp # Inventory repository (stub)
@@ -61,7 +67,9 @@ inventory-service/
 │       ├── Logger.cpp             # Logger implementation (complete)
 │       ├── Config.cpp             # Config implementation (complete)
 │       ├── JsonValidator.cpp      # Validator implementation (partial)
-│       └── RabbitMqMessageBus.cpp # RabbitMQ-backed MessageBus implementation
+│       ├── RabbitMqMessageBus.cpp # RabbitMQ-backed MessageBus implementation
+│       ├── Auth.cpp               # Service-to-service auth implementation
+│       └── SwaggerGenerator.cpp   # Swagger/OpenAPI helper implementation
 │
 ├── tests/                         # Test files
 │   ├── CMakeLists.txt            # Test configuration
@@ -69,7 +77,9 @@ inventory-service/
 │   ├── InventoryTests.cpp        # Inventory model tests
 │   ├── InventoryRepositoryTests.cpp # Repository + DB integration tests
 │   ├── InventoryServiceBusTests.cpp # Service wiring with MessageBus stub
-│   └── RabbitMqIntegrationTests.cpp # Real RabbitMQ publish integration test
+│   ├── RabbitMqIntegrationTests.cpp # Real RabbitMQ publish integration test
+│   ├── AuthTests.cpp             # Service-to-service auth tests
+│   └── RoutingTests.cpp          # HTTP routing tests (/health, /api/swagger.json)
 │
 └── migrations/                    # Database migrations
     └── 001_init.sql              # Initial schema with triggers
@@ -128,24 +138,20 @@ inventory-service/
 - **HTTP server** scaffolding with Poco
 - **Unit tests** framework with Catch2
 - **Movement tracking** table for audit trail
+ - **Service-to-service auth** via internal API key
+ - **Health endpoint** at `/health` exposing basic auth metrics
 
 ### 🚧 Stub/Partial Implementation
-- Controllers (routing complete, handlers stubbed)
-- Repositories (interface complete, queries stubbed)
 - JSON Schema validation (structure complete, needs implementation)
 - Database connection pooling
 
 ### 📝 TODO for Full Implementation
-1. **Database Operations**: Implement CRUD queries in repository
-2. **HTTP Handlers**: Complete request/response handling in controller
-3. **Validation**: Complete JSON Schema validation integration
-4. **Error Handling**: Add comprehensive error handling
-5. **Connection Pooling**: Implement database connection pool
-6. **Integration Tests**: Add end-to-end API tests
-7. **Metrics**: Add Prometheus metrics endpoint
-8. **Health Checks**: Implement health check endpoint
-9. **Authentication**: Add JWT or API key authentication
-10. **Low Stock Alerts**: Implement real-time alerting
+1. **Validation**: Complete JSON Schema validation integration
+2. **Connection Pooling**: Implement database connection pool
+3. **Integration Tests**: Expand HTTP integration tests into full HTTP API
+    end-to-end coverage
+4. **Metrics**: Add Prometheus metrics endpoint (expose existing counters)
+5. **Low Stock Alerts**: Implement real-time alerting
 
 ## Data Model
 
@@ -284,9 +290,9 @@ docker-compose up -d
 
 ## Status
 
-**Current State**: ✅ Compiles and runs (stub implementation)  
-**Next Step**: Implement repository database queries  
-**Estimated Completion**: 2-3 days for full implementation
+**Current State**: ✅ Core functionality implemented (repositories, services, controllers, Swagger, DB + RabbitMQ tests)  
+**Next Step**: Implement JSON Schema validation, metrics endpoint, and full HTTP API integration tests  
+**Estimated Completion**: 1-2 days for remaining hardening work
 
 See [STUBS.md](src/STUBS.md) for detailed implementation status.
 
