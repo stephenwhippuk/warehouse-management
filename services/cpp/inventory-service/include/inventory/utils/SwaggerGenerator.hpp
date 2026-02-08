@@ -14,10 +14,24 @@ namespace utils {
  * 
  * Utility class to build Swagger/OpenAPI JSON specifications
  * for service endpoints. Provides methods to create the base
- * specification and add endpoint definitions.
+ * specification and add endpoint definitions, or generate the
+ * entire specification from contract definitions.
  */
 class SwaggerGenerator {
 public:
+    /**
+     * @brief Generate complete OpenAPI specification from contract definitions
+     * @param title API title
+     * @param version API version
+     * @param description API description
+     * @param contractsPath Path to the service's contracts directory
+     * @return JSON object with complete OpenAPI specification
+     */
+    static json generateSpecFromContracts(const std::string& title,
+                                          const std::string& version,
+                                          const std::string& description,
+                                          const std::string& contractsPath);
+
     /**
      * @brief Generate base OpenAPI 3.0 specification
      * @param title API title

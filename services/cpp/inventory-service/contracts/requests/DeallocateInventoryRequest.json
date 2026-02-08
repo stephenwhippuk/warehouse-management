@@ -1,0 +1,32 @@
+{
+  "name": "DeallocateInventoryRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Process",
+  "description": "Deallocate previously allocated inventory",
+  "basis": ["Inventory"],
+  "resultType": "InventoryOperationResultDto",
+  "parameters": [
+    {
+      "name": "quantity",
+      "type": "PositiveInteger",
+      "required": true,
+      "description": "Quantity to deallocate"
+    },
+    {
+      "name": "shipmentId",
+      "type": "UUID",
+      "required": true,
+      "description": "Shipment associated with the allocation"
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 500
+      },
+      "description": "Reason for deallocating"
+    }
+  ]
+}

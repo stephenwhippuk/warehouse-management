@@ -1,0 +1,29 @@
+{
+  "name": "AllocateInventoryRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Process",
+  "description": "Allocate inventory for shipment",
+  "basis": ["Inventory"],
+  "resultType": "InventoryOperationResultDto",
+  "parameters": [
+    {
+      "name": "quantity",
+      "type": "PositiveInteger",
+      "required": true,
+      "description": "Quantity to allocate"
+    },
+    {
+      "name": "shipmentId",
+      "type": "UUID",
+      "required": true,
+      "description": "Shipment requesting the allocation"
+    },
+    {
+      "name": "fromReservation",
+      "type": "boolean",
+      "required": false,
+      "description": "Whether to allocate from reserved quantity"
+    }
+  ]
+}

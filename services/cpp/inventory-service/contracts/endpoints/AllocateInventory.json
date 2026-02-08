@@ -1,0 +1,57 @@
+{
+  "name": "AllocateInventory",
+  "version": "1.0",
+  "uri": "/api/v1/inventory/{id}/allocate",
+  "method": "POST",
+  "basis": "InventoryManagementService.AllocateStock",
+  "authentication": "ApiKey",
+  "description": "Allocate inventory for shipment",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Inventory record ID"
+    },
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "AllocateInventoryRequest",
+      "required": true,
+      "description": "Allocation details"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "InventoryOperationResultDto",
+      "description": "Allocation successful"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request parameters"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Inventory record not found"
+    },
+    {
+      "status": 409,
+      "type": "ErrorDto",
+      "description": "Insufficient quantity to allocate"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

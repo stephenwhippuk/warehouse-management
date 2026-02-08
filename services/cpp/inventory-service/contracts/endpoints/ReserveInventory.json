@@ -1,0 +1,57 @@
+{
+  "name": "ReserveInventory",
+  "version": "1.0",
+  "uri": "/api/v1/inventory/{id}/reserve",
+  "method": "POST",
+  "basis": "InventoryManagementService.ReserveStock",
+  "authentication": "ApiKey",
+  "description": "Reserve inventory quantity for an order",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Inventory record ID"
+    },
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "ReserveInventoryRequest",
+      "required": true,
+      "description": "Reservation details"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "InventoryOperationResultDto",
+      "description": "Reservation successful"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request parameters"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Inventory record not found"
+    },
+    {
+      "status": 409,
+      "type": "ErrorDto",
+      "description": "Insufficient available quantity"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

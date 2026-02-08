@@ -1,0 +1,40 @@
+{
+  "name": "GetInventoryById",
+  "version": "1.0",
+  "uri": "/api/v1/inventory/{id}",
+  "method": "GET",
+  "basis": "InventoryManagementService.GetInventory",
+  "authentication": "ApiKey",
+  "description": "Retrieve a single inventory record by ID",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Inventory record ID"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "InventoryItemDto",
+      "description": "Inventory found and returned"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Inventory record not found"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

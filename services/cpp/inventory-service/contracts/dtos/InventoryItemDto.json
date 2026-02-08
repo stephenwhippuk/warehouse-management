@@ -1,0 +1,174 @@
+{
+  "name": "InventoryItemDto",
+  "version": "1.0",
+  "description": "Complete inventory item with referenced entity data",
+  "basis": [
+    {"entity": "Inventory", "type": "fulfilment"},
+    {"entity": "Product", "type": "reference"},
+    {"entity": "Warehouse", "type": "reference"},
+    {"entity": "Location", "type": "reference"}
+  ],
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "source": "Inventory.id",
+      "description": "Inventory record identifier"
+    },
+    {
+      "name": "ProductId",
+      "type": "UUID",
+      "required": true,
+      "source": "Product.id",
+      "description": "Product identity field"
+    },
+    {
+      "name": "ProductSku",
+      "type": "string",
+      "required": true,
+      "source": "Product.sku",
+      "description": "Product SKU identity field"
+    },
+    {
+      "name": "ProductName",
+      "type": "string",
+      "required": false,
+      "source": "Product.name",
+      "description": "Product name (cached)"
+    },
+    {
+      "name": "ProductCategory",
+      "type": "string",
+      "required": false,
+      "source": "Product.category",
+      "description": "Product category (cached)"
+    },
+    {
+      "name": "WarehouseId",
+      "type": "UUID",
+      "required": true,
+      "source": "Warehouse.id",
+      "description": "Warehouse identity field"
+    },
+    {
+      "name": "WarehouseCode",
+      "type": "string",
+      "required": true,
+      "source": "Warehouse.code",
+      "description": "Warehouse code identity field"
+    },
+    {
+      "name": "WarehouseName",
+      "type": "string",
+      "required": false,
+      "source": "Warehouse.name",
+      "description": "Warehouse name (cached)"
+    },
+    {
+      "name": "LocationId",
+      "type": "UUID",
+      "required": true,
+      "source": "Location.id",
+      "description": "Location identity field"
+    },
+    {
+      "name": "LocationCode",
+      "type": "string",
+      "required": true,
+      "source": "Location.code",
+      "description": "Location code identity field"
+    },
+    {
+      "name": "LocationAisle",
+      "type": "string",
+      "required": false,
+      "source": "Location.aisle",
+      "description": "Location aisle (cached)"
+    },
+    {
+      "name": "LocationBay",
+      "type": "string",
+      "required": false,
+      "source": "Location.bay",
+      "description": "Location bay (cached)"
+    },
+    {
+      "name": "LocationLevel",
+      "type": "string",
+      "required": false,
+      "source": "Location.level",
+      "description": "Location level (cached)"
+    },
+    {
+      "name": "quantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "Inventory.quantity",
+      "description": "Current quantity on hand"
+    },
+    {
+      "name": "reservedQuantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "Inventory.reservedQuantity",
+      "description": "Quantity reserved for orders"
+    },
+    {
+      "name": "allocatedQuantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "Inventory.allocatedQuantity",
+      "description": "Quantity allocated to shipments"
+    },
+    {
+      "name": "availableQuantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Available quantity (quantity - reservedQuantity - allocatedQuantity)"
+    },
+    {
+      "name": "serialNumber",
+      "type": "string",
+      "required": false,
+      "source": "Inventory.serialNumber",
+      "description": "Serial number for serialized items"
+    },
+    {
+      "name": "batchNumber",
+      "type": "string",
+      "required": false,
+      "source": "Inventory.batchNumber",
+      "description": "Batch or lot number"
+    },
+    {
+      "name": "expirationDate",
+      "type": "DateTime",
+      "required": false,
+      "source": "Inventory.expirationDate",
+      "description": "Expiration date"
+    },
+    {
+      "name": "status",
+      "type": "InventoryStatus",
+      "required": true,
+      "source": "Inventory.status",
+      "description": "Inventory status"
+    },
+    {
+      "name": "createdAt",
+      "type": "DateTime",
+      "required": true,
+      "source": "Inventory.createdAt",
+      "description": "Created timestamp"
+    },
+    {
+      "name": "updatedAt",
+      "type": "DateTime",
+      "required": true,
+      "source": "Inventory.updatedAt",
+      "description": "Last updated timestamp"
+    }
+  ]
+}

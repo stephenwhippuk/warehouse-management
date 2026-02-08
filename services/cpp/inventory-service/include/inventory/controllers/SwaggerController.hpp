@@ -38,6 +38,12 @@ private:
     json generateSpecification();
 
     /**
+     * @brief Generate specification manually (fallback method)
+     * @return JSON object with full API specification
+     */
+    json generateSpecificationManual();
+
+    /**
      * @brief Add inventory schemas to the specification
      * @param spec The OpenAPI specification object
      */

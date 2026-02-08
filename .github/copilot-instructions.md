@@ -10,6 +10,8 @@ This is a microservices-based warehouse management system with:
 - **Redis**: Caching layer
 - **Sqitch**: Database migration management
 
+**IMPORTANT**: This project uses a comprehensive **Contract System** to ensure consistency across services. All services must declare contracts (fulfilments/references), define DTOs/Requests/Events/Endpoints, and maintain a `claims.json` manifest. See "Contract System" section below and `/contracts/docs/overview.md` for full details.
+
 ## C++ Project Guidelines
 
 ### Architecture
@@ -91,10 +93,11 @@ src/                       # Implementation files
 ### Model Classes
 
 All domain models must:
-- Match JSON Schema contracts in `/contracts/schemas/v1/`
+- Match entity contracts in `/contracts/entities/v1/` (see Contract System section)
 - Implement `toJson()` and `fromJson()` methods
 - Use getters/setters for encapsulation
 - Include business logic methods (e.g., `reserve()`, `isExpired()`)
+- Include all fields declared in the service's fulfilment claims
 
 **Example:**
 ```cpp
@@ -535,6 +538,293 @@ std::string dbUrl = utils::Config::getEnv("DATABASE_URL",
 }
 ```
 
+## Contract System
+
+### Overview
+
+The warehouse management system uses a comprehensive contract system to ensure consistency across services. See `/contracts/docs/overview.md` for full specification.
+
+**Key Concepts:**
+- **Contracts**: Global definitions (Types, Entities, Services) that guide validation
+- **Claims**: Service promises to fulfill/reference contracts via DTOs, Requests, Events, Endpoints
+- **Versioning**: All contracts are versioned; breaking by default
+- **Validation**: Build-time and runtime validation ensures compliance
+
+### Contract Types
+
+**Entity Contracts** (`/contracts/entities/v1/`):
+- Define global entities (Product, Inventory, Warehouse, etc.)
+- Specify fields with classifications: Identity, Core, Complete
+- Identity fields: Must be shared across systems
+- Core fields: Required for all instances
+- Complete fields: Optional but must match type if present
+
+**Type Contracts** (`/contracts/types/v1/`):
+- Define reusable types (UUID, Email, DateTime, etc.)
+- Built on base primitives (string, number, boolean, symbol)
+- Include constraints (format, size, pattern, enum, encryption)
+
+### Service Claims
+
+**Location**: Each service maintains `claims.json` in its root directory
+
+**Purpose**: 
+- Declare which contracts the service implements
+- List supported contract versions
+- Specify field-level details (method, security, status)
+
+**Example Structure**:
+```json
+{
+  "service": "inventory-service",
+  "version": "1.0.0",
+  "fulfilments": [
+    {
+      "contract": "Inventory",
+      "versions": ["1.0"],
+      "status": "fulfilled",
+      "fields": [
+        {
+          "name": "id",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "contract": "Product",
+      "versions": ["1.0"],
+      "requiredFields": ["id", "sku"],
+      "optionalFields": ["name"]
+    }
+  ]
+}
+```
+
+### Service-Specific Contract Definitions
+
+**Location**: `/services/<lang>/<service>/contracts/`
+
+**Structure**:
+```
+/services/cpp/inventory-service/
+  claims.json                       # Claims manifest
+  /contracts/
+    /dtos/                          # Service DTOs
+      InventoryItemDto.json
+      InventoryListDto.json
+    /requests/                      # Request definitions
+      ReserveInventoryRequest.json
+      AllocateInventoryRequest.json
+    /events/                        # Event definitions
+      InventoryReserved.json
+      InventoryAllocated.json
+    /endpoints/                     # Endpoint definitions
+      GetInventory.json
+      ListInventory.json
+      ReserveInventory.json
+```
+
+### DTOs (Data Transfer Objects)
+
+**Purpose**: Define API response formats and message payloads
+
+**Requirements**:
+- Must have `basis` field referencing fulfilments/references
+- Entity-prefixed fields (e.g., `ProductId`, `WarehouseName`) for entity data
+- Unprefixed fields for computed/service-specific data
+- Must include ALL identity fields from referenced entities
+
+**Example**:
+```json
+{
+  "name": "InventoryItemDto",
+  "version": "1.0",
+  "basis": [
+    {"entity": "Inventory", "type": "fulfilment"},
+    {"entity": "Product", "type": "reference"}
+  ],
+  "fields": [
+    {"name": "id", "type": "UUID", "required": true, "source": "Inventory.id"},
+    {"name": "ProductId", "type": "UUID", "required": true, "source": "Product.id"},
+    {"name": "ProductSku", "type": "string", "required": true, "source": "Product.sku"},
+    {"name": "quantity", "type": "PositiveInteger", "required": true, "source": "Inventory.quantity"},
+    {"name": "availableQuantity", "type": "integer", "required": true, "source": "computed"}
+  ]
+}
+```
+
+### Requests (Commands and Queries)
+
+**Purpose**: Define API input parameters
+
+**Requirements**:
+- Commands must specify `type` (Create/Update/Delete/Process)
+- Must have `basis` listing affected entities
+- Must declare `resultType` (a Dto)
+- Parameters use contractual types
+
+**Example**:
+```json
+{
+  "name": "ReserveInventoryRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Process",
+  "basis": ["Inventory"],
+  "resultType": "InventoryOperationResultDto",
+  "parameters": [
+    {"name": "quantity", "type": "PositiveInteger", "required": true},
+    {"name": "orderId", "type": "UUID", "required": true}
+  ]
+}
+```
+
+### Events
+
+**Purpose**: Define domain/integration messages
+
+**Requirements**:
+- Must specify event type (Create/Update/Delete/Notify)
+- Must reference a Dto for data payload
+- Must include standard metadata (eventId, timestamp, correlationId, source)
+
+**Example**:
+```json
+{
+  "name": "InventoryReserved",
+  "version": "1.0",
+  "type": "Notify",
+  "dataDto": "InventoryOperationResultDto",
+  "description": "Published when inventory is successfully reserved"
+}
+```
+
+### Endpoints
+
+**Purpose**: Define API endpoints
+
+**Requirements**:
+- Must specify URI path with parameters
+- Must declare HTTP method
+- Must list parameters with locations (Route/Query/Body/Header)
+- Must specify result type and error responses
+- Optional: reference Service Contract operation
+
+**Example**:
+```json
+{
+  "name": "ReserveInventory",
+  "uri": "/api/v1/inventory/{id}/reserve",
+  "method": "POST",
+  "parameters": [
+    {"name": "id", "location": "Route", "type": "UUID", "required": true},
+    {"name": "request", "location": "Body", "type": "ReserveInventoryRequest", "required": true}
+  ],
+  "responses": [
+    {"status": 200, "type": "InventoryOperationResultDto"},
+    {"status": 404, "type": "ErrorDto"},
+    {"status": 409, "type": "ErrorDto"}
+  ]
+}
+```
+
+### Critical Validation Rules
+
+**1. Field Exposure (Fulfilments Only)**:
+- Every fulfilled entity field must either:
+  - Appear in at least ONE service Dto, OR
+  - Be marked `"access": "private"` in claims manifest
+- Validated at CI build time
+- Example: If Inventory contract has 10 fields, service must expose 9 in DTOs + 1 marked private = 10 total
+
+**2. Identity Fields (References)**:
+- All identity fields from referenced entities must be included in DTOs
+- Example: If referencing Product, must include `ProductId` and `ProductSku` if both are identity fields
+
+**3. Request Basis Enforcement**:
+- Requests can only modify entities declared in their `basis`
+- Validated to prevent unintended side effects
+- Example: ReserveInventory with basis=[Inventory] cannot modify Product
+
+**4. Naming Conventions**:
+- Entity-sourced fields: `<Entity><Field>` (ProductId, WarehouseName)
+- Computed fields: No prefix (availableQuantity, totalPrice)
+- Must be enforced in DTO definitions
+
+### When to Update Contracts
+
+**Adding New Entity**:
+1. Define entity contract in `/contracts/entities/v1/<Entity>.json`
+2. Add fulfilment claim to service's `claims.json`
+3. Create DTOs in service's `/contracts/dtos/`
+4. Ensure all entity fields exposed in DTOs or marked private
+5. Update models to implement `toJson()`/`fromJson()`
+
+**Adding New Endpoint**:
+1. Define Request in service's `/contracts/requests/`
+2. Define result Dto in service's `/contracts/dtos/`
+3. Define Endpoint in service's `/contracts/endpoints/`
+4. Ensure Request `basis` matches service's fulfilments/references
+5. Implement controller and add to OpenAPI
+
+**Adding New Field to Entity**:
+1. Update entity contract (new version if breaking)
+2. Update service claims.json with field status
+3. Add field to at least one service Dto (or mark private)
+4. Update model class with getter/setter
+5. Update repository queries
+6. Update `toJson()`/`fromJson()` methods
+
+**Referencing Another Service's Entity**:
+1. Add reference claim to `claims.json`
+2. Specify required identity fields
+3. Update DTOs to include entity-prefixed identity fields
+4. Do NOT need to expose all fields (only identity required)
+
+**Publishing Events**:
+1. Define Event in service's `/contracts/events/`
+2. Ensure event's data Dto exists
+3. Include standard metadata fields
+4. Publish after successful state changes
+5. Use correlation IDs for tracing
+
+### Contract Validation Workflow
+
+**Pre-commit**:
+- Validate contract JSON syntax
+- Validate type references exist
+- Run local contract linter (if available)
+
+**CI Build**:
+- Validate service claims against entity contracts
+- Verify all fulfilled fields exposed or marked private
+- Verify DTO basis matches claims
+- Verify Request basis entities are fulfilled/referenced
+- Verify naming conventions (entity-prefixed fields)
+- Generate validation report
+
+**Integration Tests**:
+- Validate actual API responses match DTOs
+- Test field presence and types
+- Verify identity fields included for references
+
+### Contract Checklist for New Services
+
+1. **Create directory structure**: `/services/<lang>/<service>/contracts/{dtos,requests,events,endpoints}`
+2. **Create claims.json**: Declare fulfilments and references
+3. **Define DTOs**: For all API responses and event payloads
+4. **Define Requests**: For all API inputs (commands/queries)
+5. **Define Events**: For all published messages
+6. **Define Endpoints**: For all HTTP endpoints
+7. **Validate field exposure**: All fulfilled fields in DTOs or marked private
+8. **Validate identity fields**: All referenced entity identity fields included
+9. **Validate naming**: Entity-prefixed fields follow convention
+10. **Update models**: Implement matching C++ classes with `toJson()`/`fromJson()`
+
 ### JSON Schema Validation
 
 All requests should validate against contracts:
@@ -644,19 +934,61 @@ void reserve(const std::string& id, int quantity);
 
 **New Service Checklist:**
 1. Create directory structure (include/, src/, tests/, migrations/)
-2. Set up CMakeLists.txt
-3. Create Dockerfile and docker-compose.yml
-4. Initialize Sqitch (sqitch.conf, sqitch.plan)
-5. Create initial migration
-6. Create models matching JSON schemas
-7. Implement repositories (with TODOs if needed)
-8. Implement services with validation
-9. ImplemenSwaggerGenerator utility
-11. Add `/api/swagger.json` endpoint
-12. Create unit tests
-13. Update README.md with API endpoints
-14. Update README.md with API endpoints
-12. Create PROJECT_STRUCTURE.md
+2. Create contracts directory structure (/contracts/dtos/, /contracts/requests/, /contracts/events/, /contracts/endpoints/)
+3. Create claims.json manifest (declare fulfilments and references)
+4. Set up CMakeLists.txt
+5. Create Dockerfile and docker-compose.yml
+6. Initialize Sqitch (sqitch.conf, sqitch.plan)
+7. Create initial migration
+8. Create models matching entity contracts (with toJson/fromJson)
+9. Define DTOs for all API responses (in /contracts/dtos/)
+10. Define Requests for all API inputs (in /contracts/requests/)
+11. Define Events for all messages (in /contracts/events/)
+12. Define Endpoints for all HTTP endpoints (in /contracts/endpoints/)
+13. Validate field exposure (all fulfilled fields in DTOs or marked private)
+14. Implement repositories (with TODOs if needed)
+15. Implement services with validation
+16. Implement controllers
+17. Implement SwaggerGenerator utility
+18. Add `/api/swagger.json` endpoint
+19. Create unit tests
+20. Create HTTP integration tests
+21. Update README.md with API endpoints
+22. Create PROJECT_STRUCTURE.md
+
+**New Endpoint Checklist:**
+1. Define Request in service's `/contracts/requests/`
+2. Define result Dto in service's `/contracts/dtos/` (if not exists)
+3. Define Endpoint in service's `/contracts/endpoints/`
+4. Ensure Request `basis` matches service's fulfilments/references
+5. Implement controller method
+6. Add endpoint to OpenAPI/Swagger
+7. Add HTTP integration test
+8. Update README.md
+
+**Adding Field to Fulfilled Entity:**
+1. Update entity contract in `/contracts/entities/v1/` (new version if breaking)
+2. Update service's `claims.json` with field status and security
+3. Add field to at least one service Dto (or mark private in claims.json)
+4. Update model class with getter/setter
+5. Update repository queries
+6. Update `toJson()`/`fromJson()` methods
+7. Update database migration if needed
+
+**Referencing New Entity:**
+1. Add reference claim to service's `claims.json`
+2. Specify required identity fields and optional fields
+3. Update DTOs to include entity-prefixed identity fields
+4. Update models if caching referenced entity data
+5. Update relevant Requests if passing referenced entity data
+
+**Publishing New Event:**
+1. Define Event in service's `/contracts/events/`
+2. Ensure event's data Dto exists in `/contracts/dtos/`
+3. Include standard metadata fields (eventId, timestamp, correlationId, source)
+4. Implement event publishing after successful state changes
+5. Use correlation IDs for tracing
+6. Update README.md with event documentation
 
 **New Migration Checklist:**
 1. Add with Sqitch: `sqitch add NNN_name -n "Description"`
@@ -685,4 +1017,5 @@ void reserve(const std::string& id, int quantity);
 - Poco Documentation: https://pocoproject.org/docs/
 - Project Architecture: `/docs/architecture.md`
 - Database Migrations: `/docs/cpp-database-migrations.md`
-- Contracts: `/contracts/README.md`
+- Contract System: `/contracts/docs/overview.md` (REQUIRED READING)
+- Contracts Directory: `/contracts/README.md`

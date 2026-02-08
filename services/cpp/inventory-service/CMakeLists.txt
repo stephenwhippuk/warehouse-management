@@ -49,6 +49,7 @@ set(SOURCES
     src/utils/RabbitMqMessageBus.cpp
     src/utils/JsonValidator.cpp
     src/utils/SwaggerGenerator.cpp
+    src/utils/ContractReader.cpp
 )
 
 # Create executable
@@ -88,5 +89,10 @@ install(TARGETS ${PROJECT_NAME}
 
 install(DIRECTORY config/
     DESTINATION etc/${PROJECT_NAME}
+    FILES_MATCHING PATTERN "*.json"
+)
+
+install(DIRECTORY contracts/
+    DESTINATION share/${PROJECT_NAME}/contracts
     FILES_MATCHING PATTERN "*.json"
 )

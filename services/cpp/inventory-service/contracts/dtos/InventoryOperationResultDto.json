@@ -1,0 +1,80 @@
+{
+  "name": "InventoryOperationResultDto",
+  "version": "1.0",
+  "description": "Result of an inventory operation (reserve, allocate, etc.)",
+  "basis": [
+    {"entity": "Inventory", "type": "fulfilment"}
+  ],
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "source": "Inventory.id",
+      "description": "Inventory record identifier"
+    },
+    {
+      "name": "ProductId",
+      "type": "UUID",
+      "required": true,
+      "source": "Inventory.productId",
+      "description": "Product identifier"
+    },
+    {
+      "name": "quantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "Inventory.quantity",
+      "description": "Current total quantity"
+    },
+    {
+      "name": "reservedQuantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "Inventory.reservedQuantity",
+      "description": "Reserved quantity after operation"
+    },
+    {
+      "name": "allocatedQuantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "Inventory.allocatedQuantity",
+      "description": "Allocated quantity after operation"
+    },
+    {
+      "name": "availableQuantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Available quantity after operation"
+    },
+    {
+      "name": "operation",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Operation performed (reserve, release, allocate, deallocate, adjust)"
+    },
+    {
+      "name": "operationQuantity",
+      "type": "number",
+      "required": true,
+      "source": "computed",
+      "description": "Quantity affected by the operation (positive or negative)"
+    },
+    {
+      "name": "success",
+      "type": "boolean",
+      "required": true,
+      "source": "computed",
+      "description": "Whether the operation succeeded"
+    },
+    {
+      "name": "message",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Optional message about the operation"
+    }
+  ]
+}

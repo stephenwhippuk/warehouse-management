@@ -1,0 +1,64 @@
+{
+  "name": "Location",
+  "version": "1.0",
+  "description": "Storage location within a warehouse",
+  "owner": "warehouse-service",
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "required": true,
+      "description": "Unique location identifier"
+    },
+    {
+      "name": "warehouseId",
+      "type": "UUID",
+      "classification": "core",
+      "required": true,
+      "description": "Parent warehouse ID"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "classification": "identity",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 50,
+        "pattern": "^[A-Z0-9-]+$"
+      },
+      "description": "Location code (e.g., A-01-02-03)"
+    },
+    {
+      "name": "aisle",
+      "type": "string",
+      "classification": "complete",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Aisle identifier"
+    },
+    {
+      "name": "bay",
+      "type": "string",
+      "classification": "complete",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Bay identifier"
+    },
+    {
+      "name": "level",
+      "type": "string",
+      "classification": "complete",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Level/shelf identifier"
+    }
+  ]
+}

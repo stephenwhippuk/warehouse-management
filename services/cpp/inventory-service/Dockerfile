@@ -61,24 +61,27 @@ COPY --from=builder /app/seed /app/seed
 # Copy entrypoint script
 COPY docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
-# Copy binary, tests, and config from builder
+
+# Copy binary, tests, config, and contracts from builder
 COPY --from=builder /app/build/bin/inventory-service /app/
 COPY --from=builder /app/build/bin/inventory-service-tests /app/
 COPY --from=builder /app/config /app/config
+COPY --from=builder /app/contracts /app/contracts
 
 # Change ownership
 RUN chown -R appuser:appuser /app
 
-# Switch to app user10s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+# Switch to app user
+USER appuser
 
-# Run application with entrypoint
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# Expose port
 EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# Run application
+# Run application with entrypoint
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["./inventory-service", "config/application.json"]
+

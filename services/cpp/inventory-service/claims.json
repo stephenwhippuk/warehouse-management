@@ -1,0 +1,118 @@
+{
+  "service": "inventory-service",
+  "version": "1.0.0",
+  "fulfilments": [
+    {
+      "contract": "Inventory",
+      "versions": ["1.0"],
+      "status": "fulfilled",
+      "fields": [
+        {
+          "name": "id",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "productId",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "warehouseId",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "locationId",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "quantity",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "reservedQuantity",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "allocatedQuantity",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "serialNumber",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "batchNumber",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "expirationDate",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "status",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "createdAt",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "updatedAt",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "contract": "Product",
+      "versions": ["1.0"],
+      "requiredFields": ["id", "sku"],
+      "optionalFields": ["name", "category"]
+    },
+    {
+      "contract": "Warehouse",
+      "versions": ["1.0"],
+      "requiredFields": ["id", "code"],
+      "optionalFields": ["name"]
+    },
+    {
+      "contract": "Location",
+      "versions": ["1.0"],
+      "requiredFields": ["id", "code"],
+      "optionalFields": ["aisle", "bay", "level"]
+    }
+  ],
+  "serviceContracts": [
+    {
+      "contract": "InventoryManagementService",
+      "versions": ["1.0"],
+      "status": "fulfilled"
+    }
+  ]
+}

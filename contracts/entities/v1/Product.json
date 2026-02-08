@@ -1,0 +1,68 @@
+{
+  "name": "Product",
+  "version": "1.0",
+  "description": "Product/SKU master data",
+  "owner": "product-service",
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "required": true,
+      "description": "Unique product identifier"
+    },
+    {
+      "name": "sku",
+      "type": "string",
+      "classification": "identity",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 100,
+        "pattern": "^[A-Z0-9-]+$"
+      },
+      "description": "Stock Keeping Unit - unique product code"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "classification": "core",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "description": "Product name"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "classification": "complete",
+      "required": false,
+      "constraints": {
+        "maxLength": 2000
+      },
+      "description": "Detailed product description"
+    },
+    {
+      "name": "category",
+      "type": "string",
+      "classification": "complete",
+      "required": false,
+      "constraints": {
+        "maxLength": 100
+      },
+      "description": "Product category"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "classification": "core",
+      "required": true,
+      "constraints": {
+        "enum": ["active", "inactive", "discontinued"]
+      },
+      "description": "Product status"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "name": "AdjustInventoryQuantity",
+  "version": "1.0",
+  "uri": "/api/v1/inventory/{id}/adjust",
+  "method": "POST",
+  "basis": "InventoryManagementService.AdjustQuantity",
+  "authentication": "ApiKey",
+  "description": "Manually adjust inventory quantity (cycle count, correction)",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Inventory record ID"
+    },
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "AdjustQuantityRequest",
+      "required": true,
+      "description": "Adjustment details"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "InventoryOperationResultDto",
+      "description": "Adjustment successful"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request parameters"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Inventory record not found"
+    },
+    {
+      "status": 409,
+      "type": "ErrorDto",
+      "description": "Cannot adjust to quantity less than reserved + allocated"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

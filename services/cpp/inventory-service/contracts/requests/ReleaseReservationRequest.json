@@ -1,0 +1,32 @@
+{
+  "name": "ReleaseReservationRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Process",
+  "description": "Release a quantity from reservation",
+  "basis": ["Inventory"],
+  "resultType": "InventoryOperationResultDto",
+  "parameters": [
+    {
+      "name": "quantity",
+      "type": "PositiveInteger",
+      "required": true,
+      "description": "Quantity to release"
+    },
+    {
+      "name": "orderId",
+      "type": "UUID",
+      "required": true,
+      "description": "Order associated with the reservation"
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 500
+      },
+      "description": "Reason for releasing the reservation"
+    }
+  ]
+}

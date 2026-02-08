@@ -1,0 +1,10 @@
+{
+  "name": "PositiveInteger",
+  "version": "1.0",
+  "description": "Integer value greater than or equal to 1",
+  "base": "number",
+  "constraints": {
+    "minimum": 1,
+    "multipleOf": 1
+  }
+}

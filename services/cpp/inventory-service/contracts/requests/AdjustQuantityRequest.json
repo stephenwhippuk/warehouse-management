@@ -1,0 +1,35 @@
+{
+  "name": "AdjustQuantityRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Process",
+  "description": "Manually adjust inventory quantity (cycle count, correction)",
+  "basis": ["Inventory"],
+  "resultType": "InventoryOperationResultDto",
+  "parameters": [
+    {
+      "name": "newQuantity",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "description": "New total quantity"
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "maxLength": 500
+      },
+      "description": "Reason for adjustment (e.g., cycle count, damage, found)"
+    },
+    {
+      "name": "notes",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 1000
+      },
+      "description": "Additional notes"
+    }
+  ]
+}

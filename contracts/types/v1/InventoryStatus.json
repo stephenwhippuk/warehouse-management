@@ -1,0 +1,9 @@
+{
+  "name": "InventoryStatus",
+  "version": "1.0",
+  "description": "Current status of inventory record",
+  "base": "string",
+  "constraints": {
+    "enum": ["available", "reserved", "allocated", "quarantine", "damaged", "expired", "recalled"]
+  }
+}

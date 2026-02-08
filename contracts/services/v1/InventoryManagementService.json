@@ -1,0 +1,68 @@
+{
+  "name": "InventoryManagementService",
+  "version": "1.0",
+  "description": "Managing inventory stock levels, reservations, and allocations",
+  "owner": "inventory-service",
+  "operations": [
+    {
+      "name": "GetInventory",
+      "type": "Query",
+      "required": true,
+      "description": "Retrieve a single inventory record by ID"
+    },
+    {
+      "name": "ListInventory",
+      "type": "Query",
+      "required": true,
+      "description": "List inventory records with optional filtering"
+    },
+    {
+      "name": "CreateInventory",
+      "type": "Command",
+      "required": true,
+      "description": "Create a new inventory record"
+    },
+    {
+      "name": "UpdateInventory",
+      "type": "Command",
+      "required": true,
+      "description": "Update an existing inventory record"
+    },
+    {
+      "name": "DeleteInventory",
+      "type": "Command",
+      "required": true,
+      "description": "Delete an inventory record"
+    },
+    {
+      "name": "ReserveStock",
+      "type": "Command",
+      "required": true,
+      "description": "Reserve inventory for an order"
+    },
+    {
+      "name": "ReleaseReservation",
+      "type": "Command",
+      "required": true,
+      "description": "Release a reservation"
+    },
+    {
+      "name": "AllocateStock",
+      "type": "Command",
+      "required": true,
+      "description": "Allocate inventory for shipment"
+    },
+    {
+      "name": "DeallocateStock",
+      "type": "Command",
+      "required": true,
+      "description": "Deallocate previously allocated stock"
+    },
+    {
+      "name": "AdjustQuantity",
+      "type": "Command",
+      "required": false,
+      "description": "Manually adjust inventory quantity (cycle count, correction)"
+    }
+  ]
+}

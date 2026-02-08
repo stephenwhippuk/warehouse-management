@@ -1,0 +1,48 @@
+{
+  "name": "Warehouse",
+  "version": "1.0",
+  "description": "Warehouse facility information",
+  "owner": "warehouse-service",
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "required": true,
+      "description": "Unique warehouse identifier"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "classification": "identity",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 20,
+        "pattern": "^[A-Z0-9-]+$"
+      },
+      "description": "Warehouse code (e.g., WH-001)"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "classification": "core",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "description": "Warehouse name"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "classification": "core",
+      "required": true,
+      "constraints": {
+        "enum": ["active", "inactive", "maintenance"]
+      },
+      "description": "Warehouse operational status"
+    }
+  ]
+}

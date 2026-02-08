@@ -1,0 +1,44 @@
+{
+  "name": "InventoryListDto",
+  "version": "1.0",
+  "description": "Paginated list of inventory items",
+  "basis": [],
+  "fields": [
+    {
+      "name": "items",
+      "type": "array",
+      "elementType": "InventoryItemDto",
+      "required": true,
+      "source": "computed",
+      "description": "Array of inventory items"
+    },
+    {
+      "name": "totalCount",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Total number of items matching the query"
+    },
+    {
+      "name": "page",
+      "type": "PositiveInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Current page number"
+    },
+    {
+      "name": "pageSize",
+      "type": "PositiveInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Number of items per page"
+    },
+    {
+      "name": "totalPages",
+      "type": "PositiveInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Total number of pages"
+    }
+  ]
+}

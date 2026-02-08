@@ -1,0 +1,105 @@
+{
+  "name": "Inventory",
+  "version": "1.0",
+  "description": "Inventory stock levels and tracking information",
+  "owner": "inventory-service",
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "required": true,
+      "description": "Unique inventory record identifier"
+    },
+    {
+      "name": "productId",
+      "type": "UUID",
+      "classification": "identity",
+      "required": true,
+      "description": "Reference to Product entity"
+    },
+    {
+      "name": "warehouseId",
+      "type": "UUID",
+      "classification": "core",
+      "required": true,
+      "description": "Reference to Warehouse entity"
+    },
+    {
+      "name": "locationId",
+      "type": "UUID",
+      "classification": "core",
+      "required": true,
+      "description": "Reference to Location entity"
+    },
+    {
+      "name": "quantity",
+      "type": "NonNegativeInteger",
+      "classification": "core",
+      "required": true,
+      "description": "Current quantity on hand"
+    },
+    {
+      "name": "reservedQuantity",
+      "type": "NonNegativeInteger",
+      "classification": "core",
+      "required": true,
+      "description": "Quantity reserved for orders"
+    },
+    {
+      "name": "allocatedQuantity",
+      "type": "NonNegativeInteger",
+      "classification": "core",
+      "required": true,
+      "description": "Quantity allocated to picks/shipments"
+    },
+    {
+      "name": "serialNumber",
+      "type": "string",
+      "classification": "complete",
+      "required": false,
+      "constraints": {
+        "maxLength": 100
+      },
+      "description": "Serial number for serialized items"
+    },
+    {
+      "name": "batchNumber",
+      "type": "string",
+      "classification": "complete",
+      "required": false,
+      "constraints": {
+        "maxLength": 100
+      },
+      "description": "Batch or lot number"
+    },
+    {
+      "name": "expirationDate",
+      "type": "DateTime",
+      "classification": "complete",
+      "required": false,
+      "description": "Expiration date for perishable items"
+    },
+    {
+      "name": "status",
+      "type": "InventoryStatus",
+      "classification": "core",
+      "required": true,
+      "description": "Current inventory status"
+    },
+    {
+      "name": "createdAt",
+      "type": "DateTime",
+      "classification": "complete",
+      "required": true,
+      "description": "When the inventory record was created"
+    },
+    {
+      "name": "updatedAt",
+      "type": "DateTime",
+      "classification": "complete",
+      "required": true,
+      "description": "When the inventory record was last updated"
+    }
+  ]
+}

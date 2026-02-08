@@ -1,0 +1,11 @@
+{
+  "name": "UUID",
+  "version": "1.0",
+  "description": "Universally Unique Identifier (RFC 4122)",
+  "base": "string",
+  "constraints": {
+    "format": "uuid",
+    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    "exactLength": 36
+  }
+}

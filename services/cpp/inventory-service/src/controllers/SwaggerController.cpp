@@ -1,6 +1,7 @@
 #include "inventory/controllers/SwaggerController.hpp"
 #include "inventory/utils/SwaggerGenerator.hpp"
 #include "inventory/utils/Logger.hpp"
+#include <filesystem>
 
 namespace inventory {
 namespace controllers {
@@ -23,6 +24,41 @@ void SwaggerController::handleRequest(Poco::Net::HTTPServerRequest& request,
 }
 
 json SwaggerController::generateSpecification() {
+    // Get the contracts path (relative to the service root)
+    std::string contractsPath = "contracts";
+    
+    // Check if we're running from the build directory
+    if (!std::filesystem::exists(contractsPath)) {
+        // Try parent directory (when running from build/bin)
+        contractsPath = "../../contracts";
+        if (!std::filesystem::exists(contractsPath)) {
+            // Try absolute path from project root
+            contractsPath = "/app/contracts";
+        }
+    }
+
+    utils::Logger::info("Using contracts path: {}", contractsPath);
+
+    try {
+        // Generate specification from contract definitions
+        json spec = utils::SwaggerGenerator::generateSpecFromContracts(
+            "Inventory Service API",
+            "1.0.0",
+            "API for managing warehouse inventory, stock levels, and inventory operations",
+            contractsPath
+        );
+        
+        return spec;
+    } catch (const std::exception& e) {
+        utils::Logger::error("Failed to generate spec from contracts: {}", e.what());
+        utils::Logger::warn("Falling back to manual specification generation");
+        
+        // Fallback to the old manual method if contract-based generation fails
+        return generateSpecificationManual();
+    }
+}
+
+json SwaggerController::generateSpecificationManual() {
     json spec = utils::SwaggerGenerator::generateSpec(
         "Inventory Service API",
         "1.0.0",

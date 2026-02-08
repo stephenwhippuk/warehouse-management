@@ -1,0 +1,32 @@
+{
+  "name": "ReserveInventoryRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Process",
+  "description": "Reserve inventory quantity for an order",
+  "basis": ["Inventory"],
+  "resultType": "InventoryOperationResultDto",
+  "parameters": [
+    {
+      "name": "quantity",
+      "type": "PositiveInteger",
+      "required": true,
+      "description": "Quantity to reserve"
+    },
+    {
+      "name": "orderId",
+      "type": "UUID",
+      "required": true,
+      "description": "Order requesting the reservation"
+    },
+    {
+      "name": "notes",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 500
+      },
+      "description": "Optional notes about the reservation"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "name": "ListInventory",
+  "version": "1.0",
+  "uri": "/api/v1/inventory",
+  "method": "GET",
+  "basis": "InventoryManagementService.ListInventory",
+  "authentication": "ApiKey",
+  "description": "List inventory records with optional filtering and pagination",
+  "parameters": [
+    {
+      "name": "warehouseId",
+      "location": "Query",
+      "type": "UUID",
+      "required": false,
+      "description": "Filter by warehouse"
+    },
+    {
+      "name": "productId",
+      "location": "Query",
+      "type": "UUID",
+      "required": false,
+      "description": "Filter by product"
+    },
+    {
+      "name": "locationId",
+      "location": "Query",
+      "type": "UUID",
+      "required": false,
+      "description": "Filter by location"
+    },
+    {
+      "name": "status",
+      "location": "Query",
+      "type": "InventoryStatus",
+      "required": false,
+      "description": "Filter by status"
+    },
+    {
+      "name": "page",
+      "location": "Query",
+      "type": "PositiveInteger",
+      "required": false,
+      "default": 1,
+      "description": "Page number"
+    },
+    {
+      "name": "pageSize",
+      "location": "Query",
+      "type": "PositiveInteger",
+      "required": false,
+      "default": 20,
+      "constraints": {
+        "minimum": 1,
+        "maximum": 100
+      },
+      "description": "Items per page"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "InventoryListDto",
+      "description": "List of inventory records"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid query parameters"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

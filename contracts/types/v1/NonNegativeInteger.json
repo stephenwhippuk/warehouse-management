@@ -1,0 +1,10 @@
+{
+  "name": "NonNegativeInteger",
+  "version": "1.0",
+  "description": "Integer value greater than or equal to 0",
+  "base": "number",
+  "constraints": {
+    "minimum": 0,
+    "multipleOf": 1
+  }
+}
