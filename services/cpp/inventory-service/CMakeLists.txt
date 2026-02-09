@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(inventory-service VERSION 1.0.0 LANGUAGES CXX)
 
+# Options
+option(VALIDATE_CONTRACTS "Run contract validation after build" ON)
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -93,25 +96,29 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Release>:-O3>
 )
 
-# Contract validation post-build step
-# Runs contract validation and generates reports automatically after each build
-add_custom_command(
-    TARGET ${PROJECT_NAME}
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
-    COMMAND ${CMAKE_COMMAND} -E echo "Running contract validation..."
-    COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
-    COMMAND bash -c "validate-contracts --contracts-root ${PROJECT_SOURCE_DIR}/../../contracts --service-contracts ${PROJECT_SOURCE_DIR}/contracts --claims ${PROJECT_SOURCE_DIR}/claims.json > ${CMAKE_BINARY_DIR}/contract-validation-report.txt 2>&1 || true"
-    COMMAND bash -c "validate-contracts --contracts-root ${PROJECT_SOURCE_DIR}/../../contracts --service-contracts ${PROJECT_SOURCE_DIR}/contracts --claims ${PROJECT_SOURCE_DIR}/claims.json --json 2>/dev/null > ${CMAKE_BINARY_DIR}/contract-validation-report.json || true"
-    COMMAND ${CMAKE_COMMAND} -E echo ""
-    COMMAND ${CMAKE_COMMAND} -E echo "Contract validation complete!"
-    COMMAND ${CMAKE_COMMAND} -E echo "Reports saved to:"
-    COMMAND ${CMAKE_COMMAND} -E echo "  Text:  ${CMAKE_BINARY_DIR}/contract-validation-report.txt"
-    COMMAND ${CMAKE_COMMAND} -E echo "  JSON:  ${CMAKE_BINARY_DIR}/contract-validation-report.json"
-    COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
-    COMMENT "Validating contracts against service claims"
-    VERBATIM
-)
+# Contract validation post-build step (optional)
+if(VALIDATE_CONTRACTS)
+    message(STATUS "Contract validation enabled (disable with -DVALIDATE_CONTRACTS=OFF)")
+    add_custom_command(
+        TARGET ${PROJECT_NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
+        COMMAND ${CMAKE_COMMAND} -E echo "Running contract validation..."
+        COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
+        COMMAND bash -c "validate-contracts --contracts-root ${PROJECT_SOURCE_DIR}/../../contracts --service-contracts ${PROJECT_SOURCE_DIR}/contracts --claims ${PROJECT_SOURCE_DIR}/claims.json > ${CMAKE_BINARY_DIR}/contract-validation-report.txt 2>&1 || true"
+        COMMAND bash -c "validate-contracts --contracts-root ${PROJECT_SOURCE_DIR}/../../contracts --service-contracts ${PROJECT_SOURCE_DIR}/contracts --claims ${PROJECT_SOURCE_DIR}/claims.json --json 2>/dev/null > ${CMAKE_BINARY_DIR}/contract-validation-report.json || true"
+        COMMAND ${CMAKE_COMMAND} -E echo ""
+        COMMAND ${CMAKE_COMMAND} -E echo "Contract validation complete!"
+        COMMAND ${CMAKE_COMMAND} -E echo "Reports saved to:"
+        COMMAND ${CMAKE_COMMAND} -E echo "  Text:  ${CMAKE_BINARY_DIR}/contract-validation-report.txt"
+        COMMAND ${CMAKE_COMMAND} -E echo "  JSON:  ${CMAKE_BINARY_DIR}/contract-validation-report.json"
+        COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
+        COMMENT "Validating contracts against service claims"
+        VERBATIM
+    )
+else()
+    message(STATUS "Contract validation disabled")
+endif()
 
 # Enable testing
 enable_testing()
