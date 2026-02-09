@@ -1,5 +1,5 @@
-#ifndef INVENTORY_UTILS_CONTRACTREADER_HPP
-#define INVENTORY_UTILS_CONTRACTREADER_HPP
+#ifndef CONTRACT_VALIDATOR_CONTRACTREADER_HPP
+#define CONTRACT_VALIDATOR_CONTRACTREADER_HPP
 
 #include <string>
 #include <vector>
@@ -10,8 +10,7 @@
 
 using json = nlohmann::json;
 
-namespace inventory {
-namespace utils {
+namespace contract_validator {
 
 /**
  * @brief Reads and processes contract definitions for OpenAPI generation
@@ -159,7 +158,6 @@ private:
     static EndpointDefinition parseEndpoint(const json& j);
 };
 
-} // namespace utils
-} // namespace inventory
+} // namespace contract_validator
 
-#endif // INVENTORY_UTILS_CONTRACTREADER_HPP
+#endif // CONTRACT_VALIDATOR_CONTRACTREADER_HPP

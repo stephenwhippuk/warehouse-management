@@ -17,6 +17,7 @@ find_package(Poco REQUIRED COMPONENTS Net NetSSL Util Foundation)
 find_package(PostgreSQL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(contract-validator REQUIRED)
 
 # RabbitMQ C client (installed via apt: librabbitmq-dev)
 find_library(RABBITMQ_LIBRARY NAMES rabbitmq)
@@ -49,11 +50,17 @@ set(SOURCES
     src/utils/RabbitMqMessageBus.cpp
     src/utils/JsonValidator.cpp
     src/utils/SwaggerGenerator.cpp
-    src/utils/ContractReader.cpp
 )
 
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
+
+# Contract validator tool
+add_executable(validate-contracts
+    src/validate_contracts.cpp
+    src/utils/Logger.cpp
+    src/utils/Config.cpp
+)
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
@@ -67,6 +74,14 @@ target_link_libraries(${PROJECT_NAME}
     nlohmann_json::nlohmann_json
     spdlog::spdlog
     ${RABBITMQ_LIBRARY}
+    ContractValidator::contract-validator
+)
+
+# Link libraries for validate-contracts tool
+target_link_libraries(validate-contracts
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog
+    ContractValidator::contract-validator
 )
 
 # Compiler options
@@ -76,6 +91,26 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -Wpedantic
     $<$<CONFIG:Debug>:-g -O0>
     $<$<CONFIG:Release>:-O3>
+)
+
+# Contract validation post-build step
+# Runs contract validation and generates reports automatically after each build
+add_custom_command(
+    TARGET ${PROJECT_NAME}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
+    COMMAND ${CMAKE_COMMAND} -E echo "Running contract validation..."
+    COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
+    COMMAND bash -c "validate-contracts --contracts-root ${PROJECT_SOURCE_DIR}/../../contracts --service-contracts ${PROJECT_SOURCE_DIR}/contracts --claims ${PROJECT_SOURCE_DIR}/claims.json > ${CMAKE_BINARY_DIR}/contract-validation-report.txt 2>&1 || true"
+    COMMAND bash -c "validate-contracts --contracts-root ${PROJECT_SOURCE_DIR}/../../contracts --service-contracts ${PROJECT_SOURCE_DIR}/contracts --claims ${PROJECT_SOURCE_DIR}/claims.json --json 2>/dev/null > ${CMAKE_BINARY_DIR}/contract-validation-report.json || true"
+    COMMAND ${CMAKE_COMMAND} -E echo ""
+    COMMAND ${CMAKE_COMMAND} -E echo "Contract validation complete!"
+    COMMAND ${CMAKE_COMMAND} -E echo "Reports saved to:"
+    COMMAND ${CMAKE_COMMAND} -E echo "  Text:  ${CMAKE_BINARY_DIR}/contract-validation-report.txt"
+    COMMAND ${CMAKE_COMMAND} -E echo "  JSON:  ${CMAKE_BINARY_DIR}/contract-validation-report.json"
+    COMMAND ${CMAKE_COMMAND} -E echo "========================================================================"
+    COMMENT "Validating contracts against service claims"
+    VERBATIM
 )
 
 # Enable testing

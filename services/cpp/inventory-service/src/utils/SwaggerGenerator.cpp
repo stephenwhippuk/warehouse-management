@@ -1,11 +1,13 @@
 #include "inventory/utils/SwaggerGenerator.hpp"
-#include "inventory/utils/ContractReader.hpp"
+#include "contract_validator/ContractReader.hpp"
 #include "inventory/utils/Logger.hpp"
 #include <algorithm>
 #include <set>
 
 namespace inventory {
 namespace utils {
+
+using contract_validator::ContractReader;
 
 json SwaggerGenerator::generateSpecFromContracts(const std::string& title,
                                                  const std::string& version,

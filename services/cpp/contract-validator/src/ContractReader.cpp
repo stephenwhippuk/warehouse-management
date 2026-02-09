@@ -1,12 +1,11 @@
-#include "inventory/utils/ContractReader.hpp"
-#include "inventory/utils/Logger.hpp"
+#include "contract_validator/ContractReader.hpp"
+#include "contract_validator/Logger.hpp"
 #include <fstream>
 #include <filesystem>
 
 namespace fs = std::filesystem;
 
-namespace inventory {
-namespace utils {
+namespace contract_validator {
 
 ContractReader::ContractReader(const std::string& contractsPath) 
     : contractsPath_(contractsPath) {
@@ -282,5 +281,4 @@ ContractReader::EndpointDefinition ContractReader::parseEndpoint(const json& j) 
     return endpoint;
 }
 
-} // namespace utils
-} // namespace inventory
+} // namespace contract_validator

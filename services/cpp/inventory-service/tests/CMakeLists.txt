@@ -24,6 +24,8 @@ add_executable(inventory-service-tests
     RoutingTests.cpp
     HttpIntegrationTests.cpp
     ContractReaderTests.cpp
+    ContractValidatorTests.cpp
+    CppCodeParserTests.cpp
 )
 
 # Link libraries
@@ -39,6 +41,7 @@ target_link_libraries(inventory-service-tests
     nlohmann_json::nlohmann_json
     spdlog::spdlog
     ${RABBITMQ_LIBRARY}
+    ContractValidator::contract-validator
 )
 
 # Include directories
@@ -57,7 +60,6 @@ target_sources(inventory-service-tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/services/InventoryService.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/RabbitMqMessageBus.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/Auth.cpp
-    ${PROJECT_SOURCE_DIR}/src/utils/ContractReader.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/SwaggerGenerator.cpp
 )
 

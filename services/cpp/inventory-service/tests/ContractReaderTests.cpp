@@ -1,10 +1,11 @@
 #include <catch2/catch_all.hpp>
-#include "inventory/utils/ContractReader.hpp"
+#include "contract_validator/ContractReader.hpp"
 #include "inventory/utils/SwaggerGenerator.hpp"
 #include <filesystem>
 #include <fstream>
 
-using namespace inventory::utils;
+using namespace contract_validator;
+using inventory::utils::SwaggerGenerator;
 
 TEST_CASE("ContractReader loads DTOs", "[contracts][dtos]") {
     std::string contractsPath = "contracts";
