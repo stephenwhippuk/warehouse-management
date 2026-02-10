@@ -1,0 +1,51 @@
+{
+  "name": "CancelOrder",
+  "version": "1.0",
+  "uri": "/api/v1/orders/{id}/cancel",
+  "method": "POST",
+  "authentication": "ApiKey",
+  "description": "Cancel an order",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Order ID"
+    },
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "CancelOrderRequest",
+      "required": true,
+      "description": "Cancellation data"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "OrderDto",
+      "description": "Order cancelled successfully"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request data or order cannot be cancelled"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Order not found"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

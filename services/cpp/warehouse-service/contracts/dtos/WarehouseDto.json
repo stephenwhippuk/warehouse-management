@@ -1,0 +1,116 @@
+{
+  "name": "WarehouseDto",
+  "version": "1.0",
+  "description": "Warehouse data transfer object",
+  "basis": [
+    {"entity": "Warehouse", "type": "fulfilment"}
+  ],
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "source": "Warehouse.id",
+      "description": "Warehouse identifier"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "required": true,
+      "source": "Warehouse.code",
+      "description": "Warehouse code"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "source": "Warehouse.name",
+      "description": "Warehouse name"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "required": true,
+      "source": "Warehouse.status",
+      "description": "Warehouse status (active, inactive, maintenance)"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Warehouse description"
+    },
+    {
+      "name": "address",
+      "type": "object",
+      "required": true,
+      "source": "computed",
+      "description": "Physical address"
+    },
+    {
+      "name": "coordinates",
+      "type": "object",
+      "required": false,
+      "source": "computed",
+      "description": "GPS coordinates"
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Warehouse type"
+    },
+    {
+      "name": "totalArea",
+      "type": "number",
+      "required": false,
+      "source": "computed",
+      "description": "Total area in square meters"
+    },
+    {
+      "name": "storageCapacity",
+      "type": "number",
+      "required": false,
+      "source": "computed",
+      "description": "Storage capacity in cubic meters"
+    },
+    {
+      "name": "contactPerson",
+      "type": "object",
+      "required": false,
+      "source": "computed",
+      "description": "Contact person details"
+    },
+    {
+      "name": "operatingHours",
+      "type": "object",
+      "required": false,
+      "source": "computed",
+      "description": "Operating hours schedule"
+    },
+    {
+      "name": "capabilities",
+      "type": "array",
+      "elementType": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Warehouse capabilities"
+    },
+    {
+      "name": "metadata",
+      "type": "object",
+      "required": false,
+      "source": "computed",
+      "description": "Additional metadata"
+    },
+    {
+      "name": "audit",
+      "type": "object",
+      "required": true,
+      "source": "computed",
+      "description": "Audit information"
+    }
+  ]
+}

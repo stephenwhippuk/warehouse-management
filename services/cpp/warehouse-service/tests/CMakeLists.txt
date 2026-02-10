@@ -14,6 +14,7 @@ if(Catch2_FOUND)
         test_main.cpp
         WarehouseTests.cpp
         LocationTests.cpp
+        HttpIntegrationTests.cpp
     )
     
     add_executable(warehouse-service-tests ${TEST_SOURCES})
@@ -23,6 +24,7 @@ if(Catch2_FOUND)
             Catch2::Catch2WithMain
             nlohmann_json::nlohmann_json
             spdlog::spdlog
+            Poco::Net
     )
     
     target_include_directories(warehouse-service-tests

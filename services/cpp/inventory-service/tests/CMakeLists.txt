@@ -26,6 +26,7 @@ add_executable(inventory-service-tests
     ContractReaderTests.cpp
     ContractValidatorTests.cpp
     CppCodeParserTests.cpp
+    ClaimsControllerTests.cpp
 )
 
 # Link libraries
@@ -61,6 +62,7 @@ target_sources(inventory-service-tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/utils/RabbitMqMessageBus.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/Auth.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/SwaggerGenerator.cpp
+    ${PROJECT_SOURCE_DIR}/src/controllers/ClaimsController.cpp
 )
 
 # Discover tests

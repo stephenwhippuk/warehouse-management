@@ -1,0 +1,42 @@
+{
+  "name": "UpdateWarehouseRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Update",
+  "description": "Update an existing warehouse",
+  "basis": ["Warehouse"],
+  "resultType": "WarehouseDto",
+  "parameters": [
+    {
+      "name": "name",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "description": "Warehouse name"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "description": "Warehouse description"
+    },
+    {
+      "name": "address",
+      "type": "object",
+      "required": false,
+      "description": "Physical address"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "enum": ["active", "inactive", "maintenance"]
+      },
+      "description": "Warehouse status"
+    }
+  ]
+}

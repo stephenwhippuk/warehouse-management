@@ -1,5 +1,6 @@
 #include "warehouse/controllers/LocationController.hpp"
 #include "warehouse/services/LocationService.hpp"
+#include "warehouse/utils/Auth.hpp"
 #include "warehouse/utils/Logger.hpp"
 #include <Poco/Net/HTTPResponse.h>
 
@@ -12,6 +13,17 @@ LocationController::LocationController(std::shared_ptr<services::LocationService
 }
 
 void LocationController::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response) {
+    // Service-to-service authentication
+    auto authStatus = utils::Auth::authorizeServiceRequest(request);
+    if (authStatus == utils::AuthStatus::MissingToken) {
+        sendErrorResponse(response, HTTPResponse::HTTP_UNAUTHORIZED, "Missing service authentication");
+        return;
+    }
+    if (authStatus == utils::AuthStatus::InvalidToken) {
+        sendErrorResponse(response, HTTPResponse::HTTP_FORBIDDEN, "Invalid service authentication");
+        return;
+    }
+
     try {
         const std::string& method = request.getMethod();
         const std::string& uri = request.getURI();

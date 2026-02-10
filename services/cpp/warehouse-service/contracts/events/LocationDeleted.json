@@ -1,0 +1,33 @@
+{
+  "name": "LocationDeleted",
+  "version": "1.0",
+  "type": "Delete",
+  "dataDto": "LocationDto",
+  "description": "Published when a location is deleted",
+  "metadata": [
+    {
+      "name": "eventId",
+      "type": "UUID",
+      "required": true,
+      "description": "Unique event identifier"
+    },
+    {
+      "name": "timestamp",
+      "type": "DateTime",
+      "required": true,
+      "description": "When the event occurred"
+    },
+    {
+      "name": "correlationId",
+      "type": "UUID",
+      "required": false,
+      "description": "Correlation ID for tracing"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "required": true,
+      "description": "Source service (warehouse-service)"
+    }
+  ]
+}

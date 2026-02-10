@@ -1,0 +1,69 @@
+{
+  "service": "order-service",
+  "version": "1.0.0",
+  "fulfilments": [
+    {
+      "contract": "Order",
+      "versions": ["1.0"],
+      "status": "fulfilled",
+      "fields": [
+        {
+          "name": "id",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "orderNumber",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "customerId",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "warehouseId",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "status",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "orderDate",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "total",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "contract": "Product",
+      "versions": ["1.0"],
+      "requiredFields": ["id", "sku"],
+      "optionalFields": ["name"]
+    },
+    {
+      "contract": "Warehouse",
+      "versions": ["1.0"],
+      "requiredFields": ["id", "code"],
+      "optionalFields": ["name"]
+    }
+  ]
+}

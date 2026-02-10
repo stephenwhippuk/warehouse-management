@@ -1,0 +1,44 @@
+{
+  "name": "CreateLocation",
+  "version": "1.0",
+  "uri": "/api/v1/locations",
+  "method": "POST",
+  "authentication": "ApiKey",
+  "description": "Create a new storage location",
+  "parameters": [
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "CreateLocationRequest",
+      "required": true,
+      "description": "Location creation data"
+    }
+  ],
+  "responses": [
+    {
+      "status": 201,
+      "type": "LocationDto",
+      "description": "Location created successfully"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request data"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 409,
+      "type": "ErrorDto",
+      "description": "Location with code already exists"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

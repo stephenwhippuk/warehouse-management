@@ -1,0 +1,38 @@
+{
+  "name": "DeleteLocation",
+  "version": "1.0",
+  "uri": "/api/v1/locations/{id}",
+  "method": "DELETE",
+  "authentication": "ApiKey",
+  "description": "Delete a location",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Location ID"
+    }
+  ],
+  "responses": [
+    {
+      "status": 204,
+      "description": "Location deleted successfully"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Location not found"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

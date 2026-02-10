@@ -1,0 +1,62 @@
+{
+  "name": "ListOrders",
+  "version": "1.0",
+  "uri": "/api/v1/orders",
+  "method": "GET",
+  "authentication": "ApiKey",
+  "description": "List orders with optional filtering",
+  "parameters": [
+    {
+      "name": "status",
+      "location": "Query",
+      "type": "string",
+      "required": false,
+      "description": "Filter by status"
+    },
+    {
+      "name": "customerId",
+      "location": "Query",
+      "type": "string",
+      "required": false,
+      "description": "Filter by customer ID"
+    },
+    {
+      "name": "warehouseId",
+      "location": "Query",
+      "type": "UUID",
+      "required": false,
+      "description": "Filter by warehouse ID"
+    },
+    {
+      "name": "page",
+      "location": "Query",
+      "type": "PositiveInteger",
+      "required": false,
+      "description": "Page number (default: 1)"
+    },
+    {
+      "name": "pageSize",
+      "location": "Query",
+      "type": "PositiveInteger",
+      "required": false,
+      "description": "Items per page (default: 50)"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "OrderListDto",
+      "description": "List of orders"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "UpdateOrderRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Update",
+  "description": "Update an existing order",
+  "basis": ["Order"],
+  "resultType": "OrderDto",
+  "parameters": [
+    {
+      "name": "status",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "enum": ["pending", "confirmed", "allocated", "picking", "picked", "packing", "packed", "shipped", "delivered", "cancelled", "on_hold"]
+      },
+      "description": "Order status"
+    },
+    {
+      "name": "priority",
+      "type": "string",
+      "required": false,
+      "description": "Order priority"
+    },
+    {
+      "name": "notes",
+      "type": "string",
+      "required": false,
+      "description": "Order notes"
+    }
+  ]
+}

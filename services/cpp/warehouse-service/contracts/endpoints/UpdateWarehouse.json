@@ -1,0 +1,51 @@
+{
+  "name": "UpdateWarehouse",
+  "version": "1.0",
+  "uri": "/api/v1/warehouses/{id}",
+  "method": "PUT",
+  "authentication": "ApiKey",
+  "description": "Update an existing warehouse",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Warehouse ID"
+    },
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "UpdateWarehouseRequest",
+      "required": true,
+      "description": "Warehouse update data"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "WarehouseDto",
+      "description": "Warehouse updated successfully"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request data"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Warehouse not found"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

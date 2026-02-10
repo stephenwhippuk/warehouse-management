@@ -10,7 +10,8 @@ namespace inventory {
 enum class RouteTarget {
     Inventory,
     Health,
-    Swagger
+    Swagger,
+    Claims
 };
 
 // Pure helper used by the HTTP server routing logic; exposed so
@@ -21,6 +22,9 @@ inline RouteTarget resolveRoute(const std::string& path) {
     }
     if (path == "/api/swagger.json") {
         return RouteTarget::Swagger;
+    }
+    if (path.starts_with("/api/v1/claims")) {
+        return RouteTarget::Claims;
     }
     return RouteTarget::Inventory;
 }

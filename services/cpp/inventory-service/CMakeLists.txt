@@ -44,6 +44,7 @@ set(SOURCES
     src/controllers/InventoryController.cpp
     src/controllers/HealthController.cpp
     src/controllers/SwaggerController.cpp
+    src/controllers/ClaimsController.cpp
     src/repositories/InventoryRepository.cpp
     src/services/InventoryService.cpp
     src/utils/Database.cpp

@@ -1,0 +1,38 @@
+{
+  "name": "DeleteWarehouse",
+  "version": "1.0",
+  "uri": "/api/v1/warehouses/{id}",
+  "method": "DELETE",
+  "authentication": "ApiKey",
+  "description": "Delete a warehouse",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Warehouse ID"
+    }
+  ],
+  "responses": [
+    {
+      "status": 204,
+      "description": "Warehouse deleted successfully"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Warehouse not found"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

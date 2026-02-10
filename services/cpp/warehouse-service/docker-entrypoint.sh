@@ -44,6 +44,23 @@ fi
 CURRENT_VERSION=$(sqitch status "$DB_URL" | grep "Nothing to deploy" || echo "Migrations applied")
 echo "==> Database schema status: $CURRENT_VERSION"
 
+echo "==> Startup complete"
+
+# If we're running the test binary, optionally start the HTTP service in the same
+# container so HTTP integration tests can target localhost without cross-container DNS.
+if [ "$1" = "./warehouse-service-tests" ] || [ "$1" = "warehouse-service-tests" ]; then
+  if [ "${WAREHOUSE_HTTP_INTEGRATION:-0}" = "1" ]; then
+    echo "==> Starting Warehouse Service in background for HTTP integration tests..."
+    ./warehouse-service config/application.json &
+    SERVICE_PID=$!
+    # Give the service a brief moment to start; the tests also include retry logic
+    sleep 2
+  fi
+
+  echo "==> Running tests: $*"
+  exec "$@"
+fi
+
 echo "==> Starting Warehouse Service..."
 
 # Execute the main command

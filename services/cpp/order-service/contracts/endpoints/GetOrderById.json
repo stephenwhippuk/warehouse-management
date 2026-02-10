@@ -1,0 +1,39 @@
+{
+  "name": "GetOrderById",
+  "version": "1.0",
+  "uri": "/api/v1/orders/{id}",
+  "method": "GET",
+  "authentication": "ApiKey",
+  "description": "Retrieve a single order by ID",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Order ID"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "OrderDto",
+      "description": "Order found and returned"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Order not found"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

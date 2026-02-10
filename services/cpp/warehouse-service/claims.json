@@ -1,0 +1,88 @@
+{
+  "service": "warehouse-service",
+  "version": "1.0.0",
+  "fulfilments": [
+    {
+      "contract": "Warehouse",
+      "versions": ["1.0"],
+      "status": "fulfilled",
+      "fields": [
+        {
+          "name": "id",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "code",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "name",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "status",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        }
+      ]
+    },
+    {
+      "contract": "Location",
+      "versions": ["1.0"],
+      "status": "fulfilled",
+      "fields": [
+        {
+          "name": "id",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "warehouseId",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "code",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "aisle",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "bay",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "level",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "contract": "Warehouse",
+      "versions": ["1.0"],
+      "requiredFields": ["id", "code"],
+      "optionalFields": ["name"]
+    }
+  ]
+}

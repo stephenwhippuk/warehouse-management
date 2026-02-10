@@ -1,0 +1,167 @@
+{
+  "name": "OrderDto",
+  "version": "1.0",
+  "description": "Order data transfer object with line items",
+  "basis": [
+    {"entity": "Order", "type": "fulfilment"},
+    {"entity": "Product", "type": "reference"},
+    {"entity": "Warehouse", "type": "reference"}
+  ],
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "source": "Order.id",
+      "description": "Order identifier"
+    },
+    {
+      "name": "orderNumber",
+      "type": "string",
+      "required": true,
+      "source": "Order.orderNumber",
+      "description": "Human-readable order number"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "required": true,
+      "source": "Order.customerId",
+      "description": "Customer identifier"
+    },
+    {
+      "name": "customerName",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Customer name"
+    },
+    {
+      "name": "customerEmail",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Customer email"
+    },
+    {
+      "name": "WarehouseId",
+      "type": "UUID",
+      "required": true,
+      "source": "Warehouse.id",
+      "description": "Fulfilling warehouse ID (identity field)"
+    },
+    {
+      "name": "WarehouseCode",
+      "type": "string",
+      "required": true,
+      "source": "Warehouse.code",
+      "description": "Fulfilling warehouse code (identity field)"
+    },
+    {
+      "name": "WarehouseName",
+      "type": "string",
+      "required": false,
+      "source": "Warehouse.name",
+      "description": "Fulfilling warehouse name (cached)"
+    },
+    {
+      "name": "orderDate",
+      "type": "DateTime",
+      "required": true,
+      "source": "Order.orderDate",
+      "description": "Date order was placed"
+    },
+    {
+      "name": "requestedShipDate",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Requested ship date"
+    },
+    {
+      "name": "requestedDeliveryDate",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Requested delivery date"
+    },
+    {
+      "name": "priority",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Order priority (low, normal, high, urgent)"
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Order type (standard, rush, etc.)"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "required": true,
+      "source": "Order.status",
+      "description": "Order status"
+    },
+    {
+      "name": "lineItems",
+      "type": "array",
+      "elementType": "object",
+      "required": true,
+      "source": "computed",
+      "description": "Order line items"
+    },
+    {
+      "name": "subtotal",
+      "type": "number",
+      "required": true,
+      "source": "computed",
+      "description": "Order subtotal"
+    },
+    {
+      "name": "shippingCost",
+      "type": "number",
+      "required": false,
+      "source": "computed",
+      "description": "Shipping cost"
+    },
+    {
+      "name": "tax",
+      "type": "number",
+      "required": false,
+      "source": "computed",
+      "description": "Total tax"
+    },
+    {
+      "name": "total",
+      "type": "number",
+      "required": true,
+      "source": "Order.total",
+      "description": "Order total"
+    },
+    {
+      "name": "shippingAddress",
+      "type": "object",
+      "required": false,
+      "source": "computed",
+      "description": "Shipping address"
+    },
+    {
+      "name": "notes",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Order notes"
+    },
+    {
+      "name": "audit",
+      "type": "object",
+      "required": true,
+      "source": "computed",
+      "description": "Audit information"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "CancelOrderRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Update",
+  "description": "Cancel an order",
+  "basis": ["Order"],
+  "resultType": "OrderDto",
+  "parameters": [
+    {
+      "name": "reason",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "maxLength": 500
+      },
+      "description": "Cancellation reason"
+    }
+  ]
+}

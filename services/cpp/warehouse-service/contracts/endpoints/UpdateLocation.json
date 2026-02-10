@@ -1,0 +1,51 @@
+{
+  "name": "UpdateLocation",
+  "version": "1.0",
+  "uri": "/api/v1/locations/{id}",
+  "method": "PUT",
+  "authentication": "ApiKey",
+  "description": "Update an existing location",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Location ID"
+    },
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "UpdateLocationRequest",
+      "required": true,
+      "description": "Location update data"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "LocationDto",
+      "description": "Location updated successfully"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request data"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Location not found"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

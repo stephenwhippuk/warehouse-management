@@ -1,0 +1,44 @@
+{
+  "name": "CreateOrder",
+  "version": "1.0",
+  "uri": "/api/v1/orders",
+  "method": "POST",
+  "authentication": "ApiKey",
+  "description": "Create a new order",
+  "parameters": [
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "CreateOrderRequest",
+      "required": true,
+      "description": "Order creation data"
+    }
+  ],
+  "responses": [
+    {
+      "status": 201,
+      "type": "OrderDto",
+      "description": "Order created successfully"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request data"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 409,
+      "type": "ErrorDto",
+      "description": "Order with number already exists"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

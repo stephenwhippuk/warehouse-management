@@ -1,0 +1,62 @@
+{
+  "name": "UpdateLocationRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Update",
+  "description": "Update an existing storage location",
+  "basis": ["Location"],
+  "resultType": "LocationDto",
+  "parameters": [
+    {
+      "name": "name",
+      "type": "string",
+      "required": false,
+      "description": "Location name"
+    },
+    {
+      "name": "aisle",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Aisle identifier"
+    },
+    {
+      "name": "bay",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Bay identifier"
+    },
+    {
+      "name": "level",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Level/shelf identifier"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "required": false,
+      "description": "Location status"
+    },
+    {
+      "name": "isPickable",
+      "type": "boolean",
+      "required": false,
+      "description": "Whether location is pickable"
+    },
+    {
+      "name": "isReceivable",
+      "type": "boolean",
+      "required": false,
+      "description": "Whether location can receive inventory"
+    }
+  ]
+}
