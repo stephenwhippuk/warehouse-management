@@ -1,0 +1,45 @@
+{
+  "name": "CreateProductRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Create",
+  "basis": ["Product"],
+  "resultType": "ProductItemDto",
+  "parameters": [
+    {
+      "name": "sku",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 100,
+        "pattern": "^[A-Z0-9-]+$"
+      }
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 2000
+      }
+    },
+    {
+      "name": "category",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 100
+      }
+    }
+  ]
+}

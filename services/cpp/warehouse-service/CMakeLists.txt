@@ -47,6 +47,11 @@ set(SOURCES
     src/models/Warehouse.cpp
     src/models/Location.cpp
     src/models/Common.cpp
+    src/dtos/ErrorDto.cpp
+    src/dtos/WarehouseDto.cpp
+    src/dtos/LocationDto.cpp
+    src/dtos/WarehouseListDto.cpp
+    src/dtos/LocationListDto.cpp
     src/controllers/WarehouseController.cpp
     src/controllers/LocationController.cpp
     src/controllers/SwaggerController.cpp
@@ -58,6 +63,7 @@ set(SOURCES
     src/services/LocationService.cpp
     src/utils/Database.cpp
     src/utils/Logger.cpp
+    src/utils/DtoMapper.cpp
     src/utils/Config.cpp
     src/utils/JsonValidator.cpp
     src/utils/SwaggerGenerator.cpp

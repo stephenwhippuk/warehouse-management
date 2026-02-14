@@ -1,0 +1,50 @@
+{
+  "service": "product-service",
+  "version": "1.0.0",
+  "fulfilments": [
+    {
+      "contract": "Product",
+      "versions": ["1.0"],
+      "status": "fulfilled",
+      "fields": [
+        {
+          "name": "id",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "sku",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "name",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "description",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "category",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        },
+        {
+          "name": "status",
+          "status": "provided",
+          "method": "direct",
+          "security": {"access": "public", "encrypt": false}
+        }
+      ]
+    }
+  ],
+  "references": []
+}

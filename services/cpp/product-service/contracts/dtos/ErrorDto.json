@@ -1,0 +1,21 @@
+{
+  "name": "ErrorDto",
+  "version": "1.0",
+  "fields": [
+    {
+      "name": "error",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "message",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "details",
+      "type": "string",
+      "required": false
+    }
+  ]
+}

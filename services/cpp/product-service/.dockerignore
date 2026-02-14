@@ -1,0 +1,10 @@
+build/
+.git/
+.github/
+.vscode/
+.env
+.env.local
+.gitignore
+README.md
+*.md
+Testing/

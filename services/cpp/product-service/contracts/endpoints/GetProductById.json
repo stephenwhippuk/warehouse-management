@@ -1,0 +1,27 @@
+{
+  "name": "GetProductById",
+  "uri": "/api/v1/products/{id}",
+  "method": "GET",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "ProductItemDto"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto"
+    }
+  ]
+}

@@ -59,8 +59,8 @@ public:
     LocationType getType() const { return type_; }
     const std::optional<std::string>& getZone() const { return zone_; }
     const std::optional<std::string>& getAisle() const { return aisle_; }
-    const std::optional<std::string>& getRack() const { return rack_; }
-    const std::optional<std::string>& getShelf() const { return shelf_; }
+    const std::optional<std::string>& getBay() const { return bay_; }
+    const std::optional<std::string>& getLevel() const { return level_; }
     const std::optional<std::string>& getBin() const { return bin_; }
     const std::optional<std::string>& getParentLocationId() const { return parentLocationId_; }
     const std::optional<Dimensions>& getDimensions() const { return dimensions_; }
@@ -84,8 +84,8 @@ public:
     void setType(LocationType type) { type_ = type; }
     void setZone(const std::optional<std::string>& zone) { zone_ = zone; }
     void setAisle(const std::optional<std::string>& aisle) { aisle_ = aisle; }
-    void setRack(const std::optional<std::string>& rack) { rack_ = rack; }
-    void setShelf(const std::optional<std::string>& shelf) { shelf_ = shelf; }
+    void setBay(const std::optional<std::string>& bay) { bay_ = bay; }
+    void setLevel(const std::optional<std::string>& level) { level_ = level; }
     void setBin(const std::optional<std::string>& bin) { bin_ = bin; }
     void setParentLocationId(const std::optional<std::string>& parentId) { parentLocationId_ = parentId; }
     void setDimensions(const std::optional<Dimensions>& dims) { dimensions_ = dims; }
@@ -113,8 +113,8 @@ private:
     LocationType type_;
     std::optional<std::string> zone_;
     std::optional<std::string> aisle_;
-    std::optional<std::string> rack_;
-    std::optional<std::string> shelf_;
+    std::optional<std::string> bay_;
+    std::optional<std::string> level_;
     std::optional<std::string> bin_;
     std::optional<std::string> parentLocationId_;
     std::optional<Dimensions> dimensions_;

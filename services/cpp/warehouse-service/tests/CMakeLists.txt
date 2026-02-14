@@ -15,9 +15,20 @@ if(Catch2_FOUND)
         WarehouseTests.cpp
         LocationTests.cpp
         HttpIntegrationTests.cpp
+        DtoMapperTests.cpp
     )
     
-    add_executable(warehouse-service-tests ${TEST_SOURCES})
+    # DTO sources needed for tests
+    set(DTO_SOURCES
+        ${CMAKE_SOURCE_DIR}/src/dtos/WarehouseDto.cpp
+        ${CMAKE_SOURCE_DIR}/src/dtos/LocationDto.cpp
+        ${CMAKE_SOURCE_DIR}/src/dtos/WarehouseListDto.cpp
+        ${CMAKE_SOURCE_DIR}/src/dtos/LocationListDto.cpp
+        ${CMAKE_SOURCE_DIR}/src/dtos/ErrorDto.cpp
+        ${CMAKE_SOURCE_DIR}/src/utils/DtoMapper.cpp
+    )
+    
+    add_executable(warehouse-service-tests ${TEST_SOURCES} ${DTO_SOURCES})
     
     target_link_libraries(warehouse-service-tests
         PRIVATE

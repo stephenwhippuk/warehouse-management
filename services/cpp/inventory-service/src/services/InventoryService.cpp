@@ -1,5 +1,6 @@
 #include "inventory/services/InventoryService.hpp"
 #include "inventory/utils/Logger.hpp"
+#include "inventory/utils/DtoMapper.hpp"
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 
@@ -10,38 +11,42 @@ InventoryService::InventoryService(std::shared_ptr<repositories::InventoryReposi
                                    std::shared_ptr<utils::MessageBus> messageBus)
     : repository_(repository), messageBus_(std::move(messageBus)) {}
 
-std::optional<models::Inventory> InventoryService::getById(const std::string& id) {
-    return repository_->findById(id);
+std::optional<dtos::InventoryItemDto> InventoryService::getById(const std::string& id) {
+    auto inventory = repository_->findById(id);
+    if (!inventory) {
+        return std::nullopt;
+    }
+    return convertToDto(*inventory);
 }
 
-std::vector<models::Inventory> InventoryService::getAll() {
-    return repository_->findAll();
+std::vector<dtos::InventoryItemDto> InventoryService::getAll() {
+    return convertToDtos(repository_->findAll());
 }
 
-std::vector<models::Inventory> InventoryService::getByProductId(const std::string& productId) {
-    return repository_->findByProductId(productId);
+std::vector<dtos::InventoryItemDto> InventoryService::getByProductId(const std::string& productId) {
+    return convertToDtos(repository_->findByProductId(productId));
 }
 
-std::vector<models::Inventory> InventoryService::getByWarehouseId(const std::string& warehouseId) {
-    return repository_->findByWarehouseId(warehouseId);
+std::vector<dtos::InventoryItemDto> InventoryService::getByWarehouseId(const std::string& warehouseId) {
+    return convertToDtos(repository_->findByWarehouseId(warehouseId));
 }
 
-std::vector<models::Inventory> InventoryService::getByLocationId(const std::string& locationId) {
-    return repository_->findByLocationId(locationId);
+std::vector<dtos::InventoryItemDto> InventoryService::getByLocationId(const std::string& locationId) {
+    return convertToDtos(repository_->findByLocationId(locationId));
 }
 
-std::vector<models::Inventory> InventoryService::getLowStock(int threshold) {
+std::vector<dtos::InventoryItemDto> InventoryService::getLowStock(int threshold) {
     if (threshold < 0) {
         throw std::invalid_argument("Threshold must be non-negative");
     }
-    return repository_->findLowStock(threshold);
+    return convertToDtos(repository_->findLowStock(threshold));
 }
 
-std::vector<models::Inventory> InventoryService::getExpired() {
-    return repository_->findExpired();
+std::vector<dtos::InventoryItemDto> InventoryService::getExpired() {
+    return convertToDtos(repository_->findExpired());
 }
 
-models::Inventory InventoryService::create(const models::Inventory& inventory) {
+dtos::InventoryItemDto InventoryService::create(const models::Inventory& inventory) {
     if (!isValidInventory(inventory)) {
         throw std::invalid_argument("Invalid inventory data");
     }
@@ -55,10 +60,10 @@ models::Inventory InventoryService::create(const models::Inventory& inventory) {
         }
     }
 
-    return created;
+    return convertToDto(created);
 }
 
-models::Inventory InventoryService::update(const models::Inventory& inventory) {
+dtos::InventoryItemDto InventoryService::update(const models::Inventory& inventory) {
     if (!isValidInventory(inventory)) {
         throw std::invalid_argument("Invalid inventory data");
     }
@@ -78,7 +83,7 @@ models::Inventory InventoryService::update(const models::Inventory& inventory) {
         }
     }
 
-    return updated;
+    return convertToDto(updated);
 }
 
 bool InventoryService::remove(const std::string& id) {
@@ -109,7 +114,7 @@ bool InventoryService::remove(const std::string& id) {
     return deleted;
 }
 
-void InventoryService::reserve(const std::string& id, int quantity) {
+dtos::InventoryOperationResultDto InventoryService::reserve(const std::string& id, int quantity) {
     auto inventory = repository_->findById(id);
     if (!inventory) {
         throw std::runtime_error("Inventory not found: " + id);
@@ -128,9 +133,13 @@ void InventoryService::reserve(const std::string& id, int quantity) {
             utils::Logger::warn("Failed to publish inventory.reserved event: {}", ex.what());
         }
     }
+    
+    return utils::DtoMapper::toInventoryOperationResultDto(
+        updated, "reserve", quantity, true, std::nullopt
+    );
 }
 
-void InventoryService::release(const std::string& id, int quantity) {
+dtos::InventoryOperationResultDto InventoryService::release(const std::string& id, int quantity) {
     auto inventory = repository_->findById(id);
     if (!inventory) {
         throw std::runtime_error("Inventory not found: " + id);
@@ -149,9 +158,13 @@ void InventoryService::release(const std::string& id, int quantity) {
             utils::Logger::warn("Failed to publish inventory.released event: {}", ex.what());
         }
     }
+    
+    return utils::DtoMapper::toInventoryOperationResultDto(
+        updated, "release", quantity, true, std::nullopt
+    );
 }
 
-void InventoryService::allocate(const std::string& id, int quantity) {
+dtos::InventoryOperationResultDto InventoryService::allocate(const std::string& id, int quantity) {
     auto inventory = repository_->findById(id);
     if (!inventory) {
         throw std::runtime_error("Inventory not found: " + id);
@@ -170,9 +183,13 @@ void InventoryService::allocate(const std::string& id, int quantity) {
             utils::Logger::warn("Failed to publish inventory.allocated event: {}", ex.what());
         }
     }
+    
+    return utils::DtoMapper::toInventoryOperationResultDto(
+        updated, "allocate", quantity, true, std::nullopt
+    );
 }
 
-void InventoryService::deallocate(const std::string& id, int quantity) {
+dtos::InventoryOperationResultDto InventoryService::deallocate(const std::string& id, int quantity) {
     auto inventory = repository_->findById(id);
     if (!inventory) {
         throw std::runtime_error("Inventory not found: " + id);
@@ -191,9 +208,13 @@ void InventoryService::deallocate(const std::string& id, int quantity) {
             utils::Logger::warn("Failed to publish inventory.deallocated event: {}", ex.what());
         }
     }
+    
+    return utils::DtoMapper::toInventoryOperationResultDto(
+        updated, "deallocate", quantity, true, std::nullopt
+    );
 }
 
-void InventoryService::adjust(const std::string& id, int quantityChange, const std::string& reason) {
+dtos::InventoryOperationResultDto InventoryService::adjust(const std::string& id, int quantityChange, const std::string& reason) {
     auto inventory = repository_->findById(id);
     if (!inventory) {
         throw std::runtime_error("Inventory not found: " + id);
@@ -217,6 +238,10 @@ void InventoryService::adjust(const std::string& id, int quantityChange, const s
             utils::Logger::warn("Failed to publish inventory.adjusted event: {}", ex.what());
         }
     }
+    
+    return utils::DtoMapper::toInventoryOperationResultDto(
+        updated, "adjust", quantityChange, true, reason
+    );
 }
 
 bool InventoryService::isValidInventory(const models::Inventory& inventory) const {
@@ -260,6 +285,31 @@ void InventoryService::validateQuantities(int quantity, int available, int reser
     if (quantity != available + reserved + allocated) {
         throw std::invalid_argument("Quantity must equal available + reserved + allocated");
     }
+}
+
+dtos::InventoryItemDto InventoryService::convertToDto(const models::Inventory& inventory) const {
+    // TODO: Fetch identity fields from Product, Warehouse, Location services
+    // For now, using placeholder values
+    return utils::DtoMapper::toInventoryItemDto(
+        inventory,
+        "SKU-" + inventory.getProductId().substr(0, 8),  // Placeholder SKU
+        "WH-" + inventory.getWarehouseId().substr(0, 8), // Placeholder warehouse code
+        "LOC-" + inventory.getLocationId().substr(0, 8)  // Placeholder location code
+    );
+}
+
+std::vector<dtos::InventoryItemDto> InventoryService::convertToDtos(
+    const std::vector<models::Inventory>& inventories) const {
+    
+    // TODO: Batch fetch identity fields from services to improve performance
+    std::vector<dtos::InventoryItemDto> dtos;
+    dtos.reserve(inventories.size());
+    
+    for (const auto& inventory : inventories) {
+        dtos.push_back(convertToDto(inventory));
+    }
+    
+    return dtos;
 }
 
 } // namespace services

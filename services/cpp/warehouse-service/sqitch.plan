@@ -3,3 +3,4 @@
 %uri=https://github.com/stephenwhippuk/warehouse-management
 
 001_initial_schema 2026-02-07T00:00:00Z System <system@warehouse.local> # Create initial warehouse and location tables
+002_rename_location_fields [001_initial_schema] 2026-02-10T00:00:00Z System <system@warehouse.local> # Rename rack->bay, shelf->level to match entity contract

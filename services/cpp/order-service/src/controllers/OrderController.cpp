@@ -1,5 +1,7 @@
 #include "order/controllers/OrderController.hpp"
 #include "order/services/OrderService.hpp"
+#include "order/dtos/ErrorDto.hpp"
+#include "order/models/Order.hpp"
 #include "order/utils/Auth.hpp"
 #include "order/utils/Logger.hpp"
 #include <Poco/Net/HTTPResponse.h>
@@ -73,15 +75,27 @@ void OrderController::handleGetAll(
 ) {
     utils::Logger::info("Listing orders");
     
-    // TODO: Implement list orders
-    json responseJson = {
-        {"orders", json::array()},
-        {"total", 0},
-        {"page", 1},
-        {"pageSize", 50}
-    };
-    
-    sendJsonResponse(response, 200, responseJson.dump());
+    try {
+        auto dtos = service_->getAll();
+        
+        json items = json::array();
+        for (const auto& dto : dtos) {
+            items.push_back(dto.toJson());
+        }
+        
+        json responseJson = {
+            {"items", items},
+            {"totalCount", dtos.size()},
+            {"page", 1},
+            {"pageSize", dtos.size()},
+            {"totalPages", 1}
+        };
+        
+        sendJsonResponse(response, 200, responseJson.dump());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleGetAll: {}", e.what());
+        sendErrorResponse(response, 500, "Failed to retrieve orders");
+    }
 }
 
 void OrderController::handleGetById(
@@ -91,8 +105,17 @@ void OrderController::handleGetById(
 ) {
     utils::Logger::info("Getting order by ID: {}", id);
     
-    // TODO: Implement get order by ID
-    sendErrorResponse(response, 501, "Not implemented");
+    try {
+        auto dto = service_->getById(id);
+        if (!dto) {
+            sendErrorResponse(response, 404, "Order not found");
+            return;
+        }
+        sendJsonResponse(response, 200, dto->toJson().dump());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleGetById: {}", e.what());
+        sendErrorResponse(response, 500, "Failed to retrieve order");
+    }
 }
 
 void OrderController::handleCreate(
@@ -105,13 +128,24 @@ void OrderController::handleCreate(
         std::istream& input = request.stream();
         json requestBody = json::parse(input);
         
-        // TODO: Implement order creation
         utils::Logger::debug("Order creation request: {}", requestBody.dump());
         
-        sendErrorResponse(response, 501, "Not implemented");
+        // Create Order model from JSON
+        auto order = models::Order::fromJson(requestBody);
+        
+        // Call service which returns OrderDto
+        auto dto = service_->create(order);
+        
+        sendJsonResponse(response, 201, dto.toJson().dump());
     } catch (const json::exception& e) {
         utils::Logger::error("JSON parse error: {}", e.what());
         sendErrorResponse(response, 400, "Invalid JSON");
+    } catch (const std::invalid_argument& e) {
+        utils::Logger::error("Validation error in handleCreate: {}", e.what());
+        sendErrorResponse(response, 400, e.what());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleCreate: {}", e.what());
+        sendErrorResponse(response, 500, "Failed to create order");
     }
 }
 
@@ -126,13 +160,30 @@ void OrderController::handleUpdate(
         std::istream& input = request.stream();
         json requestBody = json::parse(input);
         
-        // TODO: Implement order update
         utils::Logger::debug("Order update request: {}", requestBody.dump());
         
-        sendErrorResponse(response, 501, "Not implemented");
+        // Ensure id is set in the JSON
+        requestBody["id"] = id;
+        
+        // Create Order model from JSON
+        auto order = models::Order::fromJson(requestBody);
+        
+        // Call service which returns OrderDto
+        auto dto = service_->update(order);
+        
+        sendJsonResponse(response, 200, dto.toJson().dump());
     } catch (const json::exception& e) {
         utils::Logger::error("JSON parse error: {}", e.what());
         sendErrorResponse(response, 400, "Invalid JSON");
+    } catch (const std::invalid_argument& e) {
+        utils::Logger::error("Validation error in handleUpdate: {}", e.what());
+        sendErrorResponse(response, 400, e.what());
+    } catch (const std::runtime_error& e) {
+        utils::Logger::error("Error in handleUpdate: {}", e.what());
+        sendErrorResponse(response, 404, e.what());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleUpdate: {}", e.what());
+        sendErrorResponse(response, 500, "Failed to update order");
     }
 }
 
@@ -147,13 +198,27 @@ void OrderController::handleCancel(
         std::istream& input = request.stream();
         json requestBody = json::parse(input);
         
-        // TODO: Implement order cancellation
         utils::Logger::debug("Order cancellation request: {}", requestBody.dump());
         
-        sendErrorResponse(response, 501, "Not implemented");
+        // Extract cancellation reason from request
+        std::string reason = requestBody.value("reason", "Customer requested cancellation");
+        
+        // Call service which returns OrderDto
+        auto dto = service_->cancelOrder(id, reason);
+        
+        sendJsonResponse(response, 200, dto.toJson().dump());
     } catch (const json::exception& e) {
         utils::Logger::error("JSON parse error: {}", e.what());
         sendErrorResponse(response, 400, "Invalid JSON");
+    } catch (const std::invalid_argument& e) {
+        utils::Logger::error("Validation error in handleCancel: {}", e.what());
+        sendErrorResponse(response, 400, e.what());
+    } catch (const std::runtime_error& e) {
+        utils::Logger::error("Error in handleCancel: {}", e.what());
+        sendErrorResponse(response, 404, e.what());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleCancel: {}", e.what());
+        sendErrorResponse(response, 500, "Failed to cancel order");
     }
 }
 

@@ -1,0 +1,37 @@
+{
+  "name": "UpdateProduct",
+  "uri": "/api/v1/products/{id}",
+  "method": "PUT",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true
+    },
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "UpdateProductRequest",
+      "required": true
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "ProductItemDto"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto"
+    }
+  ]
+}

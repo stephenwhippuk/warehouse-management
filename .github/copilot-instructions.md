@@ -12,6 +12,8 @@ This is a microservices-based warehouse management system with:
 
 **IMPORTANT**: This project uses a comprehensive **Contract System** to ensure consistency across services. All services must declare contracts (fulfilments/references), define DTOs/Requests/Events/Endpoints, and maintain a `claims.json` manifest. See "Contract System" section below and `/contracts/docs/overview.md` for full details.
 
+**CRITICAL ARCHITECTURE POLICY**: Services MUST return DTOs, NOT domain models. Domain models remain internal to the service/repository layers. DTOs are the external API contract. See "Data Transfer Objects (DTOs)" section and `/docs/dto-architecture-pattern.md` for complete implementation guide.
+
 ## C++ Project Guidelines
 
 ### Architecture
@@ -19,14 +21,18 @@ This is a microservices-based warehouse management system with:
 Follow a **clean layered architecture** for all C++ services:
 
 ```
-Controllers (HTTP) → Services (Business Logic) → Repositories (Data Access) → Database
+Controllers (HTTP) → DTOs → Services (Business Logic) → Models → Repositories (Data Access) → Database
+                      ↑                                    ↑
+                 Public API                           Internal Only
 ```
 
 **Layer Responsibilities:**
-- **Controllers**: Handle HTTP requests/responses, route to services, minimal logic
-- **Services**: Business logic, validation, orchestration, transaction management
+- **Controllers**: Handle HTTP requests/responses, work with DTOs, minimal logic
+- **DTOs**: External API contracts, immutable, validated, entity-prefixed references
+- **Services**: Business logic, validation, orchestration, convert models to DTOs
+- **Models**: Domain entities, business logic, internal representation only
 - **Repositories**: Database queries, CRUD operations, data mapping
-- **Utils**: Cross-cutting concerns (logging, config, database connection, validation)
+- **Utils**: Cross-cutting concerns (logging, config, database connection, validation, DTO mapping)
 
 ### Code Standards
 
@@ -47,7 +53,8 @@ Controllers (HTTP) → Services (Business Logic) → Repositories (Data Access) 
 **File Organization:**
 ```
 include/{service}/          # Public headers
-  ├── models/              # Domain entities
+  ├── models/              # Domain entities (internal)
+  ├── dtos/                # Data Transfer Objects (external API)
   ├── controllers/         # HTTP handlers
   ├── services/            # Business logic
   ├── repositories/        # Data access
@@ -55,6 +62,7 @@ include/{service}/          # Public headers
 
 src/                       # Implementation files
   ├── models/
+  ├── dtos/
   ├── controllers/
   ├── services/
   ├── repositories/
@@ -98,6 +106,7 @@ All domain models must:
 - Use getters/setters for encapsulation
 - Include business logic methods (e.g., `reserve()`, `isExpired()`)
 - Include all fields declared in the service's fulfilment claims
+- **REMAIN INTERNAL** - Models are never exposed outside service/repository layers
 
 **Example:**
 ```cpp
@@ -126,6 +135,273 @@ private:
     std::string id_;
     int quantity_ = 0;
 };
+```
+
+### Data Transfer Objects (DTOs)
+
+**CRITICAL ARCHITECTURE POLICY**: Services MUST return DTOs, NOT domain models. DTOs are the external API contract while models remain internal.
+
+```
+Controllers (HTTP) → DTOs → Services → Models → Repositories → Database
+                      ↑
+                  Public API
+```
+
+**DTO Requirements:**
+- **Immutable**: All fields passed via constructor, no setters
+- **Validated**: Constructor validates all fields using contractual type restrictions
+- **Contract-compliant**: Must match DTO definitions in `/contracts/dtos/`
+- **Entity-prefixed**: Referenced entity fields use prefixes (e.g., `ProductId`, `WarehouseName`)
+- **Serializable**: Provide `toJson()` method for API responses
+- **Performance**: Return collections by `const` reference, not by value (avoid expensive copies)
+
+**DTO Pattern:**
+```cpp
+// Header: include/{service}/dtos/InventoryItemDto.hpp
+class InventoryItemDto {
+public:
+    /**
+     * @brief Construct DTO with all required fields - validates on construction
+     */
+    InventoryItemDto(const std::string& id,              // UUID
+                     const std::string& productId,       // UUID
+                     const std::string& productSku,      // Identity field
+                     int quantity,                       // NonNegativeInteger
+                     const std::string& status,          // InventoryStatus enum
+                     const std::string& createdAt,       // DateTime (ISO 8601)
+                     const std::optional<std::string>& serialNumber = std::nullopt);
+
+    // Immutable getters (const, no setters)
+    // Scalar values: return by value
+    std::string getId() const { return id_; }
+    std::string getProductId() const { return productId_; }
+    std::string getProductSku() const { return productSku_; }
+    int getQuantity() const { return quantity_; }
+    
+    // Collections: MUST return by const reference to avoid expensive copies
+    // const std::vector<SomeType>& getItems() const { return items_; }
+    
+    // Serialization
+    json toJson() const;
+
+private:
+    // Fields
+    std::string id_;
+    std::string productId_;
+    std::string productSku_;
+    int quantity_;
+    std::string status_;
+    std::string createdAt_;
+    std::optional<std::string> serialNumber_;
+
+    // Validation (called from constructor)
+    void validateUuid(const std::string& uuid, const std::string& fieldName) const;
+    void validateNonNegativeInteger(int value, const std::string& fieldName) const;
+    void validateDateTime(const std::string& dateTime, const std::string& fieldName) const;
+    void validateInventoryStatus(const std::string& status) const;
+};
+```
+
+**DTO Implementation Pattern:**
+```cpp
+// src/dtos/InventoryItemDto.cpp
+InventoryItemDto::InventoryItemDto(
+    const std::string& id,
+    const std::string& productId,
+    const std::string& productSku,
+    int quantity,
+    const std::string& status,
+    const std::string& createdAt,
+    const std::optional<std::string>& serialNumber)
+    : id_(id)
+    , productId_(productId)
+    , productSku_(productSku)
+    , quantity_(quantity)
+    , status_(status)
+    , createdAt_(createdAt)
+    , serialNumber_(serialNumber) {
+    
+    // Validate all fields using contractual type restrictions
+    validateUuid(id_, "id");
+    validateUuid(productId_, "ProductId");
+    
+    if (productSku_.empty()) {
+        throw std::invalid_argument("ProductSku cannot be empty");
+    }
+    
+    validateNonNegativeInteger(quantity_, "quantity");
+    validateInventoryStatus(status_);
+    validateDateTime(createdAt_, "createdAt");
+}
+
+json InventoryItemDto::toJson() const {
+    json j = {
+        {"id", id_},
+        {"ProductId", productId_},
+        {"ProductSku", productSku_},
+        {"quantity", quantity_},
+        {"status", status_},
+        {"createdAt", createdAt_}
+    };
+    
+    if (serialNumber_) {
+        j["serialNumber"] = *serialNumber_;
+    }
+    
+    return j;
+}
+```
+
+**Common Validation Helpers:**
+```cpp
+// UUID validation (contract type: UUID)
+void validateUuid(const std::string& uuid, const std::string& fieldName) const {
+    static const std::regex uuidRegex(
+        "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    );
+    if (!std::regex_match(uuid, uuidRegex)) {
+        throw std::invalid_argument(fieldName + " must be a valid UUID");
+    }
+}
+
+// NonNegativeInteger validation (contract type: NonNegativeInteger)
+void validateNonNegativeInteger(int value, const std::string& fieldName) const {
+    if (value < 0) {
+        throw std::invalid_argument(fieldName + " must be non-negative");
+    }
+}
+
+// PositiveInteger validation (contract type: PositiveInteger)
+void validatePositiveInteger(int value, const std::string& fieldName) const {
+    if (value < 1) {
+        throw std::invalid_argument(fieldName + " must be positive");
+    }
+}
+
+// DateTime validation (contract type: DateTime - ISO 8601)
+void validateDateTime(const std::string& dateTime, const std::string& fieldName) const {
+    if (dateTime.empty()) {
+        throw std::invalid_argument(fieldName + " cannot be empty");
+    }
+    static const std::regex isoRegex(
+        R"(^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$)"
+    );
+    if (!std::regex_match(dateTime, isoRegex)) {
+        throw std::invalid_argument(fieldName + " must be in ISO 8601 format");
+    }
+}
+```
+
+**DTO Mapper Utility:**
+Create a mapper to convert models to DTOs:
+
+```cpp
+// include/{service}/utils/DtoMapper.hpp
+class DtoMapper {
+public:
+    static dtos::InventoryItemDto toInventoryItemDto(
+        const models::Inventory& inventory,
+        const std::string& productSku,      // From Product reference
+        const std::string& warehouseCode,   // From Warehouse reference
+        const std::string& locationCode);   // From Location reference
+};
+
+// src/utils/DtoMapper.cpp
+dtos::InventoryItemDto DtoMapper::toInventoryItemDto(
+    const models::Inventory& inventory,
+    const std::string& productSku,
+    const std::string& warehouseCode,
+    const std::string& locationCode) {
+    
+    std::string statusStr = inventoryStatusToLowerString(inventory);
+    
+    return dtos::InventoryItemDto(
+        inventory.getId(),
+        inventory.getProductId(),
+        productSku,                         // Identity field from Product
+        inventory.getWarehouseId(),
+        warehouseCode,                      // Identity field from Warehouse
+        inventory.getLocationId(),
+        locationCode,                       // Identity field from Location
+        inventory.getQuantity(),
+        inventory.getReservedQuantity(),
+        inventory.getAllocatedQuantity(),
+        inventory.getAvailableQuantity(),
+        statusStr,
+        inventory.getCreatedAt().value_or(""),
+        inventory.getUpdatedAt().value_or("")
+    );
+}
+```
+
+**Standard DTOs (create for every service):**
+
+1. **ErrorDto**: Standard error response
+   - Fields: `error`, `message`, `requestId`, `timestamp`, `path`, `details` (optional)
+
+2. **EntityItemDto**: Single entity with referenced data
+   - All fulfilled entity fields
+   - Referenced entity identity fields (entity-prefixed)
+   - Computed fields (e.g., `availableQuantity`)
+
+3. **EntityListDto**: Paginated list response
+   - Fields: `items`, `totalCount`, `page`, `pageSize`, `totalPages`
+   - **CRITICAL**: `getItems()` must return `const std::vector<EntityDto>&` (by const reference)
+   - Prevents expensive vector copies on every access
+
+4. **OperationResultDto**: Result of mutating operations
+   - Entity state after operation
+   - Operation details: `operation`, `operationQuantity`, `success`, `message`
+
+**EntityListDto Pattern (Correct Getter Implementation):**
+```cpp
+class InventoryListDto {
+public:
+    InventoryListDto(const std::vector<InventoryItemDto>& items,
+                     int totalCount, int page, int pageSize, int totalPages);
+    
+    // ✅ CORRECT: Return collection by const reference (zero-cost access)
+    const std::vector<InventoryItemDto>& getItems() const { return items_; }
+    
+    // ✅ CORRECT: Scalar values returned by value
+    int getTotalCount() const { return totalCount_; }
+    int getPage() const { return page_; }
+    int getPageSize() const { return pageSize_; }
+    int getTotalPages() const { return totalPages_; }
+    
+    json toJson() const;
+
+private:
+    std::vector<InventoryItemDto> items_;
+    int totalCount_;
+    int page_;
+    int pageSize_;
+    int totalPages_;
+};
+
+// ❌ WRONG: Returning collection by value (expensive copy on every call)
+// std::vector<InventoryItemDto> getItems() const { return items_; }
+```
+
+**DTO Directory Structure:**
+```
+contracts/dtos/                 # Contract definitions (JSON)
+  ├── ErrorDto.json
+  ├── InventoryItemDto.json
+  ├── InventoryListDto.json
+  └── InventoryOperationResultDto.json
+
+include/{service}/dtos/         # DTO headers
+  ├── ErrorDto.hpp
+  ├── InventoryItemDto.hpp
+  ├── InventoryListDto.hpp
+  └── InventoryOperationResultDto.hpp
+
+src/dtos/                       # DTO implementations
+  ├── ErrorDto.cpp
+  ├── InventoryItemDto.cpp
+  ├── InventoryListDto.cpp
+  └── InventoryOperationResultDto.cpp
 ```
 
 ### Repositories
@@ -172,15 +448,21 @@ std::optional<models::Inventory> InventoryRepository::findById(const std::string
 
 ### Services
 
-**Pattern:**
+**Pattern (MUST return DTOs, not models):**
 ```cpp
 class InventoryService {
 public:
     explicit InventoryService(std::shared_ptr<repositories::InventoryRepository> repository);
     
-    // Business operations
-    std::optional<models::Inventory> getById(const std::string& id);
-    models::Inventory create(const models::Inventory& inventory);
+    // Business operations - return DTOs, not models
+    std::optional<dtos::InventoryItemDto> getById(const std::string& id);
+    std::vector<dtos::InventoryItemDto> getAll();
+    dtos::InventoryItemDto create(const models::Inventory& inventory);
+    dtos::InventoryItemDto update(const models::Inventory& inventory);
+    
+    // Stock operations - return operation result DTOs
+    dtos::InventoryOperationResultDto reserve(const std::string& id, int quantity);
+    dtos::InventoryOperationResultDto release(const std::string& id, int quantity);
     
     // Validation
     bool isValidInventory(const models::Inventory& inventory) const;
@@ -190,15 +472,72 @@ private:
 };
 ```
 
+**Service Implementation Pattern:**
+```cpp
+#include "inventory/utils/DtoMapper.hpp"
+
+std::optional<dtos::InventoryItemDto> InventoryService::getById(const std::string& id) {
+    auto inventory = repository_->findById(id);
+    if (!inventory) {
+        return std::nullopt;
+    }
+    
+    // TODO: Fetch identity fields from Product, Warehouse, Location services
+    // For now, using placeholders
+    return utils::DtoMapper::toInventoryItemDto(
+        *inventory,
+        "SKU-" + inventory->getProductId().substr(0, 8),  // Placeholder
+        "WH-" + inventory->getWarehouseId().substr(0, 8),
+        "LOC-" + inventory->getLocationId().substr(0, 8)
+    );
+}
+
+std::vector<dtos::InventoryItemDto> InventoryService::getAll() {
+    auto inventories = repository_->findAll();
+    std::vector<dtos::InventoryItemDto> dtos;
+    dtos.reserve(inventories.size());
+    
+    for (const auto& inv : inventories) {
+        // TODO: Batch fetch identity fields to improve performance
+        dtos.push_back(utils::DtoMapper::toInventoryItemDto(
+            inv,
+            "SKU-" + inv.getProductId().substr(0, 8),
+            "WH-" + inv.getWarehouseId().substr(0, 8),
+            "LOC-" + inv.getLocationId().substr(0, 8)
+        ));
+    }
+    
+    return dtos;
+}
+
+dtos::InventoryOperationResultDto InventoryService::reserve(const std::string& id, int quantity) {
+    auto inventory = repository_->findById(id);
+    if (!inventory) {
+        throw std::runtime_error("Inventory not found: " + id);
+    }
+    
+    inventory->reserve(quantity);
+    auto updated = repository_->update(*inventory);
+    
+    // Return operation result DTO
+    return utils::DtoMapper::toInventoryOperationResultDto(
+        updated, "reserve", quantity, true, std::nullopt
+    );
+}
+```
+
 **Best Practices:**
+- **Always return DTOs** - Services are the boundary between internal models and external API
 - Validate all inputs
 - Throw meaningful exceptions (`std::invalid_argument`, `std::runtime_error`)
 - Log important operations
 - Keep services stateless
+- Use DtoMapper to convert models to DTOs
+- Add TODOs for fetching real reference data
 
 ### Controllers
 
-**Pattern:**
+**Pattern (work exclusively with DTOs):**
 ```cpp
 class InventoryController : public Poco::Net::HTTPRequestHandler {
 public:
@@ -210,6 +549,7 @@ public:
 private:
     void handleGetById(const std::string& id, Response& response);
     void handleCreate(Request& request, Response& response);
+    void handleReserve(const std::string& id, Request& request, Response& response);
     void sendJsonResponse(Response& response, const std::string& json, int status);
     void sendErrorResponse(Response& response, const std::string& msg, int status);
     
@@ -217,12 +557,50 @@ private:
 };
 ```
 
-**HTTP Routing:**
+**Controller Implementation Pattern:**
+```cpp
+void InventoryController::handleGetAll(Response& response) {
+    auto dtos = service_->getAll();  // Returns vector<InventoryItemDto>
+    json j = json::array();
+    for (const auto& dto : dtos) {
+        j.push_back(dto.toJson());   // DTOs have toJson() method
+    }
+    sendJsonResponse(response, j.dump());
+}
+
+void InventoryController::handleGetById(const std::string& id, Response& response) {
+    auto dto = service_->getById(id);  // Returns optional<InventoryItemDto>
+    if (!dto) {
+        sendErrorResponse(response, "Inventory not found", 404);
+        return;
+    }
+    sendJsonResponse(response, dto->toJson().dump());
+}
+
+void InventoryController::handleReserve(const std::string& id, Request& request, Response& response) {
+    try {
+        std::istream& bodyStream = request.stream();
+        json body;
+        bodyStream >> body;
+        
+        int quantity = body["quantity"].get<int>();
+        auto result = service_->reserve(id, quantity);  // Returns OperationResultDto
+        
+        sendJsonResponse(response, result.toJson().dump());
+    } catch (const std::exception& e) {
+        sendErrorResponse(response, e.what(), 400);
+    }
+}
+```
+
+**Controller Best Practices:**
+- **Never access models** - Only work with DTOs from services
 - Parse URI path and method
 - Extract path parameters (e.g., `/api/v1/inventory/:id`)
 - Parse query parameters
 - Parse JSON request body
 - Return JSON responses with proper status codes
+- Use try-catch for exception handling
 
 ### API Documentation (Swagger/OpenAPI)
 
@@ -332,6 +710,280 @@ TEST_CASE("Inventory operations", "[inventory][operations]") {
         REQUIRE_THROWS_AS(inv.reserve(150), std::runtime_error);
     }
 }
+```
+
+### DTO Validation Testing (CRITICAL)
+
+**ALWAYS create comprehensive DTO validation tests** for every service. These tests prevent runtime validation failures that would otherwise cause 500 errors in production.
+
+**Why DTO Tests Are Critical:**
+- DTOs validate at construction time (UUID format, enum values, timestamp format)
+- Models with invalid data can crash services when converted to DTOs
+- Enum string conversions are error-prone without tests
+- DtoMapper logic needs verification
+- Catch validation issues at build time, not in production
+
+**Required Test File:** `tests/DtoMapperTests.cpp`
+
+**Test Pattern Template:**
+```cpp
+#include <catch2/catch_all.hpp>
+#include "<service>/utils/DtoMapper.hpp"
+#include "<service>/models/<Entity>.hpp"
+#include "<service>/dtos/<Entity>Dto.hpp"
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+
+using namespace <service>;
+
+// Helper: Create ISO 8601 timestamp
+std::string createIso8601Timestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%SZ");
+    return ss.str();
+}
+
+// Helper: Create valid entity model
+models::Entity createValidEntity() {
+    models::Entity entity("550e8400-e29b-41d4-a716-446655440000", ...);
+    entity.setStatus(models::Status::Active);
+    entity.setCreatedAt(createIso8601Timestamp());
+    entity.setUpdatedAt(createIso8601Timestamp());
+    return entity;
+}
+
+TEST_CASE("DtoMapper converts valid entity", "[dto][mapper]") {
+    auto entity = createValidEntity();
+    
+    SECTION("Successful conversion with required fields") {
+        auto dto = utils::DtoMapper::toEntityDto(entity, "IDENTITY-CODE");
+        
+        REQUIRE(dto.getId() == entity.getId());
+        REQUIRE(dto.getStatus() == "active");
+        REQUIRE(dto.getCreatedAt() == entity.getCreatedAt());
+    }
+    
+    SECTION("Conversion with optional fields") {
+        entity.setDescription("Test description");
+        auto dto = utils::DtoMapper::toEntityDto(entity, "IDENTITY-CODE");
+        
+        REQUIRE(dto.getDescription().has_value());
+        REQUIRE(dto.getDescription().value() == "Test description");
+    }
+}
+
+TEST_CASE("DtoMapper handles all enum values", "[dto][mapper][enum]") {
+    SECTION("Active status") {
+        auto entity = createValidEntity();
+        entity.setStatus(models::Status::Active);
+        auto dto = utils::DtoMapper::toEntityDto(entity, "ID");
+        REQUIRE(dto.getStatus() == "active");
+    }
+    
+    SECTION("Inactive status") {
+        auto entity = createValidEntity();
+        entity.setStatus(models::Status::Inactive);
+        auto dto = utils::DtoMapper::toEntityDto(entity, "ID");
+        REQUIRE(dto.getStatus() == "inactive");
+    }
+}
+
+TEST_CASE("DTO constructor validates fields", "[dto][validation]") {
+    SECTION("Valid construction succeeds") {
+        REQUIRE_NOTHROW(
+            dtos::EntityDto(
+                "550e8400-e29b-41d4-a716-446655440000",  // Valid UUID
+                "ENTITY-001",                             // Valid code
+                "active",                                 // Valid status
+                createIso8601Timestamp(),                // Valid timestamp
+                createIso8601Timestamp()
+            )
+        );
+    }
+    
+    SECTION("Invalid UUID throws") {
+        REQUIRE_THROWS_WITH(
+            dtos::EntityDto(
+                "not-a-uuid",  // Invalid
+                "ENTITY-001",
+                "active",
+                createIso8601Timestamp(),
+                createIso8601Timestamp()
+            ),
+            Catch::Matchers::ContainsSubstring("valid UUID")
+        );
+    }
+    
+    SECTION("Empty identity field throws") {
+        REQUIRE_THROWS_WITH(
+            dtos::EntityDto(
+                "550e8400-e29b-41d4-a716-446655440000",
+                "",  // Empty identity field
+                "active",
+                createIso8601Timestamp(),
+                createIso8601Timestamp()
+            ),
+            Catch::Matchers::ContainsSubstring("cannot be empty")
+        );
+    }
+    
+    SECTION("Invalid enum value throws") {
+        REQUIRE_THROWS_WITH(
+            dtos::EntityDto(
+                "550e8400-e29b-41d4-a716-446655440000",
+                "ENTITY-001",
+                "invalid-status",  // Invalid enum
+                createIso8601Timestamp(),
+                createIso8601Timestamp()
+            ),
+            Catch::Matchers::ContainsSubstring("status")
+        );
+    }
+    
+    SECTION("Invalid timestamp throws") {
+        REQUIRE_THROWS_WITH(
+            dtos::EntityDto(
+                "550e8400-e29b-41d4-a716-446655440000",
+                "ENTITY-001",
+                "active",
+                "not-a-timestamp",  // Invalid
+                createIso8601Timestamp()
+            ),
+            Catch::Matchers::ContainsSubstring("ISO 8601")
+        );
+    }
+    
+    SECTION("Negative quantity throws") {
+        REQUIRE_THROWS_WITH(
+            dtos::EntityDto(
+                ...params...,
+                -1  // Negative quantity
+            ),
+            Catch::Matchers::ContainsSubstring("non-negative")
+        );
+    }
+}
+```
+
+**Required Test Coverage:**
+
+1. **Valid Conversions:**
+   - Model → DTO with all required fields
+   - Model → DTO with optional fields
+   - Identity field inclusion (entity-prefixed fields)
+
+2. **All Enum Values:**
+   - Test EVERY enum value for EVERY enum type
+   - Verify string conversion accuracy
+   - Example: Status (active, inactive, maintenance)
+   - Example: Type (standard, express, return)
+   - Example: Priority (low, normal, high, urgent)
+
+3. **DTO Constructor Validation:**
+   - Invalid UUID format throws
+   - Empty required fields throw
+   - Empty identity fields throw
+   - Invalid enum values throw
+   - Invalid timestamp format throws
+   - Negative quantities throw (when NonNegativeInteger)
+   - Zero/positive quantities accepted
+
+4. **Edge Cases:**
+   - Zero quantities (when allowed)
+   - Large quantities (stress test)
+   - Optional fields omitted (std::nullopt)
+   - JSON fields (address, audit, coordinates)
+
+**Test Helpers (always include):**
+```cpp
+// ISO 8601 timestamp generator
+std::string createIso8601Timestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%SZ");
+    return ss.str();
+}
+
+// ISO 8601 date generator (for orderDate, etc.)
+std::string createIso8601Date() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%d");
+    return ss.str();
+}
+
+// Valid entity factory
+models::Entity createValidEntity() {
+    models::Entity entity(
+        "550e8400-e29b-41d4-a716-446655440000",  // Deterministic UUID
+        "ENTITY-001",                            // Valid code
+        ...other required fields...
+    );
+    entity.setStatus(models::Status::Active);
+    entity.setCreatedAt(createIso8601Timestamp());
+    entity.setUpdatedAt(createIso8601Timestamp());
+    return entity;
+}
+```
+
+**CMakeLists.txt Integration:**
+```cmake
+# Test sources
+set(TEST_SOURCES
+    test_main.cpp
+    EntityTests.cpp
+    HttpIntegrationTests.cpp
+    DtoMapperTests.cpp  # REQUIRED
+)
+
+# DTO sources needed for tests
+set(DTO_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/dtos/EntityDto.cpp
+    ${CMAKE_SOURCE_DIR}/src/dtos/EntityListDto.cpp
+    ${CMAKE_SOURCE_DIR}/src/dtos/ErrorDto.cpp
+    ${CMAKE_SOURCE_DIR}/src/utils/DtoMapper.cpp  # REQUIRED
+)
+
+add_executable(service-tests ${TEST_SOURCES} ${DTO_SOURCES})
+```
+
+**Test Naming Conventions:**
+- Use `[dto]` tag for all DTO-related tests
+- Use `[dto][mapper]` for DtoMapper conversion tests
+- Use `[dto][validation]` for DTO constructor tests
+- Use `[dto][enum]` for enum conversion tests
+- Use descriptive SECTION names: "Active status", "Invalid UUID throws"
+
+**Running DTO Tests:**
+```bash
+# Run all DTO tests
+./service-tests "[dto]"
+
+# Run only validation tests
+./service-tests "[dto][validation]"
+
+# Run only enum tests
+./service-tests "[dto][enum]"
+```
+
+**Benefits:**
+- ❌ **Before tests**: Invalid model data causes 500 errors in production
+- ✅ **After tests**: Invalid data caught at compile/test time
+- ❌ **Before tests**: Enum typos ('activ' vs 'active') crash services
+- ✅ **After tests**: All enum values tested, typos impossible
+- ❌ **Before tests**: Timestamp format assumptions break silently
+- ✅ **After tests**: ISO 8601 format enforced and validated
+
+**Example Test Counts:**
+- inventory-service: 52 test cases
+- warehouse-service: 42 test cases
+- order-service: 38 test cases
+- **Total**: 132 test cases preventing runtime errors
 ```
 
 ### HTTP Integration Testing Pattern (Template)
@@ -549,6 +1201,7 @@ The warehouse management system uses a comprehensive contract system to ensure c
 - **Claims**: Service promises to fulfill/reference contracts via DTOs, Requests, Events, Endpoints
 - **Versioning**: All contracts are versioned; breaking by default
 - **Validation**: Build-time and runtime validation ensures compliance
+- **Boundary**: Contracts define inputs/outputs only. Internal DB/model field names may differ as long as requests and DTOs are mapped correctly to the contract. If internal fields differ, treat them as derived/aliased in claims when practical.
 
 ### Contract Types
 
@@ -940,55 +1593,78 @@ void reserve(const std::string& id, int quantity);
 5. Create Dockerfile and docker-compose.yml
 6. Initialize Sqitch (sqitch.conf, sqitch.plan)
 7. Create initial migration
-8. Create models matching entity contracts (with toJson/fromJson)
-9. Define DTOs for all API responses (in /contracts/dtos/)
-10. Define Requests for all API inputs (in /contracts/requests/)
-11. Define Events for all messages (in /contracts/events/)
-12. Define Endpoints for all HTTP endpoints (in /contracts/endpoints/)
-13. Validate field exposure (all fulfilled fields in DTOs or marked private)
-14. Implement repositories (with TODOs if needed)
-15. Implement services with validation
-16. Implement controllers
-17. Implement SwaggerGenerator utility
-18. Add `/api/swagger.json` endpoint
-19. Create unit tests
-20. Create HTTP integration tests
-21. Update README.md with API endpoints
-22. Create PROJECT_STRUCTURE.md
+8. Create models matching entity contracts (with toJson/fromJson) - **models remain internal**
+9. **Create DTO directory structure** (include/{service}/dtos/, src/dtos/)
+10. **Define DTO classes for all API responses:**
+    - ErrorDto (standard error)
+    - EntityItemDto (single entity with references)
+    - EntityListDto (paginated lists)
+    - OperationResultDto (operation results)
+11. **Implement DTOs** (immutable, validated, with toJson())
+12. **Create DtoMapper utility** (utils/DtoMapper for model → DTO conversion)
+13. Define contract DTOs in /contracts/dtos/
+14. Define Requests for all API inputs (in /contracts/requests/)
+15. Define Events for all messages (in /contracts/events/)
+16. Define Endpoints for all HTTP endpoints (in /contracts/endpoints/)
+17. Validate field exposure (all fulfilled fields in DTOs or marked private)
+18. Implement repositories (returns models, not DTOs)
+19. **Implement services with DTO returns** (convert models to DTOs via DtoMapper)
+20. **Implement controllers** (work exclusively with DTOs, never touch models)
+21. Add DTO source files to CMakeLists.txt
+22. Implement SwaggerGenerator utility
+23. Add `/api/swagger.json` endpoint
+24. **CRITICAL: Create tests/DtoMapperTests.cpp** (comprehensive DTO validation tests)
+25. **Add test helpers** (createIso8601Timestamp, createValidEntity)
+26. **Test all enum conversions** (every enum value for every enum type)
+27. **Test DTO constructor validation** (UUID, empty fields, invalid enums, timestamps, quantities)
+28. **Test model→DTO conversions** (required fields, optional fields, identity fields)
+29. **Update tests/CMakeLists.txt** (add DtoMapperTests.cpp + DTO sources + DtoMapper.cpp)
+30. Create HTTP integration tests (verify API returns DTOs)
+31. Update README.md with API endpoints
+32. Create PROJECT_STRUCTURE.md
 
 **New Endpoint Checklist:**
 1. Define Request in service's `/contracts/requests/`
 2. Define result Dto in service's `/contracts/dtos/` (if not exists)
-3. Define Endpoint in service's `/contracts/endpoints/`
-4. Ensure Request `basis` matches service's fulfilments/references
-5. Implement controller method
-6. Add endpoint to OpenAPI/Swagger
-7. Add HTTP integration test
-8. Update README.md
+3. **Create C++ DTO class** (header + implementation with validation)
+4. Define Endpoint in service's `/contracts/endpoints/`
+5. Ensure Request `basis` matches service's fulfilments/references
+6. **Implement service method** (returns DTO, not model)
+7. **Implement controller method** (calls service, gets DTO, returns JSON)
+8. **Add DTO tests to DtoMapperTests.cpp** (if new DTO created)
+9. **Test DTO constructor validation** (all validation rules)
+10. **Test DtoMapper conversion** (model → new DTO)
+11. Add endpoint to OpenAPI/Swagger
+12. Add HTTP integration test
+13. Update README.md
 
 **Adding Field to Fulfilled Entity:**
 1. Update entity contract in `/contracts/entities/v1/` (new version if breaking)
 2. Update service's `claims.json` with field status and security
-3. Add field to at least one service Dto (or mark private in claims.json)
+3. **Add field to at least one DTO class** (or mark private in claims.json)
 4. Update model class with getter/setter
 5. Update repository queries
-6. Update `toJson()`/`fromJson()` methods
-7. Update database migration if needed
+6. Update `toJson()`/`fromJson()` methods in model
+7. **Update DtoMapper** to include new field in DTO conversion
+8. Update database migration if needed
 
 **Referencing New Entity:**
 1. Add reference claim to service's `claims.json`
 2. Specify required identity fields and optional fields
-3. Update DTOs to include entity-prefixed identity fields
-4. Update models if caching referenced entity data
-5. Update relevant Requests if passing referenced entity data
+3. **Update DTOs to include entity-prefixed identity fields** (e.g., ProductId, ProductSku)
+4. **Update DtoMapper signature** to accept identity fields as parameters
+5. Update models if caching referenced entity data
+6. Update relevant Requests if passing referenced entity data
+7. Add TODOs for fetching real reference data
 
 **Publishing New Event:**
 1. Define Event in service's `/contracts/events/`
 2. Ensure event's data Dto exists in `/contracts/dtos/`
-3. Include standard metadata fields (eventId, timestamp, correlationId, source)
-4. Implement event publishing after successful state changes
-5. Use correlation IDs for tracing
-6. Update README.md with event documentation
+3. **Create C++ DTO class for event payload**
+4. Include standard metadata fields (eventId, timestamp, correlationId, source)
+5. Implement event publishing after successful state changes
+6. Use correlation IDs for tracing
+7. Update README.md with event documentation
 
 **New Migration Checklist:**
 1. Add with Sqitch: `sqitch add NNN_name -n "Description"`
@@ -1017,5 +1693,6 @@ void reserve(const std::string& id, int quantity);
 - Poco Documentation: https://pocoproject.org/docs/
 - Project Architecture: `/docs/architecture.md`
 - Database Migrations: `/docs/cpp-database-migrations.md`
+- **DTO Architecture Pattern**: `/docs/dto-architecture-pattern.md` (REQUIRED READING for all service development)
 - Contract System: `/contracts/docs/overview.md` (REQUIRED READING)
 - Contracts Directory: `/contracts/README.md`

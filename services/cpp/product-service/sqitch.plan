@@ -1,0 +1,4 @@
+%syntax-version=1.0.0
+%project=product-service
+
+001_init_schema 2026-02-14T00:00:00Z Stephen <steve@example.com> # Initial schema with products table

@@ -62,6 +62,7 @@ The Warehouse Management Solution is a microservices-based system designed for s
 - **Cross-Service Consistency**: All services validate against the same entity schemas
 - **Static Validation**: Type-safe validation in C++, C#, and TypeScript
 - **Versioned Evolution**: Schema versioning supports backward compatibility
+- **Boundary Clarity**: Contracts define external inputs/outputs; internal DB/model naming can differ if requests/DTOs map correctly
 - See [contracts/README.md](../contracts/README.md) for details
 
 ### 2. Microservices Architecture

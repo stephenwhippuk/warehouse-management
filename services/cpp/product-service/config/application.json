@@ -1,0 +1,25 @@
+{
+  "server": {
+    "port": 8082,
+    "host": "0.0.0.0"
+  },
+  "database": {
+    "connectionString": "postgresql://warehouse:warehouse@postgres:5432/warehouse_db",
+    "pool": {
+      "minConnections": 5,
+      "maxConnections": 20,
+      "idleTimeout": 300
+    }
+  },
+  "logging": {
+    "level": "info",
+    "format": "json"
+  },
+  "service": {
+    "name": "product-service",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "serviceApiKey": "product-service-key-change-in-production"
+  }
+}

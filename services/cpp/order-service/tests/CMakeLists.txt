@@ -9,10 +9,19 @@ endif()
 # Test sources
 set(TEST_SOURCES
     HttpIntegrationTests.cpp
+    DtoMapperTests.cpp
+)
+
+# DTO sources needed for tests
+set(DTO_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dtos/OrderDto.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dtos/OrderListDto.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dtos/ErrorDto.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/utils/DtoMapper.cpp
 )
 
 # Test executable
-add_executable(order-service-tests ${TEST_SOURCES})
+add_executable(order-service-tests ${TEST_SOURCES} ${DTO_SOURCES})
 
 # Include directories
 target_include_directories(order-service-tests PRIVATE

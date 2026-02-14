@@ -17,6 +17,9 @@ set(SOURCES
     src/main.cpp
     src/Server.cpp
     src/models/Order.cpp
+    src/dtos/ErrorDto.cpp
+    src/dtos/OrderDto.cpp
+    src/dtos/OrderListDto.cpp
     src/controllers/OrderController.cpp
     src/controllers/HealthController.cpp
     src/controllers/ClaimsController.cpp
@@ -25,6 +28,7 @@ set(SOURCES
     src/utils/Auth.cpp
     src/utils/Config.cpp
     src/utils/Logger.cpp
+    src/utils/DtoMapper.cpp
 )
 
 # Executable
