@@ -1,0 +1,33 @@
+{
+  "name": "OrderUpdated",
+  "version": "1.0",
+  "type": "Update",
+  "dataDto": "OrderDto",
+  "description": "Published when an order is updated",
+  "metadata": [
+    {
+      "name": "eventId",
+      "type": "UUID",
+      "required": true,
+      "description": "Unique event identifier"
+    },
+    {
+      "name": "timestamp",
+      "type": "DateTime",
+      "required": true,
+      "description": "When the event occurred"
+    },
+    {
+      "name": "correlationId",
+      "type": "UUID",
+      "required": false,
+      "description": "Correlation ID for tracing"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "required": true,
+      "description": "Source service (order-service)"
+    }
+  ]
+}

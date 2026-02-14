@@ -1,0 +1,137 @@
+{
+  "name": "LocationDto",
+  "version": "1.0",
+  "description": "Storage location data transfer object",
+  "basis": [
+    {"entity": "Location", "type": "fulfilment"},
+    {"entity": "Warehouse", "type": "reference"}
+  ],
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "source": "Location.id",
+      "description": "Location identifier"
+    },
+    {
+      "name": "WarehouseId",
+      "type": "UUID",
+      "required": true,
+      "source": "Warehouse.id",
+      "description": "Parent warehouse ID (identity field)"
+    },
+    {
+      "name": "WarehouseCode",
+      "type": "string",
+      "required": true,
+      "source": "Warehouse.code",
+      "description": "Parent warehouse code (identity field)"
+    },
+    {
+      "name": "WarehouseName",
+      "type": "string",
+      "required": false,
+      "source": "Warehouse.name",
+      "description": "Parent warehouse name (cached)"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "required": true,
+      "source": "Location.code",
+      "description": "Location code"
+    },
+    {
+      "name": "aisle",
+      "type": "string",
+      "required": false,
+      "source": "Location.aisle",
+      "description": "Aisle identifier"
+    },
+    {
+      "name": "bay",
+      "type": "string",
+      "required": false,
+      "source": "Location.bay",
+      "description": "Bay identifier"
+    },
+    {
+      "name": "level",
+      "type": "string",
+      "required": false,
+      "source": "Location.level",
+      "description": "Level/shelf identifier"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Location name"
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Location type"
+    },
+    {
+      "name": "zone",
+      "type": "string",
+      "required": false,
+      "source": "computed",
+      "description": "Zone identifier"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Location status"
+    },
+    {
+      "name": "dimensions",
+      "type": "object",
+      "required": false,
+      "source": "computed",
+      "description": "Physical dimensions"
+    },
+    {
+      "name": "maxWeight",
+      "type": "object",
+      "required": false,
+      "source": "computed",
+      "description": "Maximum weight capacity"
+    },
+    {
+      "name": "maxVolume",
+      "type": "number",
+      "required": false,
+      "source": "computed",
+      "description": "Maximum volume capacity"
+    },
+    {
+      "name": "isPickable",
+      "type": "boolean",
+      "required": true,
+      "source": "computed",
+      "description": "Whether location is pickable"
+    },
+    {
+      "name": "isReceivable",
+      "type": "boolean",
+      "required": true,
+      "source": "computed",
+      "description": "Whether location can receive inventory"
+    },
+    {
+      "name": "audit",
+      "type": "object",
+      "required": true,
+      "source": "computed",
+      "description": "Audit information"
+    }
+  ]
+}

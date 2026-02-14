@@ -1,0 +1,22 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8082,
+    "maxThreads": 10,
+    "maxQueued": 100
+  },
+  "database": {
+    "host": "postgres",
+    "port": 5432,
+    "database": "order_db",
+    "user": "postgres",
+    "password": "postgres"
+  },
+  "logging": {
+    "level": "info",
+    "file": "logs/order-service.log"
+  },
+  "auth": {
+    "serviceApiKey": "dev-api-key-change-in-production"
+  }
+}

@@ -1,6 +1,7 @@
 #include "warehouse/services/LocationService.hpp"
 #include "warehouse/repositories/LocationRepository.hpp"
 #include "warehouse/utils/Logger.hpp"
+#include "warehouse/utils/DtoMapper.hpp"
 #include <regex>
 #include <algorithm>
 
@@ -10,27 +11,35 @@ LocationService::LocationService(std::shared_ptr<repositories::LocationRepositor
     : repo_(repo) {
 }
 
-std::optional<models::Location> LocationService::getById(const std::string& id) {
-    return repo_->findById(id);
+std::optional<dtos::LocationDto> LocationService::getById(const std::string& id) {
+    auto location = repo_->findById(id);
+    if (!location) {
+        return std::nullopt;
+    }
+    
+    // TODO: Fetch warehouse code from warehouse service API
+    std::string warehouseCode = "WH-" + location->getWarehouseId().substr(0, 8);
+    
+    return utils::DtoMapper::toLocationDto(*location, warehouseCode);
 }
 
-std::vector<models::Location> LocationService::getAll() {
-    return repo_->findAll();
+std::vector<dtos::LocationDto> LocationService::getAll() {
+    return convertToDtos(repo_->findAll());
 }
 
-std::vector<models::Location> LocationService::getByWarehouse(const std::string& warehouseId) {
-    return repo_->findByWarehouse(warehouseId);
+std::vector<dtos::LocationDto> LocationService::getByWarehouse(const std::string& warehouseId) {
+    return convertToDtos(repo_->findByWarehouse(warehouseId));
 }
 
-std::vector<models::Location> LocationService::getByWarehouseAndZone(const std::string& warehouseId, const std::string& zone) {
-    return repo_->findByWarehouseAndZone(warehouseId, zone);
+std::vector<dtos::LocationDto> LocationService::getByWarehouseAndZone(const std::string& warehouseId, const std::string& zone) {
+    return convertToDtos(repo_->findByWarehouseAndZone(warehouseId, zone));
 }
 
-std::vector<models::Location> LocationService::getAvailablePickingLocations(const std::string& warehouseId) {
-    return repo_->findAvailablePickingLocations(warehouseId);
+std::vector<dtos::LocationDto> LocationService::getAvailablePickingLocations(const std::string& warehouseId) {
+    return convertToDtos(repo_->findAvailablePickingLocations(warehouseId));
 }
 
-std::string LocationService::createLocation(const models::Location& location) {
+dtos::LocationDto LocationService::createLocation(const models::Location& location) {
     std::string errorMessage;
     if (!isValidLocation(location, errorMessage)) {
         utils::Logger::warn("Invalid location: {}", errorMessage);
@@ -41,39 +50,124 @@ std::string LocationService::createLocation(const models::Location& location) {
         throw std::invalid_argument("Location code already exists in this warehouse");
     }
     
-    return repo_->create(location);
+    auto id = repo_->create(location);
+    auto created = repo_->findById(id);
+    if (!created) {
+        throw std::runtime_error("Failed to retrieve created location");
+    }
+    
+    // TODO: Fetch warehouse code from warehouse service API
+    std::string warehouseCode = "WH-" + created->getWarehouseId().substr(0, 8);
+    
+    return utils::DtoMapper::toLocationDto(*created, warehouseCode);
 }
 
-bool LocationService::updateLocation(const models::Location& location) {
+dtos::LocationDto LocationService::updateLocation(const models::Location& location) {
     std::string errorMessage;
     if (!isValidLocation(location, errorMessage)) {
         utils::Logger::warn("Invalid location update: {}", errorMessage);
-        return false;
+        throw std::invalid_argument(errorMessage);
     }
     
-    return repo_->update(location);
+    bool success = repo_->update(location);
+    if (!success) {
+        throw std::runtime_error("Failed to update location");
+    }
+    
+    auto updated = repo_->findById(location.getId());
+    if (!updated) {
+        throw std::runtime_error("Failed to retrieve updated location");
+    }
+    
+    // TODO: Fetch warehouse code from warehouse service API
+    std::string warehouseCode = "WH-" + updated->getWarehouseId().substr(0, 8);
+    
+    return utils::DtoMapper::toLocationDto(*updated, warehouseCode);
 }
 
 bool LocationService::deleteLocation(const std::string& id) {
     return repo_->deleteById(id);
 }
 
-bool LocationService::reserveLocation(const std::string& id) {
-    // TODO: Implement status change to reserved
+dtos::LocationDto LocationService::reserveLocation(const std::string& id) {
     utils::Logger::info("LocationService::reserveLocation({})", id);
-    return false;
+    
+    auto location = repo_->findById(id);
+    if (!location) {
+        throw std::runtime_error("Location not found: " + id);
+    }
+    
+    // TODO: Implement status change to reserved
+    location->setStatus(models::LocationStatus::Reserved);
+    
+    bool success = repo_->update(*location);
+    if (!success) {
+        throw std::runtime_error("Failed to reserve location");
+    }
+    
+    auto updated = repo_->findById(id);
+    if (!updated) {
+        throw std::runtime_error("Failed to retrieve reserved location");
+    }
+    
+    // TODO: Fetch warehouse code from warehouse service API
+    std::string warehouseCode = "WH-" + updated->getWarehouseId().substr(0, 8);
+    
+    return utils::DtoMapper::toLocationDto(*updated, warehouseCode);
 }
 
-bool LocationService::releaseLocation(const std::string& id) {
-    // TODO: Implement status change back to active
+dtos::LocationDto LocationService::releaseLocation(const std::string& id) {
     utils::Logger::info("LocationService::releaseLocation({})", id);
-    return false;
+    
+    auto location = repo_->findById(id);
+    if (!location) {
+        throw std::runtime_error("Location not found: " + id);
+    }
+    
+    // TODO: Implement status change back to active
+    location->setStatus(models::LocationStatus::Available);
+    
+    bool success = repo_->update(*location);
+    if (!success) {
+        throw std::runtime_error("Failed to release location");
+    }
+    
+    auto updated = repo_->findById(id);
+    if (!updated) {
+        throw std::runtime_error("Failed to retrieve released location");
+    }
+    
+    // TODO: Fetch warehouse code from warehouse service API
+    std::string warehouseCode = "WH-" + updated->getWarehouseId().substr(0, 8);
+    
+    return utils::DtoMapper::toLocationDto(*updated, warehouseCode);
 }
 
-bool LocationService::markLocationFull(const std::string& id) {
-    // TODO: Implement status change to full
+dtos::LocationDto LocationService::markLocationFull(const std::string& id) {
     utils::Logger::info("LocationService::markLocationFull({})", id);
-    return false;
+    
+    auto location = repo_->findById(id);
+    if (!location) {
+        throw std::runtime_error("Location not found: " + id);
+    }
+    
+    // TODO: Implement status change to full
+    location->setStatus(models::LocationStatus::Full);
+    
+    bool success = repo_->update(*location);
+    if (!success) {
+        throw std::runtime_error("Failed to mark location as full");
+    }
+    
+    auto updated = repo_->findById(id);
+    if (!updated) {
+        throw std::runtime_error("Failed to retrieve full location");
+    }
+    
+    // TODO: Fetch warehouse code from warehouse service API
+    std::string warehouseCode = "WH-" + updated->getWarehouseId().substr(0, 8);
+    
+    return utils::DtoMapper::toLocationDto(*updated, warehouseCode);
 }
 
 bool LocationService::isValidLocation(const models::Location& location, std::string& errorMessage) {
@@ -100,20 +194,40 @@ bool LocationService::isValidLocation(const models::Location& location, std::str
     return true;
 }
 
-std::vector<models::Location> LocationService::optimizePickingRoute(const std::vector<std::string>& locationIds) {
+std::vector<dtos::LocationDto> LocationService::optimizePickingRoute(const std::vector<std::string>& locationIds) {
     // TODO: Implement route optimization algorithm
     // For now, just return locations in the order they were provided
     utils::Logger::info("LocationService::optimizePickingRoute() called with {} locations", locationIds.size());
     
-    std::vector<models::Location> route;
+    std::vector<dtos::LocationDto> route;
+    route.reserve(locationIds.size());
+    
     for (const auto& id : locationIds) {
         auto location = repo_->findById(id);
         if (location) {
-            route.push_back(*location);
+            route.push_back(convertToDto(*location));
         }
     }
     
     return route;
+}
+
+// Helper methods for DTO conversion (DRY pattern)
+dtos::LocationDto LocationService::convertToDto(const models::Location& location) {
+    // TODO: Fetch warehouse code from warehouse service API
+    std::string warehouseCode = "WH-" + location.getWarehouseId().substr(0, 8);
+    return utils::DtoMapper::toLocationDto(location, warehouseCode);
+}
+
+std::vector<dtos::LocationDto> LocationService::convertToDtos(const std::vector<models::Location>& locations) {
+    std::vector<dtos::LocationDto> dtos;
+    dtos.reserve(locations.size());
+    
+    for (const auto& location : locations) {
+        dtos.push_back(convertToDto(location));
+    }
+    
+    return dtos;
 }
 
 bool LocationService::validateCode(const std::string& code) {

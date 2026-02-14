@@ -1,0 +1,58 @@
+{
+  "name": "CreateOrderRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Create",
+  "description": "Create a new order",
+  "basis": ["Order"],
+  "resultType": "OrderDto",
+  "parameters": [
+    {
+      "name": "orderNumber",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 50,
+        "pattern": "^[A-Z0-9-]+$"
+      },
+      "description": "Human-readable order number"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "required": true,
+      "description": "Customer identifier"
+    },
+    {
+      "name": "warehouseId",
+      "type": "UUID",
+      "required": true,
+      "description": "Fulfilling warehouse ID"
+    },
+    {
+      "name": "lineItems",
+      "type": "array",
+      "required": true,
+      "description": "Order line items"
+    },
+    {
+      "name": "shippingAddress",
+      "type": "object",
+      "required": false,
+      "description": "Shipping address"
+    },
+    {
+      "name": "priority",
+      "type": "string",
+      "required": false,
+      "description": "Order priority"
+    },
+    {
+      "name": "notes",
+      "type": "string",
+      "required": false,
+      "description": "Order notes"
+    }
+  ]
+}

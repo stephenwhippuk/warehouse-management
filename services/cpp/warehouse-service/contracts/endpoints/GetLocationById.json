@@ -1,0 +1,39 @@
+{
+  "name": "GetLocationById",
+  "version": "1.0",
+  "uri": "/api/v1/locations/{id}",
+  "method": "GET",
+  "authentication": "ApiKey",
+  "description": "Retrieve a single location by ID",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true,
+      "description": "Location ID"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "LocationDto",
+      "description": "Location found and returned"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto",
+      "description": "Location not found"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

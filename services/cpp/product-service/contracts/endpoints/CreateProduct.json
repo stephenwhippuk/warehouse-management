@@ -1,0 +1,27 @@
+{
+  "name": "CreateProduct",
+  "uri": "/api/v1/products",
+  "method": "POST",
+  "parameters": [
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "CreateProductRequest",
+      "required": true
+    }
+  ],
+  "responses": [
+    {
+      "status": 201,
+      "type": "ProductItemDto"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto"
+    }
+  ]
+}

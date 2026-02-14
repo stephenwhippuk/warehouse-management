@@ -1,0 +1,31 @@
+{
+  "name": "GetProducts",
+  "uri": "/api/v1/products",
+  "method": "GET",
+  "parameters": [
+    {
+      "name": "page",
+      "location": "Query",
+      "type": "integer",
+      "required": false,
+      "default": 1
+    },
+    {
+      "name": "pageSize",
+      "location": "Query",
+      "type": "integer",
+      "required": false,
+      "default": 50
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "ProductListDto"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto"
+    }
+  ]
+}

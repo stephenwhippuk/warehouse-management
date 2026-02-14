@@ -19,6 +19,7 @@ add_executable(inventory-service-tests
     InventoryTests.cpp
     InventoryRepositoryTests.cpp
     InventoryServiceBusTests.cpp
+    DtoMapperTests.cpp
     RabbitMqIntegrationTests.cpp
     AuthTests.cpp
     RoutingTests.cpp
@@ -26,6 +27,7 @@ add_executable(inventory-service-tests
     ContractReaderTests.cpp
     ContractValidatorTests.cpp
     CppCodeParserTests.cpp
+    ClaimsControllerTests.cpp
 )
 
 # Link libraries
@@ -56,11 +58,17 @@ target_sources(inventory-service-tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/utils/Logger.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/Database.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/Config.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/DtoMapper.cpp
+    ${PROJECT_SOURCE_DIR}/src/dtos/InventoryItemDto.cpp
+    ${PROJECT_SOURCE_DIR}/src/dtos/InventoryListDto.cpp
+    ${PROJECT_SOURCE_DIR}/src/dtos/InventoryOperationResultDto.cpp
+    ${PROJECT_SOURCE_DIR}/src/dtos/ErrorDto.cpp
     ${PROJECT_SOURCE_DIR}/src/repositories/InventoryRepository.cpp
     ${PROJECT_SOURCE_DIR}/src/services/InventoryService.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/RabbitMqMessageBus.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/Auth.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/SwaggerGenerator.cpp
+    ${PROJECT_SOURCE_DIR}/src/controllers/ClaimsController.cpp
 )
 
 # Discover tests

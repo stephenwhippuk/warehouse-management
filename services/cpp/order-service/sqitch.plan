@@ -1,0 +1,7 @@
+%syntax-version=1.0.0
+%project=order-service
+%uri=https://github.com/your-org/warehouse-management
+
+# Migrations will be added here
+# Example:
+# 001_initial_schema 2024-01-15T12:00:00Z Your Name <email@example.com> # Initial schema

@@ -41,15 +41,21 @@ set(SOURCES
     src/Application.cpp
     src/Server.cpp
     src/models/Inventory.cpp
+    src/dtos/ErrorDto.cpp
+    src/dtos/InventoryItemDto.cpp
+    src/dtos/InventoryListDto.cpp
+    src/dtos/InventoryOperationResultDto.cpp
     src/controllers/InventoryController.cpp
     src/controllers/HealthController.cpp
     src/controllers/SwaggerController.cpp
+    src/controllers/ClaimsController.cpp
     src/repositories/InventoryRepository.cpp
     src/services/InventoryService.cpp
     src/utils/Database.cpp
     src/utils/Logger.cpp
     src/utils/Config.cpp
     src/utils/Auth.cpp
+    src/utils/DtoMapper.cpp
     src/utils/RabbitMqMessageBus.cpp
     src/utils/JsonValidator.cpp
     src/utils/SwaggerGenerator.cpp

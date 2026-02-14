@@ -1,6 +1,7 @@
 #include "warehouse/services/WarehouseService.hpp"
 #include "warehouse/repositories/WarehouseRepository.hpp"
 #include "warehouse/utils/Logger.hpp"
+#include "warehouse/utils/DtoMapper.hpp"
 #include <regex>
 
 namespace warehouse::services {
@@ -9,23 +10,31 @@ WarehouseService::WarehouseService(std::shared_ptr<repositories::WarehouseReposi
     : repo_(repo) {
 }
 
-std::optional<models::Warehouse> WarehouseService::getById(const std::string& id) {
-    return repo_->findById(id);
+std::optional<dtos::WarehouseDto> WarehouseService::getById(const std::string& id) {
+    auto warehouse = repo_->findById(id);
+    if (!warehouse) {
+        return std::nullopt;
+    }
+    return utils::DtoMapper::toWarehouseDto(*warehouse);
 }
 
-std::optional<models::Warehouse> WarehouseService::getByCode(const std::string& code) {
-    return repo_->findByCode(code);
+std::optional<dtos::WarehouseDto> WarehouseService::getByCode(const std::string& code) {
+    auto warehouse = repo_->findByCode(code);
+    if (!warehouse) {
+        return std::nullopt;
+    }
+    return utils::DtoMapper::toWarehouseDto(*warehouse);
 }
 
-std::vector<models::Warehouse> WarehouseService::getAll() {
-    return repo_->findAll();
+std::vector<dtos::WarehouseDto> WarehouseService::getAll() {
+    return convertToDtos(repo_->findAll());
 }
 
-std::vector<models::Warehouse> WarehouseService::getActiveWarehouses() {
-    return repo_->findByStatus(models::Status::Active);
+std::vector<dtos::WarehouseDto> WarehouseService::getActiveWarehouses() {
+    return convertToDtos(repo_->findByStatus(models::Status::Active));
 }
 
-std::string WarehouseService::createWarehouse(const models::Warehouse& warehouse) {
+dtos::WarehouseDto WarehouseService::createWarehouse(const models::Warehouse& warehouse) {
     std::string errorMessage;
     if (!isValidWarehouse(warehouse, errorMessage)) {
         utils::Logger::warn("Invalid warehouse: {}", errorMessage);
@@ -36,33 +45,81 @@ std::string WarehouseService::createWarehouse(const models::Warehouse& warehouse
         throw std::invalid_argument("Warehouse code already exists");
     }
     
-    return repo_->create(warehouse);
+    auto id = repo_->create(warehouse);
+    auto created = repo_->findById(id);
+    if (!created) {
+        throw std::runtime_error("Failed to retrieve created warehouse");
+    }
+    return utils::DtoMapper::toWarehouseDto(*created);
 }
 
-bool WarehouseService::updateWarehouse(const models::Warehouse& warehouse) {
+dtos::WarehouseDto WarehouseService::updateWarehouse(const models::Warehouse& warehouse) {
     std::string errorMessage;
     if (!isValidWarehouse(warehouse, errorMessage)) {
         utils::Logger::warn("Invalid warehouse update: {}", errorMessage);
-        return false;
+        throw std::invalid_argument(errorMessage);
     }
     
-    return repo_->update(warehouse);
+    bool success = repo_->update(warehouse);
+    if (!success) {
+        throw std::runtime_error("Failed to update warehouse");
+    }
+    
+    auto updated = repo_->findById(warehouse.getId());
+    if (!updated) {
+        throw std::runtime_error("Failed to retrieve updated warehouse");
+    }
+    return utils::DtoMapper::toWarehouseDto(*updated);
 }
 
 bool WarehouseService::deleteWarehouse(const std::string& id) {
     return repo_->deleteById(id);
 }
 
-bool WarehouseService::activateWarehouse(const std::string& id) {
-    // TODO: Implement status change to active
+dtos::WarehouseDto WarehouseService::activateWarehouse(const std::string& id) {
     utils::Logger::info("WarehouseService::activateWarehouse({})", id);
-    return false;
+    
+    auto warehouse = repo_->findById(id);
+    if (!warehouse) {
+        throw std::runtime_error("Warehouse not found: " + id);
+    }
+    
+    // TODO: Implement status change to active
+    warehouse->setStatus(models::Status::Active);
+    
+    bool success = repo_->update(*warehouse);
+    if (!success) {
+        throw std::runtime_error("Failed to activate warehouse");
+    }
+    
+    auto updated = repo_->findById(id);
+    if (!updated) {
+        throw std::runtime_error("Failed to retrieve activated warehouse");
+    }
+    return utils::DtoMapper::toWarehouseDto(*updated);
 }
 
-bool WarehouseService::deactivateWarehouse(const std::string& id) {
-    // TODO: Implement status change to inactive
+dtos::WarehouseDto WarehouseService::deactivateWarehouse(const std::string& id) {
     utils::Logger::info("WarehouseService::deactivateWarehouse({})", id);
-    return false;
+    
+    auto warehouse = repo_->findById(id);
+    if (!warehouse) {
+        throw std::runtime_error("Warehouse not found: " + id);
+    }
+    
+    // TODO: Implement status change to inactive
+    warehouse->setStatus(models::Status::Inactive);
+    
+    bool success = repo_->update(*warehouse);
+    if (!success) {
+        throw std::runtime_error("Failed to deactivate warehouse");
+    }
+    
+    auto updated = repo_->findById(id);
+    if (!updated) {
+        throw std::runtime_error("Failed to retrieve deactivated warehouse");
+    }
+    return utils::DtoMapper::toWarehouseDto(*updated);
 }
 
 bool WarehouseService::isValidWarehouse(const models::Warehouse& warehouse, std::string& errorMessage) {
@@ -87,6 +144,22 @@ bool WarehouseService::isValidWarehouse(const models::Warehouse& warehouse, std:
     }
     
     return true;
+}
+
+// Helper methods for DTO conversion (DRY pattern)
+dtos::WarehouseDto WarehouseService::convertToDto(const models::Warehouse& warehouse) {
+    return utils::DtoMapper::toWarehouseDto(warehouse);
+}
+
+std::vector<dtos::WarehouseDto> WarehouseService::convertToDtos(const std::vector<models::Warehouse>& warehouses) {
+    std::vector<dtos::WarehouseDto> dtos;
+    dtos.reserve(warehouses.size());
+    
+    for (const auto& warehouse : warehouses) {
+        dtos.push_back(convertToDto(warehouse));
+    }
+    
+    return dtos;
 }
 
 bool WarehouseService::validateCode(const std::string& code) {

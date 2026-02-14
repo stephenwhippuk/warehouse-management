@@ -306,16 +306,9 @@ void InventoryController::handleReserve(const std::string& id,
         }
 
         int quantity = body["quantity"].get<int>();
-        service_->reserve(id, quantity);
+        auto result = service_->reserve(id, quantity);
 
-        auto updated = service_->getById(id);
-        if (!updated) {
-            sendErrorResponse(response, "Inventory not found after reserve",
-                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
-            return;
-        }
-
-        sendJsonResponse(response, updated->toJson().dump(),
+        sendJsonResponse(response, result.toJson().dump(),
                          Poco::Net::HTTPResponse::HTTP_OK);
     } catch (const json::exception& e) {
         sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
@@ -344,16 +337,9 @@ void InventoryController::handleRelease(const std::string& id,
         }
 
         int quantity = body["quantity"].get<int>();
-        service_->release(id, quantity);
+        auto result = service_->release(id, quantity);
 
-        auto updated = service_->getById(id);
-        if (!updated) {
-            sendErrorResponse(response, "Inventory not found after release",
-                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
-            return;
-        }
-
-        sendJsonResponse(response, updated->toJson().dump(),
+        sendJsonResponse(response, result.toJson().dump(),
                          Poco::Net::HTTPResponse::HTTP_OK);
     } catch (const json::exception& e) {
         sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
@@ -382,16 +368,9 @@ void InventoryController::handleAllocate(const std::string& id,
         }
 
         int quantity = body["quantity"].get<int>();
-        service_->allocate(id, quantity);
+        auto result = service_->allocate(id, quantity);
 
-        auto updated = service_->getById(id);
-        if (!updated) {
-            sendErrorResponse(response, "Inventory not found after allocate",
-                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
-            return;
-        }
-
-        sendJsonResponse(response, updated->toJson().dump(),
+        sendJsonResponse(response, result.toJson().dump(),
                          Poco::Net::HTTPResponse::HTTP_OK);
     } catch (const json::exception& e) {
         sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
@@ -420,16 +399,9 @@ void InventoryController::handleDeallocate(const std::string& id,
         }
 
         int quantity = body["quantity"].get<int>();
-        service_->deallocate(id, quantity);
+        auto result = service_->deallocate(id, quantity);
 
-        auto updated = service_->getById(id);
-        if (!updated) {
-            sendErrorResponse(response, "Inventory not found after deallocate",
-                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
-            return;
-        }
-
-        sendJsonResponse(response, updated->toJson().dump(),
+        sendJsonResponse(response, result.toJson().dump(),
                          Poco::Net::HTTPResponse::HTTP_OK);
     } catch (const json::exception& e) {
         sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),
@@ -465,16 +437,9 @@ void InventoryController::handleAdjust(const std::string& id,
         int quantityChange = body["quantityChange"].get<int>();
         std::string reason = body["reason"].get<std::string>();
 
-        service_->adjust(id, quantityChange, reason);
+        auto result = service_->adjust(id, quantityChange, reason);
 
-        auto updated = service_->getById(id);
-        if (!updated) {
-            sendErrorResponse(response, "Inventory not found after adjust",
-                              Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
-            return;
-        }
-
-        sendJsonResponse(response, updated->toJson().dump(),
+        sendJsonResponse(response, result.toJson().dump(),
                          Poco::Net::HTTPResponse::HTTP_OK);
     } catch (const json::exception& e) {
         sendErrorResponse(response, std::string("Invalid JSON body: ") + e.what(),

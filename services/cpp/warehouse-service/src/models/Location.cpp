@@ -15,8 +15,8 @@ json Location::toJson() const {
     
     if (zone_) j["zone"] = *zone_;
     if (aisle_) j["aisle"] = *aisle_;
-    if (rack_) j["rack"] = *rack_;
-    if (shelf_) j["shelf"] = *shelf_;
+    if (bay_) j["bay"] = *bay_;
+    if (level_) j["level"] = *level_;
     if (bin_) j["bin"] = *bin_;
     if (parentLocationId_) j["parentLocationId"] = *parentLocationId_;
     if (dimensions_) j["dimensions"] = json(*dimensions_);
@@ -54,8 +54,8 @@ Location Location::fromJson(const json& j) {
     
     if (j.contains("zone")) loc.zone_ = j["zone"].get<std::string>();
     if (j.contains("aisle")) loc.aisle_ = j["aisle"].get<std::string>();
-    if (j.contains("rack")) loc.rack_ = j["rack"].get<std::string>();
-    if (j.contains("shelf")) loc.shelf_ = j["shelf"].get<std::string>();
+    if (j.contains("bay")) loc.bay_ = j["bay"].get<std::string>();
+    if (j.contains("level")) loc.level_ = j["level"].get<std::string>();
     if (j.contains("bin")) loc.bin_ = j["bin"].get<std::string>();
     if (j.contains("parentLocationId")) loc.parentLocationId_ = j["parentLocationId"].get<std::string>();
     if (j.contains("dimensions")) loc.dimensions_ = j["dimensions"].get<Dimensions>();

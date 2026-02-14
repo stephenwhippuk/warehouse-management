@@ -1,0 +1,51 @@
+{
+  "name": "ErrorDto",
+  "version": "1.0",
+  "description": "Standard error response",
+  "basis": [],
+  "fields": [
+    {
+      "name": "error",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Error type"
+    },
+    {
+      "name": "message",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Human-readable error message"
+    },
+    {
+      "name": "details",
+      "type": "array",
+      "elementType": "object",
+      "required": false,
+      "source": "computed",
+      "description": "Detailed error information"
+    },
+    {
+      "name": "requestId",
+      "type": "UUID",
+      "required": true,
+      "source": "computed",
+      "description": "Request identifier for tracing"
+    },
+    {
+      "name": "timestamp",
+      "type": "DateTime",
+      "required": true,
+      "source": "computed",
+      "description": "When the error occurred"
+    },
+    {
+      "name": "path",
+      "type": "string",
+      "required": true,
+      "source": "computed",
+      "description": "Request URI path"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "name": "ProductItemDto",
+  "version": "1.0",
+  "basis": [
+    {"entity": "Product", "type": "fulfilment"}
+  ],
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "source": "Product.id"
+    },
+    {
+      "name": "sku",
+      "type": "string",
+      "required": true,
+      "source": "Product.sku"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "source": "Product.name"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "source": "Product.description"
+    },
+    {
+      "name": "category",
+      "type": "string",
+      "required": false,
+      "source": "Product.category"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "required": true,
+      "enum": ["active", "inactive", "discontinued"],
+      "source": "Product.status"
+    }
+  ]
+}

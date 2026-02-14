@@ -1,0 +1,37 @@
+{
+  "name": "LocationListDto",
+  "version": "1.0",
+  "description": "List of locations with pagination",
+  "basis": [],
+  "fields": [
+    {
+      "name": "items",
+      "type": "array",
+      "elementType": "LocationDto",
+      "required": true,
+      "source": "computed",
+      "description": "Array of location records"
+    },
+    {
+      "name": "total",
+      "type": "NonNegativeInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Total number of locations"
+    },
+    {
+      "name": "page",
+      "type": "PositiveInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Current page number"
+    },
+    {
+      "name": "pageSize",
+      "type": "PositiveInteger",
+      "required": true,
+      "source": "computed",
+      "description": "Number of items per page"
+    }
+  ]
+}

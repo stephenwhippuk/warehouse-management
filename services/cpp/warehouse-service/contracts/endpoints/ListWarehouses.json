@@ -1,0 +1,55 @@
+{
+  "name": "ListWarehouses",
+  "version": "1.0",
+  "uri": "/api/v1/warehouses",
+  "method": "GET",
+  "authentication": "ApiKey",
+  "description": "List warehouses with optional filtering",
+  "parameters": [
+    {
+      "name": "status",
+      "location": "Query",
+      "type": "string",
+      "required": false,
+      "description": "Filter by status"
+    },
+    {
+      "name": "type",
+      "location": "Query",
+      "type": "string",
+      "required": false,
+      "description": "Filter by warehouse type"
+    },
+    {
+      "name": "page",
+      "location": "Query",
+      "type": "PositiveInteger",
+      "required": false,
+      "description": "Page number (default: 1)"
+    },
+    {
+      "name": "pageSize",
+      "location": "Query",
+      "type": "PositiveInteger",
+      "required": false,
+      "description": "Items per page (default: 50)"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "type": "WarehouseListDto",
+      "description": "List of warehouses"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

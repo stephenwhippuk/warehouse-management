@@ -2,6 +2,7 @@
 #include "inventory/controllers/InventoryController.hpp"
 #include "inventory/controllers/HealthController.hpp"
 #include "inventory/controllers/SwaggerController.hpp"
+#include "inventory/controllers/ClaimsController.hpp"
 #include "inventory/utils/Logger.hpp"
 #include <Poco/Net/HTTPServerParams.h>
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
@@ -50,6 +51,8 @@ public:
                 return new controllers::HealthController();
             case RouteTarget::Swagger:
                 return new controllers::SwaggerController();
+            case RouteTarget::Claims:
+                return new controllers::ClaimsController();
             case RouteTarget::Inventory:
             default:
                 // TODO: Implement more complete routing

@@ -1,7 +1,13 @@
 #include "warehouse/controllers/LocationController.hpp"
 #include "warehouse/services/LocationService.hpp"
+#include "warehouse/dtos/ErrorDto.hpp"
+#include "warehouse/models/Location.hpp"
+#include "warehouse/utils/Auth.hpp"
 #include "warehouse/utils/Logger.hpp"
 #include <Poco/Net/HTTPResponse.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace warehouse::controllers {
 
@@ -12,6 +18,17 @@ LocationController::LocationController(std::shared_ptr<services::LocationService
 }
 
 void LocationController::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response) {
+    // Service-to-service authentication
+    auto authStatus = utils::Auth::authorizeServiceRequest(request);
+    if (authStatus == utils::AuthStatus::MissingToken) {
+        sendErrorResponse(response, HTTPResponse::HTTP_UNAUTHORIZED, "Missing service authentication");
+        return;
+    }
+    if (authStatus == utils::AuthStatus::InvalidToken) {
+        sendErrorResponse(response, HTTPResponse::HTTP_FORBIDDEN, "Invalid service authentication");
+        return;
+    }
+
     try {
         const std::string& method = request.getMethod();
         const std::string& uri = request.getURI();
@@ -59,33 +76,114 @@ void LocationController::handleRequest(HTTPServerRequest& request, HTTPServerRes
 }
 
 void LocationController::handleGetAll(HTTPServerRequest&, HTTPServerResponse& response) {
-    // TODO: Implement location listing with filters
-    sendJsonResponse(response, HTTPResponse::HTTP_OK, "[]");
+    try {
+        auto dtos = service_->getAll();
+        json j = json::array();
+        for (const auto& dto : dtos) {
+            j.push_back(dto.toJson());
+        }
+        sendJsonResponse(response, HTTPResponse::HTTP_OK, j.dump());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleGetAll: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to retrieve locations");
+    }
 }
 
-void LocationController::handleGetById(const std::string&, HTTPServerRequest&, HTTPServerResponse& response) {
-    // TODO: Implement location retrieval by ID
-    sendErrorResponse(response, HTTPResponse::HTTP_NOT_FOUND, "Location not found");
+void LocationController::handleGetById(const std::string& id, HTTPServerRequest&, HTTPServerResponse& response) {
+    try {
+        auto dto = service_->getById(id);
+        if (!dto) {
+            sendErrorResponse(response, HTTPResponse::HTTP_NOT_FOUND, "Location not found");
+            return;
+        }
+        sendJsonResponse(response, HTTPResponse::HTTP_OK, dto->toJson().dump());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleGetById: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to retrieve location");
+    }
 }
 
-void LocationController::handleGetByWarehouse(const std::string&, HTTPServerRequest&, HTTPServerResponse& response) {
-    // TODO: Implement location listing by warehouse
-    sendJsonResponse(response, HTTPResponse::HTTP_OK, "[]");
+void LocationController::handleGetByWarehouse(const std::string& warehouseId, HTTPServerRequest&, HTTPServerResponse& response) {
+    try {
+        auto dtos = service_->getByWarehouseId(warehouseId);
+        json j = json::array();
+        for (const auto& dto : dtos) {
+            j.push_back(dto.toJson());
+        }
+        sendJsonResponse(response, HTTPResponse::HTTP_OK, j.dump());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleGetByWarehouse: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to retrieve locations");
+    }
 }
 
-void LocationController::handleCreate(HTTPServerRequest&, HTTPServerResponse& response) {
-    // TODO: Implement location creation
-    sendJsonResponse(response, HTTPResponse::HTTP_CREATED, "{\"message\": \"Location created\"}");
+void LocationController::handleCreate(HTTPServerRequest& request, HTTPServerResponse& response) {
+    try {
+        std::istream& input = request.stream();
+        json requestBody = json::parse(input);
+        
+        // Create Location model from JSON
+        auto location = models::Location::fromJson(requestBody);
+        
+        // Call service which returns LocationDto
+        auto dto = service_->createLocation(location);
+        
+        sendJsonResponse(response, HTTPResponse::HTTP_CREATED, dto.toJson().dump());
+    } catch (const json::exception& e) {
+        utils::Logger::error("JSON parse error in handleCreate: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, "Invalid JSON");
+    } catch (const std::invalid_argument& e) {
+        utils::Logger::error("Validation error in handleCreate: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, e.what());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleCreate: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to create location");
+    }
 }
 
-void LocationController::handleUpdate(const std::string&, HTTPServerRequest&, HTTPServerResponse& response) {
-    // TODO: Implement location update
-    sendJsonResponse(response, HTTPResponse::HTTP_OK, "{\"message\": \"Location updated\"}");
+void LocationController::handleUpdate(const std::string& id, HTTPServerRequest& request, HTTPServerResponse& response) {
+    try {
+        std::istream& input = request.stream();
+        json requestBody = json::parse(input);
+        
+        // Ensure id is set in the JSON
+        requestBody["id"] = id;
+        
+        // Create Location model from JSON
+        auto location = models::Location::fromJson(requestBody);
+        
+        // Call service which returns LocationDto
+        auto dto = service_->updateLocation(location);
+        
+        sendJsonResponse(response, HTTPResponse::HTTP_OK, dto.toJson().dump());
+    } catch (const json::exception& e) {
+        utils::Logger::error("JSON parse error in handleUpdate: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, "Invalid JSON");
+    } catch (const std::invalid_argument& e) {
+        utils::Logger::error("Validation error in handleUpdate: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, e.what());
+    } catch (const std::runtime_error& e) {
+        utils::Logger::error("Error in handleUpdate: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_NOT_FOUND, e.what());
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleUpdate: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to update location");
+    }
 }
 
-void LocationController::handleDelete(const std::string&, HTTPServerRequest&, HTTPServerResponse& response) {
-    // TODO: Implement location deletion
-    sendJsonResponse(response, HTTPResponse::HTTP_NO_CONTENT, "");
+void LocationController::handleDelete(const std::string& id, HTTPServerRequest&, HTTPServerResponse& response) {
+    try {
+        bool deleted = service_->deleteLocation(id);
+        if (deleted) {
+            response.setStatus(HTTPResponse::HTTP_NO_CONTENT);
+            response.send();
+        } else {
+            sendErrorResponse(response, HTTPResponse::HTTP_NOT_FOUND, "Location not found");
+        }
+    } catch (const std::exception& e) {
+        utils::Logger::error("Error in handleDelete: {}", e.what());
+        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to delete location");
+    }
 }
 
 void LocationController::sendJsonResponse(HTTPServerResponse& response, int status, const std::string& body) {

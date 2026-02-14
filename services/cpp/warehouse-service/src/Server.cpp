@@ -1,6 +1,9 @@
 #include "warehouse/Server.hpp"
 #include "warehouse/controllers/WarehouseController.hpp"
 #include "warehouse/controllers/LocationController.hpp"
+#include "warehouse/controllers/HealthController.hpp"
+#include "warehouse/controllers/SwaggerController.hpp"
+#include "warehouse/controllers/ClaimsController.hpp"
 #include "warehouse/utils/Logger.hpp"
 #include <Poco/Net/HTTPServerParams.h>
 #include <Poco/Net/ServerSocket.h>
@@ -19,15 +22,27 @@ public:
         
         const std::string& uri = request.getURI();
         
+        // Health check endpoint
+        if (uri == "/health") {
+            return new controllers::HealthController();
+        }
+        
+        // Swagger/OpenAPI endpoint
+        if (uri == "/api/swagger.json") {
+            return new controllers::SwaggerController();
+        }
+        
+        // Claims endpoints
+        if (uri.find("/api/v1/claims") == 0) {
+            return new controllers::ClaimsController();
+        }
+        
         // Route to appropriate controller
         if (uri.find("/api/v1/warehouses") == 0) {
             return new controllers::WarehouseController(warehouseService_);
         } else if (uri.find("/api/v1/locations") == 0) {
             return new controllers::LocationController(locationService_);
         }
-        
-        // TODO: Add health check endpoint
-        // TODO: Add metrics endpoint
         
         return nullptr; // Will result in 404
     }

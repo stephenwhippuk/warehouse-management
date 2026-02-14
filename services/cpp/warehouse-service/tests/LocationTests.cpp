@@ -33,8 +33,8 @@ TEST_CASE("Location model tests", "[location]") {
         location.setType(LocationType::Bin);
         location.setZone("A");
         location.setAisle("01");
-        location.setRack("02");
-        location.setShelf("03");
+        location.setBay("02");
+        location.setLevel("03");
         location.setStatus(LocationStatus::Active);
         
         AuditInfo audit;

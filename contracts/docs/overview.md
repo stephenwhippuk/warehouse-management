@@ -7,6 +7,7 @@ The contract system is designed to provide control over and discoverability of d
 - a contract is a global definition that represents an abstract entity to guide and validate the inputs and outputs of systems. There are 3 types of contract, Type, Entity and Service
 
 - A claim is provided by a service as a promise to provide input and output that matches a contract. Claim types are Fulfilment, Reference, Dto, Request, Event and Endpoint
+- Contracts define system inputs/outputs only. Internal DB/model naming can differ as long as requests and DTOs map correctly to the contract. When internal names differ, treat those fields as derived/aliased in claims when practical.
 
 contracts and related claims are all versioned, a given claim only refers to specified versions of a contract, BUT may where applicable support multiple versions 
 

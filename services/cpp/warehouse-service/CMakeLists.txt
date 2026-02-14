@@ -46,18 +46,28 @@ set(SOURCES
     src/Server.cpp
     src/models/Warehouse.cpp
     src/models/Location.cpp
+    src/models/Common.cpp
+    src/dtos/ErrorDto.cpp
+    src/dtos/WarehouseDto.cpp
+    src/dtos/LocationDto.cpp
+    src/dtos/WarehouseListDto.cpp
+    src/dtos/LocationListDto.cpp
     src/controllers/WarehouseController.cpp
     src/controllers/LocationController.cpp
     src/controllers/SwaggerController.cpp
+    src/controllers/HealthController.cpp
+    src/controllers/ClaimsController.cpp
     src/repositories/WarehouseRepository.cpp
     src/repositories/LocationRepository.cpp
     src/services/WarehouseService.cpp
     src/services/LocationService.cpp
     src/utils/Database.cpp
     src/utils/Logger.cpp
+    src/utils/DtoMapper.cpp
     src/utils/Config.cpp
     src/utils/JsonValidator.cpp
     src/utils/SwaggerGenerator.cpp
+    src/utils/Auth.cpp
 )
 
 # Header files
@@ -70,6 +80,8 @@ set(HEADERS
     include/warehouse/controllers/WarehouseController.hpp
     include/warehouse/controllers/LocationController.hpp
     include/warehouse/controllers/SwaggerController.hpp
+    include/warehouse/controllers/HealthController.hpp
+    include/warehouse/controllers/ClaimsController.hpp
     include/warehouse/repositories/WarehouseRepository.hpp
     include/warehouse/repositories/LocationRepository.hpp
     include/warehouse/services/WarehouseService.hpp
@@ -79,6 +91,7 @@ set(HEADERS
     include/warehouse/utils/Config.hpp
     include/warehouse/utils/JsonValidator.hpp
     include/warehouse/utils/SwaggerGenerator.hpp
+    include/warehouse/utils/Auth.hpp
 )
 
 # Create executable

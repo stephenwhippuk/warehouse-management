@@ -1,0 +1,27 @@
+{
+  "name": "DeleteProduct",
+  "uri": "/api/v1/products/{id}",
+  "method": "DELETE",
+  "parameters": [
+    {
+      "name": "id",
+      "location": "Route",
+      "type": "UUID",
+      "required": true
+    }
+  ],
+  "responses": [
+    {
+      "status": 204,
+      "type": "void"
+    },
+    {
+      "status": 404,
+      "type": "ErrorDto"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto"
+    }
+  ]
+}

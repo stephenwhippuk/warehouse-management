@@ -1,0 +1,65 @@
+{
+  "name": "Order",
+  "version": "1.0",
+  "description": "Customer order with line items",
+  "owner": "order-service",
+  "fields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "required": true,
+      "description": "Unique order identifier"
+    },
+    {
+      "name": "orderNumber",
+      "type": "string",
+      "classification": "identity",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 50,
+        "pattern": "^[A-Z0-9-]+$"
+      },
+      "description": "Human-readable order number"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "classification": "core",
+      "required": true,
+      "description": "Customer identifier"
+    },
+    {
+      "name": "warehouseId",
+      "type": "UUID",
+      "classification": "core",
+      "required": true,
+      "description": "Fulfilling warehouse ID"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "classification": "core",
+      "required": true,
+      "constraints": {
+        "enum": ["pending", "confirmed", "allocated", "picking", "picked", "packing", "packed", "shipped", "delivered", "cancelled", "on_hold"]
+      },
+      "description": "Order status"
+    },
+    {
+      "name": "orderDate",
+      "type": "DateTime",
+      "classification": "core",
+      "required": true,
+      "description": "Date order was placed"
+    },
+    {
+      "name": "total",
+      "type": "number",
+      "classification": "core",
+      "required": true,
+      "description": "Order total amount"
+    }
+  ]
+}

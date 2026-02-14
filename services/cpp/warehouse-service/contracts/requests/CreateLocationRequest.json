@@ -1,0 +1,85 @@
+{
+  "name": "CreateLocationRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Create",
+  "description": "Create a new storage location",
+  "basis": ["Location"],
+  "resultType": "LocationDto",
+  "parameters": [
+    {
+      "name": "warehouseId",
+      "type": "UUID",
+      "required": true,
+      "description": "Parent warehouse ID"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 50,
+        "pattern": "^[A-Z0-9-]+$"
+      },
+      "description": "Location code"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "required": false,
+      "description": "Location name"
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "required": true,
+      "description": "Location type"
+    },
+    {
+      "name": "aisle",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Aisle identifier"
+    },
+    {
+      "name": "bay",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Bay identifier"
+    },
+    {
+      "name": "level",
+      "type": "string",
+      "required": false,
+      "constraints": {
+        "maxLength": 20
+      },
+      "description": "Level/shelf identifier"
+    },
+    {
+      "name": "zone",
+      "type": "string",
+      "required": false,
+      "description": "Zone identifier"
+    },
+    {
+      "name": "isPickable",
+      "type": "boolean",
+      "required": false,
+      "description": "Whether location is pickable"
+    },
+    {
+      "name": "isReceivable",
+      "type": "boolean",
+      "required": false,
+      "description": "Whether location can receive inventory"
+    }
+  ]
+}

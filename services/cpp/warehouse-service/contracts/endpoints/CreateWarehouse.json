@@ -1,0 +1,44 @@
+{
+  "name": "CreateWarehouse",
+  "version": "1.0",
+  "uri": "/api/v1/warehouses",
+  "method": "POST",
+  "authentication": "ApiKey",
+  "description": "Create a new warehouse",
+  "parameters": [
+    {
+      "name": "request",
+      "location": "Body",
+      "type": "CreateWarehouseRequest",
+      "required": true,
+      "description": "Warehouse creation data"
+    }
+  ],
+  "responses": [
+    {
+      "status": 201,
+      "type": "WarehouseDto",
+      "description": "Warehouse created successfully"
+    },
+    {
+      "status": 400,
+      "type": "ErrorDto",
+      "description": "Invalid request data"
+    },
+    {
+      "status": 401,
+      "type": "ErrorDto",
+      "description": "Unauthorized"
+    },
+    {
+      "status": 409,
+      "type": "ErrorDto",
+      "description": "Warehouse with code already exists"
+    },
+    {
+      "status": 500,
+      "type": "ErrorDto",
+      "description": "Internal server error"
+    }
+  ]
+}

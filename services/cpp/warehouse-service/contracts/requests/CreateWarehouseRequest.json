@@ -1,0 +1,65 @@
+{
+  "name": "CreateWarehouseRequest",
+  "version": "1.0",
+  "type": "command",
+  "commandType": "Create",
+  "description": "Create a new warehouse",
+  "basis": ["Warehouse"],
+  "resultType": "WarehouseDto",
+  "parameters": [
+    {
+      "name": "code",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 20,
+        "pattern": "^[A-Z0-9-]+$"
+      },
+      "description": "Warehouse code"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "description": "Warehouse name"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "description": "Warehouse description"
+    },
+    {
+      "name": "address",
+      "type": "object",
+      "required": true,
+      "description": "Physical address"
+    },
+    {
+      "name": "coordinates",
+      "type": "object",
+      "required": false,
+      "description": "GPS coordinates"
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "required": true,
+      "description": "Warehouse type"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "required": true,
+      "constraints": {
+        "enum": ["active", "inactive", "maintenance"]
+      },
+      "description": "Initial warehouse status"
+    }
+  ]
+}
