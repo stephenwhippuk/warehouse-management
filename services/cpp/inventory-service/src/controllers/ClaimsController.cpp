@@ -1,6 +1,5 @@
 #include "inventory/controllers/ClaimsController.hpp"
 #include "inventory/utils/Logger.hpp"
-#include <Poco/URI.h>
 #include <fstream>
 #include <filesystem>
 
@@ -9,98 +8,48 @@ using json = nlohmann::json;
 namespace inventory {
 namespace controllers {
 
-ClaimsController::ClaimsController() {
+ClaimsController::ClaimsController() : ControllerBase("/api/v1/claims") {
     if (!loadClaims()) {
         utils::Logger::error("Failed to load claims.json");
     }
+
+    // Register routes
+    Get("/", [this](http::HttpContext& ctx) {
+        return handleGetAllClaims(ctx);
+    });
+
+    Get("/fulfilments", [this](http::HttpContext& ctx) {
+        return handleGetFulfilments(ctx);
+    });
+
+    Get("/references", [this](http::HttpContext& ctx) {
+        return handleGetReferences(ctx);
+    });
+
+    Get("/services", [this](http::HttpContext& ctx) {
+        return handleGetServices(ctx);
+    });
+
+    Get("/supports/{type:alpha}/{name:alphanum}/{version:alphanum}", [this](http::HttpContext& ctx) {
+        return handleSupportsCheck(ctx);
+    });
 }
 
-void ClaimsController::handleRequest(Poco::Net::HTTPServerRequest& request,
-                                     Poco::Net::HTTPServerResponse& response) {
-    const std::string& uri = request.getURI();
-    const std::string& method = request.getMethod();
-
-    utils::Logger::debug("ClaimsController: {} {}", method, uri);
-
-    // Only support GET requests
-    if (method != "GET") {
-        sendErrorResponse(response, "Method not allowed", 405);
-        return;
-    }
-
-    Poco::URI pocoUri(uri);
-    std::vector<std::string> pathSegments;
-    pocoUri.getPathSegments(pathSegments);
-
-    // Expected paths:
-    // /api/v1/claims
-    // /api/v1/claims/fulfilments
-    // /api/v1/claims/references
-    // /api/v1/claims/services
-    // /api/v1/claims/supports/{type}/{name}/{version}
-
-    if (pathSegments.size() < 3) {
-        sendErrorResponse(response, "Invalid path", 400);
-        return;
-    }
-
-    // pathSegments: [api, v1, claims, ...]
-    if (pathSegments[0] != "api" || pathSegments[1] != "v1" || pathSegments[2] != "claims") {
-        sendErrorResponse(response, "Invalid path", 400);
-        return;
-    }
-
-    // /api/v1/claims
-    if (pathSegments.size() == 3) {
-        handleGetAllClaims(response);
-        return;
-    }
-
-    const std::string& subPath = pathSegments[3];
-
-    // /api/v1/claims/fulfilments
-    if (subPath == "fulfilments" && pathSegments.size() == 4) {
-        handleGetFulfilments(response);
-        return;
-    }
-
-    // /api/v1/claims/references
-    if (subPath == "references" && pathSegments.size() == 4) {
-        handleGetReferences(response);
-        return;
-    }
-
-    // /api/v1/claims/services
-    if (subPath == "services" && pathSegments.size() == 4) {
-        handleGetServices(response);
-        return;
-    }
-
-    // /api/v1/claims/supports/{type}/{name}/{version}
-    if (subPath == "supports" && pathSegments.size() == 7) {
-        const std::string& type = pathSegments[4];
-        const std::string& name = pathSegments[5];
-        const std::string& version = pathSegments[6];
-        handleSupportsCheck(type, name, version, response);
-        return;
-    }
-
-    sendErrorResponse(response, "Not found", 404);
-}
-
-void ClaimsController::handleGetAllClaims(Poco::Net::HTTPServerResponse& response) {
+std::string ClaimsController::handleGetAllClaims(http::HttpContext& ctx) {
+    (void)ctx;
     if (claims_.empty()) {
-        sendErrorResponse(response, "Claims not loaded", 500);
-        return;
+        ctx.response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+        return json{{"error", "Claims not loaded"}, {"status", 500}}.dump();
     }
 
-    sendJsonResponse(response, claims_, 200);
+    return claims_.dump(2);
 }
 
-void ClaimsController::handleGetFulfilments(Poco::Net::HTTPServerResponse& response) {
+std::string ClaimsController::handleGetFulfilments(http::HttpContext& ctx) {
+    (void)ctx;
     if (claims_.empty() || !claims_.contains("fulfilments")) {
-        sendErrorResponse(response, "Fulfilments not found", 500);
-        return;
+        ctx.response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+        return json{{"error", "Fulfilments not found"}, {"status", 500}}.dump();
     }
 
     json result;
@@ -108,13 +57,14 @@ void ClaimsController::handleGetFulfilments(Poco::Net::HTTPServerResponse& respo
     result["version"] = claims_["version"];
     result["fulfilments"] = claims_["fulfilments"];
 
-    sendJsonResponse(response, result, 200);
+    return result.dump(2);
 }
 
-void ClaimsController::handleGetReferences(Poco::Net::HTTPServerResponse& response) {
+std::string ClaimsController::handleGetReferences(http::HttpContext& ctx) {
+    (void)ctx;
     if (claims_.empty() || !claims_.contains("references")) {
-        sendErrorResponse(response, "References not found", 500);
-        return;
+        ctx.response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+        return json{{"error", "References not found"}, {"status", 500}}.dump();
     }
 
     json result;
@@ -122,13 +72,14 @@ void ClaimsController::handleGetReferences(Poco::Net::HTTPServerResponse& respon
     result["version"] = claims_["version"];
     result["references"] = claims_["references"];
 
-    sendJsonResponse(response, result, 200);
+    return result.dump(2);
 }
 
-void ClaimsController::handleGetServices(Poco::Net::HTTPServerResponse& response) {
+std::string ClaimsController::handleGetServices(http::HttpContext& ctx) {
+    (void)ctx;
     if (claims_.empty()) {
-        sendErrorResponse(response, "Service contracts not found", 500);
-        return;
+        ctx.response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+        return json{{"error", "Service contracts not found"}, {"status", 500}}.dump();
     }
 
     json result;
@@ -136,17 +87,18 @@ void ClaimsController::handleGetServices(Poco::Net::HTTPServerResponse& response
     result["version"] = claims_["version"];
     result["serviceContracts"] = claims_.value("serviceContracts", json::array());
 
-    sendJsonResponse(response, result, 200);
+    return result.dump(2);
 }
 
-void ClaimsController::handleSupportsCheck(const std::string& type,
-                                           const std::string& name,
-                                           const std::string& version,
-                                           Poco::Net::HTTPServerResponse& response) {
+std::string ClaimsController::handleSupportsCheck(http::HttpContext& ctx) {
     if (claims_.empty()) {
-        sendErrorResponse(response, "Claims not loaded", 500);
-        return;
+        ctx.response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+        return json{{"error", "Claims not loaded"}, {"status", 500}}.dump();
     }
+
+    std::string type = ctx.routeParams["type"];
+    std::string name = ctx.routeParams["name"];
+    std::string version = ctx.routeParams["version"];
 
     json result;
     result["requested"] = {
@@ -170,8 +122,8 @@ void ClaimsController::handleSupportsCheck(const std::string& type,
             supportType = "fulfilled";
         }
     } else {
-        sendErrorResponse(response, "Invalid type. Must be 'entity' or 'service'", 400);
-        return;
+        ctx.response.setStatus(Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+        return json{{"error", "Invalid type. Must be 'entity' or 'service'"}, {"status", 400}}.dump();
     }
 
     result["supported"] = supported;
@@ -179,7 +131,7 @@ void ClaimsController::handleSupportsCheck(const std::string& type,
     result["service"] = claims_["service"];
     result["serviceVersion"] = claims_["version"];
 
-    sendJsonResponse(response, result, 200);
+    return result.dump(2);
 }
 
 bool ClaimsController::loadClaims() {
@@ -273,27 +225,6 @@ bool ClaimsController::supportsService(const std::string& name, const std::strin
     }
 
     return false;
-}
-
-void ClaimsController::sendJsonResponse(Poco::Net::HTTPServerResponse& response,
-                                        const json& jsonData,
-                                        int statusCode) {
-    response.setStatus(static_cast<Poco::Net::HTTPResponse::HTTPStatus>(statusCode));
-    response.setContentType("application/json");
-    response.setChunkedTransferEncoding(true);
-
-    std::ostream& out = response.send();
-    out << jsonData.dump(2);
-}
-
-void ClaimsController::sendErrorResponse(Poco::Net::HTTPServerResponse& response,
-                                         const std::string& message,
-                                         int statusCode) {
-    json error;
-    error["error"] = message;
-    error["status"] = statusCode;
-
-    sendJsonResponse(response, error, statusCode);
 }
 
 } // namespace controllers

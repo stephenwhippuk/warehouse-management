@@ -15,7 +15,16 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Add warehouse-messaging shared library
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../shared/warehouse-messaging ${CMAKE_BINARY_DIR}/warehouse-messaging)
+if(NOT DEFINED WAREHOUSE_MESSAGING_DIR)
+    set(WAREHOUSE_MESSAGING_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/warehouse-messaging")
+endif()
+add_subdirectory(${WAREHOUSE_MESSAGING_DIR} ${CMAKE_BINARY_DIR}/warehouse-messaging)
+
+# Add http-framework shared library
+if(NOT DEFINED HTTP_FRAMEWORK_DIR)
+    set(HTTP_FRAMEWORK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/http-framework")
+endif()
+add_subdirectory(${HTTP_FRAMEWORK_DIR} ${CMAKE_BINARY_DIR}/http-framework)
 
 # Find required packages
 find_package(Boost REQUIRED COMPONENTS system thread)
@@ -28,6 +37,7 @@ find_package(spdlog REQUIRED)
 # Include directories
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../shared/http-framework/include
     ${Boost_INCLUDE_DIRS}
     ${PostgreSQL_INCLUDE_DIRS}
 )
@@ -80,6 +90,7 @@ target_link_libraries(${PROJECT_NAME}
     nlohmann_json::nlohmann_json
     spdlog::spdlog
     warehouse-messaging
+    http-framework
     # ContractValidator::contract-validator  # Disabled for now
 )
 

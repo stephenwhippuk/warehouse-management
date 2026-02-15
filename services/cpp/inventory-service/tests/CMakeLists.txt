@@ -43,6 +43,7 @@ target_link_libraries(inventory-service-tests
     nlohmann_json::nlohmann_json
     spdlog::spdlog
     warehouse-messaging
+    http-framework
     # ContractValidator::contract-validator  # Disabled for now
 )
 
@@ -50,6 +51,7 @@ target_link_libraries(inventory-service-tests
 target_include_directories(inventory-service-tests
     PRIVATE
     ${PROJECT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../shared/http-framework/include
 )
 
 # Add test sources (without main.cpp)

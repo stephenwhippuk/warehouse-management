@@ -1,8 +1,6 @@
 #pragma once
 
-#include <Poco/Net/HTTPRequestHandler.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/HTTPServerResponse.h>
+#include <http-framework/ControllerBase.hpp>
 #include <nlohmann/json.hpp>
 #include <string>
 
@@ -25,36 +23,22 @@ namespace controllers {
  * The 'supports' endpoint checks if this service fulfills or references
  * a specific contract at a given version. Type can be 'entity' or 'service'.
  */
-class ClaimsController : public Poco::Net::HTTPRequestHandler {
+class ClaimsController : public http::ControllerBase {
 public:
     ClaimsController();
-
-    void handleRequest(Poco::Net::HTTPServerRequest& request,
-                       Poco::Net::HTTPServerResponse& response) override;
 
 private:
     nlohmann::json claims_;
 
-    void handleGetAllClaims(Poco::Net::HTTPServerResponse& response);
-    void handleGetFulfilments(Poco::Net::HTTPServerResponse& response);
-    void handleGetReferences(Poco::Net::HTTPServerResponse& response);
-    void handleGetServices(Poco::Net::HTTPServerResponse& response);
-    void handleSupportsCheck(const std::string& type,
-                            const std::string& name,
-                            const std::string& version,
-                            Poco::Net::HTTPServerResponse& response);
+    std::string handleGetAllClaims(http::HttpContext& ctx);
+    std::string handleGetFulfilments(http::HttpContext& ctx);
+    std::string handleGetReferences(http::HttpContext& ctx);
+    std::string handleGetServices(http::HttpContext& ctx);
+    std::string handleSupportsCheck(http::HttpContext& ctx);
 
     bool loadClaims();
     bool supportsEntity(const std::string& name, const std::string& version, bool& fulfilled);
     bool supportsService(const std::string& name, const std::string& version);
-
-    void sendJsonResponse(Poco::Net::HTTPServerResponse& response,
-                          const nlohmann::json& json,
-                          int statusCode = 200);
-
-    void sendErrorResponse(Poco::Net::HTTPServerResponse& response,
-                           const std::string& message,
-                           int statusCode);
 };
 
 } // namespace controllers

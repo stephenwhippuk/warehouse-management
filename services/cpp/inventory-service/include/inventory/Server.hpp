@@ -1,33 +1,11 @@
 #pragma once
 
 #include "inventory/services/InventoryService.hpp"
-#include <Poco/Net/HTTPServer.h>
+#include <http-framework/HttpHost.hpp>
 #include <memory>
 #include <string>
 
 namespace inventory {
-
-enum class RouteTarget {
-    Inventory,
-    Health,
-    Swagger,
-    Claims
-};
-
-// Pure helper used by the HTTP server routing logic; exposed so
-// tests can verify that individual paths map to the expected targets.
-inline RouteTarget resolveRoute(const std::string& path) {
-    if (path == "/health") {
-        return RouteTarget::Health;
-    }
-    if (path == "/api/swagger.json") {
-        return RouteTarget::Swagger;
-    }
-    if (path.starts_with("/api/v1/claims")) {
-        return RouteTarget::Claims;
-    }
-    return RouteTarget::Inventory;
-}
 
 class Server {
 public:
@@ -40,7 +18,7 @@ public:
     
 private:
     int port_;
-    std::unique_ptr<Poco::Net::HTTPServer> httpServer_;
+    std::unique_ptr<http::HttpHost> httpHost_;
     std::shared_ptr<services::InventoryService> inventoryService_;
 };
 

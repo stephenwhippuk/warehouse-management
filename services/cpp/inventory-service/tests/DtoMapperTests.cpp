@@ -345,7 +345,7 @@ TEST_CASE("InventoryItemDto validates on construction", "[dto][validation]") {
                 createIso8601Timestamp(),
                 createIso8601Timestamp()
             ),
-            Catch::Matchers::ContainsSubstring("status")
+            Catch::Matchers::ContainsSubstring("InventoryStatus")
         );
     }
     
@@ -437,7 +437,7 @@ TEST_CASE("InventoryOperationResultDto validates on construction", "[dto][valida
                 true,
                 std::nullopt
             ),
-            Catch::Matchers::ContainsSubstring("cannot be empty")
+            Catch::Matchers::ContainsSubstring("Operation must be one of")
         );
     }
     
@@ -452,7 +452,7 @@ TEST_CASE("InventoryOperationResultDto validates on construction", "[dto][valida
                 true,
                 std::nullopt
             ),
-            Catch::Matchers::ContainsSubstring("operation")
+            Catch::Matchers::ContainsSubstring("Operation must be one of")
         );
     }
 }

@@ -1,7 +1,6 @@
 #include "inventory/controllers/HealthController.hpp"
 #include "inventory/utils/Auth.hpp"
 #include "inventory/utils/Logger.hpp"
-
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -9,9 +8,14 @@ using json = nlohmann::json;
 namespace inventory {
 namespace controllers {
 
-void HealthController::handleRequest(Poco::Net::HTTPServerRequest& request,
-                                     Poco::Net::HTTPServerResponse& response) {
-    (void)request; // Unused for now
+HealthController::HealthController() : ControllerBase("/health") {
+    Get("/", [this](http::HttpContext& ctx) {
+        return handleHealthCheck(ctx);
+    });
+}
+
+std::string HealthController::handleHealthCheck(http::HttpContext& ctx) {
+    (void)ctx; // Unused for now
 
     utils::Logger::debug("Health check requested");
 
@@ -26,18 +30,7 @@ void HealthController::handleRequest(Poco::Net::HTTPServerRequest& request,
 
     payload["auth"] = authMetrics;
 
-    sendJsonResponse(response, payload.dump(), 200);
-}
-
-void HealthController::sendJsonResponse(Poco::Net::HTTPServerResponse& response,
-                                        const std::string& jsonContent,
-                                        int statusCode) {
-    response.setStatus(static_cast<Poco::Net::HTTPResponse::HTTPStatus>(statusCode));
-    response.setContentType("application/json");
-    response.setChunkedTransferEncoding(true);
-
-    std::ostream& out = response.send();
-    out << jsonContent;
+    return payload.dump();
 }
 
 } // namespace controllers

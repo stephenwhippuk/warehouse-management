@@ -18,15 +18,15 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
+# Copy entire repository
+COPY . /warehouse-management/
 
-# Copy source code
-COPY . .
+# Set working directory
+WORKDIR /warehouse-management/services/cpp/inventory-service
 
 # Build application (clean build directory inside image)
 RUN rm -rf build && mkdir build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    cmake -DWAREHOUSE_MESSAGING_DIR=/warehouse-management/services/cpp/shared/warehouse-messaging -DCMAKE_BUILD_TYPE=Release .. && \
     make -j"$(nproc)"
 
 # Runtime stage
@@ -39,7 +39,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libpoco-dev \
     libpq5 \
     libpqxx-dev \
-    librabbitmq-dev \
+    librabbitmq4 \
     sqitch \
     libdbd-pg-perl \
     postgresql-client \
@@ -53,20 +53,19 @@ RUN useradd -m -u 1000 appuser
 # Set working directory
 WORKDIR /app
 
-COPY --from=builder /app/migrations /app/migrations
-COPY --from=builder /app/sqitch.conf /app/
-COPY --from=builder /app/sqitch.plan /app/
-COPY --from=builder /app/seed /app/seed
+COPY --from=builder /warehouse-management/services/cpp/inventory-service/migrations /app/migrations
+COPY --from=builder /warehouse-management/services/cpp/inventory-service/sqitch.conf /app/
+COPY --from=builder /warehouse-management/services/cpp/inventory-service/sqitch.plan /app/
+COPY --from=builder /warehouse-management/services/cpp/inventory-service/seed /app/seed
 
 # Copy entrypoint script
-COPY docker-entrypoint.sh /app/
+COPY services/cpp/inventory-service/docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
 
-# Copy binary, tests, config, and contracts from builder
-COPY --from=builder /app/build/bin/inventory-service /app/
-COPY --from=builder /app/build/bin/inventory-service-tests /app/
-COPY --from=builder /app/config /app/config
-COPY --from=builder /app/contracts /app/contracts
+# Copy binary, config, and contracts from builder
+COPY --from=builder /warehouse-management/services/cpp/inventory-service/build/bin/inventory-service /app/
+COPY --from=builder /warehouse-management/services/cpp/inventory-service/config /app/config
+COPY --from=builder /warehouse-management/services/cpp/inventory-service/contracts /app/contracts
 
 # Change ownership
 RUN chown -R appuser:appuser /app

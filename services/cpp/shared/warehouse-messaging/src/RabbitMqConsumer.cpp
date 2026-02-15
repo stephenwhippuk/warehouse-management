@@ -1,6 +1,26 @@
 #include "warehouse/messaging/internal/RabbitMqConsumer.hpp"
+
+// Support both old (0.10.0) and new (0.15.0+) header paths
+#ifdef __has_include
+#if __has_include(<rabbitmq-c/tcp_socket.h>)
 #include <rabbitmq-c/tcp_socket.h>
+#else
+#include <amqp_tcp_socket.h>
+#endif
+#else
+#include <rabbitmq-c/tcp_socket.h>
+#endif
+
+#ifdef __has_include
+#if __has_include(<rabbitmq-c/framing.h>)
 #include <rabbitmq-c/framing.h>
+#else
+#include <amqp_framing.h>
+#endif
+#else
+#include <rabbitmq-c/framing.h>
+#endif
+
 #include <stdexcept>
 #include <thread>
 #include <chrono>

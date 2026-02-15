@@ -3,7 +3,18 @@
 
 #include "warehouse/messaging/EventPublisher.hpp"
 #include "warehouse/messaging/MessagingConfig.hpp"
+
+// Support both old (0.10.0) and new (0.15.0+) header paths
+#ifdef __has_include
+#if __has_include(<rabbitmq-c/amqp.h>)
 #include <rabbitmq-c/amqp.h>
+#else
+#include <amqp.h>
+#endif
+#else
+#include <rabbitmq-c/amqp.h>
+#endif
+
 #include <memory>
 #include <string>
 #include <atomic>

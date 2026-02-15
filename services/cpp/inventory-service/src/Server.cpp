@@ -1,14 +1,9 @@
 #include "inventory/Server.hpp"
 #include "inventory/controllers/InventoryController.hpp"
 #include "inventory/controllers/HealthController.hpp"
-// #include "inventory/controllers/SwaggerController.hpp"  // Temporarily disabled
 #include "inventory/controllers/ClaimsController.hpp"
 #include "inventory/utils/Logger.hpp"
-#include <Poco/Net/HTTPServerParams.h>
-#include <Poco/Net/HTTPRequestHandlerFactory.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/ServerSocket.h>
-#include <Poco/URI.h>
+#include <http-framework/Middleware.hpp>
 #include <atomic>
 #include <csignal>
 #include <chrono>
@@ -34,39 +29,6 @@ void waitForTerminationRequest() {
 
 } // namespace
 
-class RequestHandlerFactory : public Poco::Net::HTTPRequestHandlerFactory {
-public:
-    explicit RequestHandlerFactory(std::shared_ptr<services::InventoryService> inventoryService)
-        : inventoryService_(inventoryService) {}
-    
-    Poco::Net::HTTPRequestHandler* createRequestHandler(const Poco::Net::HTTPServerRequest& request) override {
-        utils::Logger::info("Incoming request: {} {}", request.getMethod(), request.getURI());
-
-        Poco::URI uri(request.getURI());
-        const std::string path = uri.getPath();
-
-        RouteTarget target = resolveRoute(path);
-        switch (target) {
-            case RouteTarget::Health:
-                return new controllers::HealthController();
-            case RouteTarget::Swagger:
-                // Temporarily disabled - return health controller
-                utils::Logger::warn("Swagger endpoint temporarily disabled");
-                return new controllers::HealthController();
-            case RouteTarget::Claims:
-                return new controllers::ClaimsController();
-            case RouteTarget::Inventory:
-            default:
-                // TODO: Implement more complete routing
-                // Default: route to InventoryController
-                return new controllers::InventoryController(inventoryService_);
-        }
-    }
-    
-private:
-    std::shared_ptr<services::InventoryService> inventoryService_;
-};
-
 Server::Server(int port) : port_(port) {}
 
 Server::~Server() {
@@ -78,18 +40,25 @@ void Server::setInventoryService(std::shared_ptr<services::InventoryService> ser
 }
 
 void Server::start() {
-    Poco::Net::ServerSocket socket(port_);
-    Poco::Net::HTTPServerParams* params = new Poco::Net::HTTPServerParams;
-    params->setMaxQueued(100);
-    params->setMaxThreads(16);
+    httpHost_ = std::make_unique<http::HttpHost>(port_);
     
-    httpServer_ = std::make_unique<Poco::Net::HTTPServer>(
-        new RequestHandlerFactory(inventoryService_),
-        socket,
-        params
-    );
+    // Add middleware
+    httpHost_->use(std::make_shared<http::LoggingMiddleware>());
+    httpHost_->use(std::make_shared<http::CorsMiddleware>());
+    httpHost_->use(std::make_shared<http::ErrorHandlingMiddleware>());
     
-    httpServer_->start();
+    // Register controllers
+    httpHost_->addController(std::make_shared<controllers::HealthController>());
+    httpHost_->addController(std::make_shared<controllers::ClaimsController>());
+    httpHost_->addController(std::make_shared<controllers::InventoryController>(inventoryService_));
+    
+    // Configure server
+    httpHost_->setMaxThreads(16);
+    httpHost_->setMaxQueued(100);
+    httpHost_->setTimeout(60);
+    
+    // Start the server
+    httpHost_->start();
     utils::Logger::info("HTTP Server started on port {}", port_);
     
     // Wait for termination signal
@@ -100,10 +69,10 @@ void Server::start() {
 }
 
 void Server::stop() {
-    if (httpServer_) {
+    if (httpHost_) {
         utils::Logger::info("Stopping HTTP server...");
-        httpServer_->stop();
-        httpServer_.reset();
+        httpHost_->stop();
+        httpHost_.reset();
     }
 }
 
