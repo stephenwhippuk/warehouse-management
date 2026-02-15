@@ -12,7 +12,15 @@ void Auth::setServiceApiKey(const std::string& key) {
 bool Auth::authorizeServiceRequest(Poco::Net::HTTPServerRequest& request,
                                    Poco::Net::HTTPServerResponse& response) {
     if (serviceApiKey_.empty()) {
-        return true;  // Auth disabled
+        // NOTE: For product-service, an empty serviceApiKey_ is treated as
+        // "auth disabled" and all requests are allowed. Other services
+        // (e.g., warehouse-service) may instead surface a distinct
+        // "not configured" status to callers. This deviation is intentional
+        // to keep product-service accessible when no SERVICE_API_KEY or
+        // auth.serviceApiKey is configured.
+        Logger::warn("Auth::authorizeServiceRequest: SERVICE_API_KEY not configured; "
+                     "treating request as authorized (auth disabled for product-service).");
+        return true;
     }
     
     std::string apiKey = extractApiKey(request);

@@ -3,6 +3,7 @@
 #include "product/utils/Config.hpp"
 #include "product/utils/Database.hpp"
 #include "product/repositories/ProductRepository.hpp"
+#include <warehouse/messaging/EventPublisher.hpp>
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -65,12 +66,19 @@ void Application::initialize() {
     utils::Database::connect(dbUrl);
     if (auto logger = utils::Logger::getLogger()) logger->info("Database connected successfully");
     
+    // Initialize event publisher (uses environment variables)
+    if (auto logger = utils::Logger::getLogger()) logger->info("Initializing event publisher...");
+    eventPublisher_ = std::shared_ptr<warehouse::messaging::EventPublisher>(
+        warehouse::messaging::EventPublisher::create("product-service")
+    );
+    if (auto logger = utils::Logger::getLogger()) logger->info("Event publisher initialized");
+    
     // Initialize repository and service
     auto repository = std::make_shared<repositories::ProductRepository>(
         utils::Database::getConnection()
     );
     
-    productService_ = std::make_shared<services::ProductService>(repository);
+    productService_ = std::make_shared<services::ProductService>(repository, eventPublisher_);
     if (auto logger = utils::Logger::getLogger()) logger->info("Product service initialized");
     
     // Initialize server

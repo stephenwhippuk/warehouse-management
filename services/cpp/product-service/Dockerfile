@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nlohmann-json3-dev \
     libspdlog-dev \
     uuid-dev \
+    librabbitmq-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
 
@@ -31,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpqxx-dev \
     libspdlog1 \
     uuid-runtime \
+    librabbitmq4 \
     postgresql-client \
     sqitch \
     libdbd-pg-perl \

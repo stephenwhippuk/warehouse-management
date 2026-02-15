@@ -13,9 +13,15 @@ services:
       DATABASE_NAME: warehouse_db
       DATABASE_USER: warehouse
       DATABASE_PASSWORD: warehouse
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_VHOST: /
+      RABBITMQ_USER: warehouse
+      RABBITMQ_PASS: warehouse_dev
       RUST_LOG: info
     depends_on:
       - postgres
+      - rabbitmq
     networks:
       - warehouse
 
@@ -32,8 +38,22 @@ services:
     networks:
       - warehouse
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: warehouse
+      RABBITMQ_DEFAULT_PASS: warehouse_dev
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - warehouse
+
 volumes:
   postgres_data:
+  rabbitmq_data:
 
 networks:
   warehouse:

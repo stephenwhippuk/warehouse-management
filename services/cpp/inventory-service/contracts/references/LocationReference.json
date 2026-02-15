@@ -1,0 +1,54 @@
+{
+  "name": "LocationReference",
+  "version": "1.0",
+  "description": "inventory-service reference to Location entity contract",
+  "entityContract": "Location",
+  "entityVersion": "1.0",
+  "owner": "warehouse-service",
+  "status": "referenced",
+  "accessMethod": "service-api",
+  "accessEndpoint": "https://warehouse-service/api/v1/locations",
+  "requiredFields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "description": "Location unique identifier - always required when referencing a location"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "classification": "identity",
+      "description": "Location code - identity field used for display"
+    }
+  ],
+  "optionalFields": [
+    {
+      "name": "aisle",
+      "type": "string",
+      "classification": "core",
+      "description": "Aisle number - optional for enrichment"
+    },
+    {
+      "name": "bay",
+      "type": "string",
+      "classification": "core",
+      "description": "Bay number - optional for enrichment"
+    },
+    {
+      "name": "level",
+      "type": "string",
+      "classification": "core",
+      "description": "Shelf level - optional for enrichment"
+    }
+  ],
+  "usagePoints": [
+    {
+      "context": "InventoryItemDto",
+      "requiredFieldsUsed": ["id", "code"],
+      "optionalFieldsUsed": ["aisle", "bay", "level"],
+      "purpose": "Provides LocationId and LocationCode identity fields in inventory response"
+    }
+  ],
+  "notes": "inventory-service stores locationId as foreign key and resolves via Warehouse service API when DTOs need identity fields (code, aisle, bay, level)"
+}

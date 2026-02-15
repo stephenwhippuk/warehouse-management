@@ -389,6 +389,69 @@ ctest -R http --output-on-failure
 - **spdlog**: Logging
 - **Catch2**: Testing framework
 
+## Documentation
+
+### Event Consumption Architecture
+
+Complete guides for implementing production-ready message consumption:
+
+1. **[MULTI_SERVICE_EVENT_FLOW.md](docs/MULTI_SERVICE_EVENT_FLOW.md)** - START HERE! 
+   - Visual diagrams showing how multiple services consume the same events
+   - Real-world example with timeline
+   - Answers: "How do inventory-service AND order-service both get product events?"
+
+2. **[EVENT_DISTRIBUTION_PATTERNS.md](docs/EVENT_DISTRIBUTION_PATTERNS.md)**
+   - Quick reference guide
+   - Fanout vs Competing Consumers patterns
+   - Common mistakes and how to avoid them
+   - Testing strategies
+
+3. **[EVENT_CONSUMPTION_ARCHITECTURE.md](docs/EVENT_CONSUMPTION_ARCHITECTURE.md)**
+   - Complete implementation guide
+   - Resilience patterns and error handling
+   - Idempotency strategies
+   - Production configuration details
+
+4. **[CONSUMER_RESILIENCE_CHECKLIST.md](docs/CONSUMER_RESILIENCE_CHECKLIST.md)**
+   - Step-by-step implementation tasks
+   - Code snippets with before/after
+   - Testing procedures for each phase
+   - Completion criteria
+
+5. **[MULTI_SERVICE_CONSUMPTION_SUMMARY.md](docs/MULTI_SERVICE_CONSUMPTION_SUMMARY.md)**
+   - Executive summary
+   - Implementation status
+   - What's correct, what needs fixing
+
+### Key Topics Covered
+- **Fanout Pattern**: Multiple services consuming the same events (inventory + order both need product events)
+- **Competing Consumers**: Multiple instances load balancing within one service
+- **Manual ACK with Retry**: Ensuring no message loss on errors
+- **Dead Letter Queues**: Handling permanently failed messages
+- **Idempotency**: Safe message reprocessing strategies
+- **Horizontal Scaling**: Running multiple service instances
+
+### Quick Reference
+
+**Current Queue Configuration**:
+```cpp
+queue_name: "inventory-service-products"  // ✅ Unique per service (enables fanout)
+routing_keys: ["product.created", "product.updated", "product.deleted"]
+```
+
+**Multi-Service Event Flow**:
+```
+product-service publishes product.created
+    ↓
+warehouse.events exchange
+    ├─> inventory-service-products queue → inventory-service processes
+    └─> order-service-products queue → order-service processes
+    
+Result: Both services receive the SAME event independently ✅
+```
+
+**See [MULTI_SERVICE_EVENT_FLOW.md](docs/MULTI_SERVICE_EVENT_FLOW.md) for complete visual diagrams.**
+
 ## Contributing
 
 1. Follow C++ Core Guidelines

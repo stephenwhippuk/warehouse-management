@@ -1,0 +1,222 @@
+{
+  "name": "InventoryFulfilment",
+  "version": "1.0",
+  "description": "inventory-service fulfilment of the Inventory entity contract",
+  "entityContract": "Inventory",
+  "entityVersion": "1.0",
+  "owner": "inventory-service",
+  "status": "fulfilled",
+  "fields": [
+    {
+      "name": "id",
+      "classification": "identity",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Unique inventory record identifier"
+    },
+    {
+      "name": "productId",
+      "classification": "identity",
+      "status": "provided",
+      "method": "reference",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Reference to Product entity - resolved via ProductReference"
+    },
+    {
+      "name": "warehouseId",
+      "classification": "core",
+      "status": "provided",
+      "method": "reference",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Reference to Warehouse entity - resolved via WarehouseReference"
+    },
+    {
+      "name": "locationId",
+      "classification": "core",
+      "status": "provided",
+      "method": "reference",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Reference to Location entity - resolved via LocationReference"
+    },
+    {
+      "name": "quantity",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Current quantity on hand"
+    },
+    {
+      "name": "reservedQuantity",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Quantity reserved for orders"
+    },
+    {
+      "name": "allocatedQuantity",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Quantity allocated to picks/shipments"
+    },
+    {
+      "name": "serialNumber",
+      "classification": "complete",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Serial number for serialized items"
+    },
+    {
+      "name": "batchNumber",
+      "classification": "complete",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Batch or lot number"
+    },
+    {
+      "name": "expirationDate",
+      "classification": "complete",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Expiration date for perishable items"
+    },
+    {
+      "name": "status",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Current inventory status (active, reserved, allocated, expired, etc.)"
+    },
+    {
+      "name": "createdAt",
+      "classification": "complete",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "When the inventory record was created"
+    },
+    {
+      "name": "updatedAt",
+      "classification": "complete",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["InventoryItemDto", "InventoryListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "When the inventory record was last updated"
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory",
+      "description": "List inventory items with pagination",
+      "responseDto": "InventoryListDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/{id}",
+      "description": "Get inventory item by ID",
+      "responseDto": "InventoryItemDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/product/{productId}",
+      "description": "List inventory by product ID",
+      "responseDto": "InventoryListDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory",
+      "description": "Create new inventory record",
+      "responseDto": "InventoryItemDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/{id}/reserve",
+      "description": "Reserve inventory quantity",
+      "responseDto": "InventoryOperationResultDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/{id}/release",
+      "description": "Release reserved inventory",
+      "responseDto": "InventoryOperationResultDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/{id}/allocate",
+      "description": "Allocate inventory quantity",
+      "responseDto": "InventoryOperationResultDto"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/inventory/{id}",
+      "description": "Update inventory record",
+      "responseDto": "InventoryItemDto"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/inventory/{id}",
+      "description": "Delete inventory record"
+    }
+  ]
+}

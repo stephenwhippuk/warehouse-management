@@ -1,0 +1,47 @@
+{
+  "name": "ProductReference",
+  "version": "1.0",
+  "description": "inventory-service reference to Product entity contract via local cache table",
+  "entityContract": "Product",
+  "entityVersion": "1.0",
+  "owner": "product-service",
+  "status": "referenced",
+  "accessMethod": "local-cache",
+  "cacheTable": "product_cache",
+  "cacheStrategy": "denormalized-copy",
+  "cacheSync": "on-demand via product-service API",
+  "requiredFields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "databaseField": "product_id",
+      "description": "Product unique identifier - primary key in product_cache, used to join with inventory records"
+    },
+    {
+      "name": "sku",
+      "type": "string",
+      "classification": "identity",
+      "databaseField": "sku",
+      "description": "Stock Keeping Unit - product identity field stored locally for immediate access"
+    }
+  ],
+  "optionalFields": [
+    {
+      "name": "name",
+      "type": "string",
+      "classification": "core",
+      "databaseField": "name",
+      "description": "Product name - optional for enrichment, stored locally"
+    }
+  ],
+  "usagePoints": [
+    {
+      "context": "InventoryItemDto",
+      "requiredFieldsUsed": ["id", "sku"],
+      "optionalFieldsUsed": ["name"],
+      "purpose": "Provides ProductId and ProductSku identity fields in inventory response via local product_cache table join"
+    }
+  ],
+  "notes": "inventory-service maintains a local product_cache table containing only essential identity fields (id, sku, name) from Product entity. This avoids repeated service calls while keeping DTOs accurate with current Product identity data. Cache is updated on-demand when inventory records reference new products."
+}

@@ -1,0 +1,16 @@
+{
+  "name": "ProductCreated",
+  "version": "1.0",
+  "type": "Create",
+  "description": "Published when a new product is created",
+  "dataDto": "ProductItemDto",
+  "metadata": [
+    {"name": "eventId", "type": "UUID", "required": true},
+    {"name": "eventType", "type": "string", "required": true, "const": "ProductCreated"},
+    {"name": "eventVersion", "type": "string", "required": true, "const": "1.0"},
+    {"name": "timestamp", "type": "DateTime", "required": true},
+    {"name": "correlationId", "type": "UUID", "required": true},
+    {"name": "causationId", "type": "UUID", "required": false},
+    {"name": "source", "type": "string", "required": true, "const": "product-service"}
+  ]
+}

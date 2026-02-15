@@ -1,0 +1,47 @@
+{
+  "name": "WarehouseReference",
+  "version": "1.0",
+  "description": "order-service reference to Warehouse entity contract via local cache table",
+  "entityContract": "Warehouse",
+  "entityVersion": "1.0",
+  "owner": "warehouse-service",
+  "status": "referenced",
+  "accessMethod": "local-cache",
+  "cacheTable": "warehouse_cache",
+  "cacheStrategy": "denormalized-copy",
+  "cacheSync": "on-demand via warehouse-service API",
+  "requiredFields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "databaseField": "warehouse_id",
+      "description": "Warehouse unique identifier - primary key in warehouse_cache, used to join with orders"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "classification": "identity",
+      "databaseField": "code",
+      "description": "Warehouse code - identity field stored locally for immediate access"
+    }
+  ],
+  "optionalFields": [
+    {
+      "name": "name",
+      "type": "string",
+      "classification": "core",
+      "databaseField": "name",
+      "description": "Warehouse name - optional for enrichment, stored locally"
+    }
+  ],
+  "usagePoints": [
+    {
+      "context": "OrderItemDto",
+      "requiredFieldsUsed": ["id", "code"],
+      "optionalFieldsUsed": ["name"],
+      "purpose": "Provides WarehouseId and WarehouseCode identity fields in order response via local warehouse_cache table join"
+    }
+  ],
+  "notes": "order-service maintains a local warehouse_cache table containing only essential identity fields (id, code, name) from Warehouse entity. This avoids repeated service calls while keeping DTOs accurate with current Warehouse identity data. Cache is updated on-demand when orders reference new warehouses."
+}

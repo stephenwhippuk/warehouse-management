@@ -1,0 +1,126 @@
+{
+  "name": "LocationFulfilment",
+  "version": "1.0",
+  "description": "warehouse-service fulfilment of the Location entity contract",
+  "entityContract": "Location",
+  "entityVersion": "1.0",
+  "owner": "warehouse-service",
+  "status": "fulfilled",
+  "fields": [
+    {
+      "name": "id",
+      "classification": "identity",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["LocationItemDto", "LocationListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Unique location identifier"
+    },
+    {
+      "name": "warehouseId",
+      "classification": "core",
+      "status": "provided",
+      "method": "reference",
+      "dtoMappings": ["LocationItemDto", "LocationListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Parent warehouse ID - resolved via WarehouseReference"
+    },
+    {
+      "name": "code",
+      "classification": "identity",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["LocationItemDto", "LocationListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Location code (e.g., A-01-02-03)"
+    },
+    {
+      "name": "aisle",
+      "classification": "complete",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["LocationItemDto", "LocationListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Aisle identifier"
+    },
+    {
+      "name": "bay",
+      "classification": "complete",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["LocationItemDto", "LocationListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Bay identifier"
+    },
+    {
+      "name": "level",
+      "classification": "complete",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["LocationItemDto", "LocationListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Level/shelf identifier"
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/locations",
+      "description": "List locations with pagination",
+      "responseDto": "LocationListDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/locations/{id}",
+      "description": "Get location by ID",
+      "responseDto": "LocationItemDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/locations/code/{code}",
+      "description": "Get location by code",
+      "responseDto": "LocationItemDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/locations/warehouse/{warehouseId}",
+      "description": "Get locations by warehouse ID",
+      "responseDto": "LocationListDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/locations",
+      "description": "Create new location",
+      "responseDto": "LocationItemDto"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/locations/{id}",
+      "description": "Update location",
+      "responseDto": "LocationItemDto"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/locations/{id}",
+      "description": "Delete location"
+    }
+  ]
+}

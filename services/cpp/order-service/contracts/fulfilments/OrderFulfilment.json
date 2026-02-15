@@ -1,0 +1,132 @@
+{
+  "name": "OrderFulfilment",
+  "version": "1.0",
+  "description": "order-service fulfilment of the Order entity contract",
+  "entityContract": "Order",
+  "entityVersion": "1.0",
+  "owner": "order-service",
+  "status": "fulfilled",
+  "fields": [
+    {
+      "name": "id",
+      "classification": "identity",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["OrderItemDto", "OrderListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Unique order identifier"
+    },
+    {
+      "name": "orderNumber",
+      "classification": "identity",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["OrderItemDto", "OrderListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Human-readable order number"
+    },
+    {
+      "name": "customerId",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["OrderItemDto", "OrderListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Customer identifier"
+    },
+    {
+      "name": "warehouseId",
+      "classification": "core",
+      "status": "provided",
+      "method": "reference",
+      "dtoMappings": ["OrderItemDto", "OrderListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Fulfilling warehouse ID - resolved via WarehouseReference"
+    },
+    {
+      "name": "status",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["OrderItemDto", "OrderListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Order status (pending, confirmed, allocated, picking, picked, packing, packed, shipped, delivered, cancelled, on_hold)"
+    },
+    {
+      "name": "orderDate",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["OrderItemDto", "OrderListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Date order was placed"
+    },
+    {
+      "name": "total",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["OrderItemDto", "OrderListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Order total amount"
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/orders",
+      "description": "List orders with pagination",
+      "responseDto": "OrderListDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders/{id}",
+      "description": "Get order by ID",
+      "responseDto": "OrderItemDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders/number/{orderNumber}",
+      "description": "Get order by order number",
+      "responseDto": "OrderItemDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders",
+      "description": "Create new order",
+      "responseDto": "OrderItemDto"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/orders/{id}",
+      "description": "Update order",
+      "responseDto": "OrderItemDto"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/orders/{id}",
+      "description": "Delete order"
+    }
+  ]
+}

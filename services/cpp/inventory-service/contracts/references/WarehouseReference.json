@@ -1,0 +1,42 @@
+{
+  "name": "WarehouseReference",
+  "version": "1.0",
+  "description": "inventory-service reference to Warehouse entity contract",
+  "entityContract": "Warehouse",
+  "entityVersion": "1.0",
+  "owner": "warehouse-service",
+  "status": "referenced",
+  "accessMethod": "service-api",
+  "accessEndpoint": "https://warehouse-service/api/v1/warehouses",
+  "requiredFields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "description": "Warehouse unique identifier - always required when referencing a warehouse"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "classification": "identity",
+      "description": "Warehouse code - identity field used for display"
+    }
+  ],
+  "optionalFields": [
+    {
+      "name": "name",
+      "type": "string",
+      "classification": "core",
+      "description": "Warehouse name - optional for enrichment"
+    }
+  ],
+  "usagePoints": [
+    {
+      "context": "InventoryItemDto",
+      "requiredFieldsUsed": ["id", "code"],
+      "optionalFieldsUsed": ["name"],
+      "purpose": "Provides WarehouseId and WarehouseCode identity fields in inventory response"
+    }
+  ],
+  "notes": "inventory-service stores warehouseId as foreign key and resolves via Warehouse service API when DTOs need identity fields (code, name)"
+}

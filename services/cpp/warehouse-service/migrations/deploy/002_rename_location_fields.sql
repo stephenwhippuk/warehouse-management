@@ -9,6 +9,6 @@ ALTER TABLE locations RENAME COLUMN rack TO bay;
 ALTER TABLE locations RENAME COLUMN shelf TO level;
 
 -- Note: bin column is kept as it may contain useful data
--- but is not exposed in the LocationDto contract
+-- Exposure of this column is governed by the contract system (claims/DTOs)
 
 COMMIT;

@@ -2,6 +2,7 @@
 
 #include "product/Server.hpp"
 #include "product/services/ProductService.hpp"
+#include <warehouse/messaging/EventPublisher.hpp>
 #include <memory>
 #include <string>
 
@@ -21,6 +22,7 @@ public:
 private:
     std::unique_ptr<Server> server_;
     std::shared_ptr<services::ProductService> productService_;
+    std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher_;
     
     void initialize();
     void start();

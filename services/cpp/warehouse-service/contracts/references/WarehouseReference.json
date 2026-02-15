@@ -1,0 +1,42 @@
+{
+  "name": "WarehouseReference",
+  "version": "1.0",
+  "description": "warehouse-service internal reference to Warehouse entity contract from Location",
+  "entityContract": "Warehouse",
+  "entityVersion": "1.0",
+  "owner": "warehouse-service",
+  "status": "referenced",
+  "accessMethod": "internal-direct",
+  "accessNote": "warehouse-service fulfils both Warehouse and Location; Location references parent Warehouse via direct database query",
+  "requiredFields": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "classification": "identity",
+      "description": "Warehouse unique identifier - required when querying locations for a warehouse"
+    },
+    {
+      "name": "code",
+      "type": "string",
+      "classification": "identity",
+      "description": "Warehouse code - identity field used for location display"
+    }
+  ],
+  "optionalFields": [
+    {
+      "name": "name",
+      "type": "string",
+      "classification": "core",
+      "description": "Warehouse name - optional for enrichment"
+    }
+  ],
+  "usagePoints": [
+    {
+      "context": "LocationItemDto",
+      "requiredFieldsUsed": ["id", "code"],
+      "optionalFieldsUsed": ["name"],
+      "purpose": "Provides WarehouseId and WarehouseCode identity fields in location response"
+    }
+  ],
+  "notes": "This is an internal reference as warehouse-service owns both entities. Location stores warehouseId and resolves warehouse data via internal query when building LocationDtos"
+}

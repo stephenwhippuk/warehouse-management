@@ -3,7 +3,9 @@
 #include "inventory/controllers/InventoryController.hpp"
 #include "inventory/services/InventoryService.hpp"
 #include "inventory/repositories/InventoryRepository.hpp"
-#include "inventory/utils/MessageBus.hpp"
+#include "inventory/handlers/ProductEventHandler.hpp"
+#include <warehouse/messaging/EventPublisher.hpp>
+#include <warehouse/messaging/EventConsumer.hpp>
 #include <memory>
 #include <string>
 
@@ -27,13 +29,14 @@ private:
     // Services
     std::shared_ptr<repositories::InventoryRepository> inventoryRepository_;
     std::shared_ptr<services::InventoryService> inventoryService_;
-    std::shared_ptr<utils::MessageBus> messageBus_;
+    std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher_;
+    std::unique_ptr<warehouse::messaging::EventConsumer> eventConsumer_;
+    std::shared_ptr<handlers::ProductEventHandler> productEventHandler_;
     
     // Configuration
     std::string dbConnectionString_;
     int serverPort_;
     std::string logLevel_;
-    utils::MessageBus::Config messageBusConfig_;
     
     bool initialized_;
 };

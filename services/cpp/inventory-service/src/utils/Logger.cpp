@@ -7,17 +7,15 @@ namespace utils {
 std::shared_ptr<spdlog::logger> Logger::logger_ = nullptr;
 
 void Logger::init(const std::string& logLevel) {
+    // Drop existing logger from spdlog registry to allow clean reinitialization
+    spdlog::drop("inventory_service");
+    
+    // Create new logger
+    logger_ = spdlog::stdout_color_mt("inventory_service");
+    
+    // Ensure logger_ is set
     if (!logger_) {
-        // Reuse existing logger instance if it was already created in this process,
-        // otherwise create a new one. This avoids duplicate logger name errors when
-        // init() is called multiple times (e.g., during configuration loading and
-        // later explicit initialization).
-        auto existing = spdlog::get("inventory_service");
-        if (existing) {
-            logger_ = existing;
-        } else {
-            logger_ = spdlog::stdout_color_mt("inventory_service");
-        }
+        throw std::runtime_error("Failed to initialize logger");
     }
     
     // Set log level

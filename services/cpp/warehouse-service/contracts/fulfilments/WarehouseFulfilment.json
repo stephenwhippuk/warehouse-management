@@ -1,0 +1,96 @@
+{
+  "name": "WarehouseFulfilment",
+  "version": "1.0",
+  "description": "warehouse-service fulfilment of the Warehouse entity contract",
+  "entityContract": "Warehouse",
+  "entityVersion": "1.0",
+  "owner": "warehouse-service",
+  "status": "fulfilled",
+  "fields": [
+    {
+      "name": "id",
+      "classification": "identity",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["WarehouseItemDto", "WarehouseListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Unique warehouse identifier"
+    },
+    {
+      "name": "code",
+      "classification": "identity",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["WarehouseItemDto", "WarehouseListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Warehouse code (e.g., WH-001)"
+    },
+    {
+      "name": "name",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["WarehouseItemDto", "WarehouseListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Warehouse name"
+    },
+    {
+      "name": "status",
+      "classification": "core",
+      "status": "provided",
+      "method": "direct",
+      "dtoMappings": ["WarehouseItemDto", "WarehouseListDto"],
+      "security": {
+        "access": "public",
+        "encrypt": false
+      },
+      "description": "Warehouse operational status (active, inactive, maintenance)"
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/warehouses",
+      "description": "List warehouses with pagination",
+      "responseDto": "WarehouseListDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/warehouses/{id}",
+      "description": "Get warehouse by ID",
+      "responseDto": "WarehouseItemDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/warehouses/code/{code}",
+      "description": "Get warehouse by code",
+      "responseDto": "WarehouseItemDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/warehouses",
+      "description": "Create new warehouse",
+      "responseDto": "WarehouseItemDto"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/warehouses/{id}",
+      "description": "Update warehouse",
+      "responseDto": "WarehouseItemDto"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/warehouses/{id}",
+      "description": "Delete warehouse"
+    }
+  ]
+}

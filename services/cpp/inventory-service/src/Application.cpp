@@ -2,10 +2,13 @@
 #include "inventory/utils/Config.hpp"
 #include "inventory/utils/Logger.hpp"
 #include "inventory/utils/Database.hpp"
-#include "inventory/utils/MessageBus.hpp"
-#include "inventory/utils/RabbitMqMessageBus.hpp"
 #include "inventory/Server.hpp"
+#include <warehouse/messaging/EventConsumer.hpp>
+#include <warehouse/messaging/EventPublisher.hpp>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
+
+using json = nlohmann::json;
 
 namespace inventory {
 
@@ -49,6 +52,12 @@ void Application::shutdown() {
     }
     
     utils::Logger::info("Shutting down Inventory Service");
+    
+    // Stop event consumer gracefully
+    if (eventConsumer_ && eventConsumer_->isRunning()) {
+        eventConsumer_->stop();
+    }
+    
     utils::Database::disconnect();
     initialized_ = false;
 }
@@ -67,20 +76,8 @@ void Application::loadConfiguration(const std::string& configPath) {
     // Load logging configuration
     logLevel_ = utils::Config::getString("logging.level", "info");
 
-    // Load message bus configuration (env overrides JSON where provided)
-    messageBusConfig_.host = utils::Config::getEnv("RABBITMQ_HOST",
-        utils::Config::getString("messageBus.host", "rabbitmq"));
-    messageBusConfig_.port = utils::Config::getInt("messageBus.port", 5672);
-    messageBusConfig_.virtual_host = utils::Config::getEnv("RABBITMQ_VHOST",
-        utils::Config::getString("messageBus.virtualHost", "/"));
-    messageBusConfig_.username = utils::Config::getEnv("RABBITMQ_USER",
-        utils::Config::getString("messageBus.username", "warehouse"));
-    messageBusConfig_.password = utils::Config::getEnv("RABBITMQ_PASSWORD",
-        utils::Config::getString("messageBus.password", "warehouse_dev"));
-    messageBusConfig_.exchange = utils::Config::getString("messageBus.exchange", "warehouse.events");
-    messageBusConfig_.routing_key_prefix = utils::Config::getString("messageBus.routingKeyPrefix", "inventory.");
-    
-    utils::Logger::info("Configuration loaded from {}", configPath);
+    // Note: Message bus configuration now handled by warehouse-messaging library via environment variables
+    // The library reads RABBITMQ_HOST, RABBITMQ_PORT, RABBITMQ_USER, RABBITMQ_PASSWORD automatically
 }
 
 void Application::initializeLogging() {
@@ -99,12 +96,73 @@ void Application::initializeServices() {
     // Initialize repositories
     inventoryRepository_ = std::make_shared<repositories::InventoryRepository>(db);
 
-    // Initialize message bus
-    utils::Logger::info("Initializing RabbitMQ message bus...");
-    messageBus_ = std::make_shared<utils::RabbitMqMessageBus>(messageBusConfig_);
+    // Initialize event publisher (for publishing inventory events)
+    utils::Logger::info("Initializing event publisher...");
+    eventPublisher_ = std::shared_ptr<warehouse::messaging::EventPublisher>(
+        warehouse::messaging::EventPublisher::create("inventory-service")
+    );
 
-    // Initialize services (message bus may be null if initialization failed)
-    inventoryService_ = std::make_shared<services::InventoryService>(inventoryRepository_, messageBus_);
+    // Initialize services
+    inventoryService_ = std::make_shared<services::InventoryService>(inventoryRepository_, eventPublisher_);
+    
+    // Initialize event handlers
+    productEventHandler_ = std::make_shared<handlers::ProductEventHandler>(db);
+    
+    // Initialize event consumer (for receiving product events)
+    utils::Logger::info("Initializing event consumer...");
+    try {
+        std::vector<std::string> routingKeys = {
+            "product.created",
+            "product.updated",
+            "product.deleted"
+        };
+        
+        eventConsumer_ = warehouse::messaging::EventConsumer::create("inventory-service", routingKeys);
+        
+        // Register event handlers (simple lambda that routes to ProductEventHandler)
+        eventConsumer_->onEvent("product.created", [this](const warehouse::messaging::Event& event) {
+            try {
+                utils::Logger::debug("Received product.created event (id: {})", event.getId());
+                productEventHandler_->handleProductCreated(event.getData());
+            } catch (const std::exception& e) {
+                utils::Logger::error("Error processing product.created event: {}", e.what());
+                throw;  // Re-throw to trigger library retry logic
+            }
+        });
+        
+        eventConsumer_->onEvent("product.updated", [this](const warehouse::messaging::Event& event) {
+            try {
+                utils::Logger::debug("Received product.updated event (id: {})", event.getId());
+                productEventHandler_->handleProductUpdated(event.getData());
+            } catch (const std::exception& e) {
+                utils::Logger::error("Error processing product.updated event: {}", e.what());
+                throw;  // Re-throw to trigger library retry logic
+            }
+        });
+        
+        eventConsumer_->onEvent("product.deleted", [this](const warehouse::messaging::Event& event) {
+            try {
+                utils::Logger::debug("Received product.deleted event (id: {})", event.getId());
+                productEventHandler_->handleProductDeleted(event.getData());
+            } catch (const std::exception& e) {
+                utils::Logger::error("Error processing product.deleted event: {}", e.what());
+                throw;  // Re-throw to trigger library retry logic
+            }
+        });
+        
+        // Register catch-all handler for metrics/logging
+        eventConsumer_->onAnyEvent([](const warehouse::messaging::Event& event) {
+            utils::Logger::info("Processing event: {} (id: {})", event.getType(), event.getId());
+        });
+        
+        // Start consuming events
+        eventConsumer_->start();
+        
+        utils::Logger::info("Event consumer started successfully");
+    } catch (const std::exception& e) {
+        utils::Logger::error("Failed to initialize event consumer: {}", e.what());
+        utils::Logger::warn("Service will continue without event consumption");
+    }
     
     utils::Logger::info("Services initialized");
 }

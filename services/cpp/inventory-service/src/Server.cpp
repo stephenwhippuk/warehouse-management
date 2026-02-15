@@ -1,7 +1,7 @@
 #include "inventory/Server.hpp"
 #include "inventory/controllers/InventoryController.hpp"
 #include "inventory/controllers/HealthController.hpp"
-#include "inventory/controllers/SwaggerController.hpp"
+// #include "inventory/controllers/SwaggerController.hpp"  // Temporarily disabled
 #include "inventory/controllers/ClaimsController.hpp"
 #include "inventory/utils/Logger.hpp"
 #include <Poco/Net/HTTPServerParams.h>
@@ -50,7 +50,9 @@ public:
             case RouteTarget::Health:
                 return new controllers::HealthController();
             case RouteTarget::Swagger:
-                return new controllers::SwaggerController();
+                // Temporarily disabled - return health controller
+                utils::Logger::warn("Swagger endpoint temporarily disabled");
+                return new controllers::HealthController();
             case RouteTarget::Claims:
                 return new controllers::ClaimsController();
             case RouteTarget::Inventory:

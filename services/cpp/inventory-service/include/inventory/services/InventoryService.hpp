@@ -2,7 +2,7 @@
 
 #include "inventory/models/Inventory.hpp"
 #include "inventory/repositories/InventoryRepository.hpp"
-#include "inventory/utils/MessageBus.hpp"
+#include <warehouse/messaging/EventPublisher.hpp>
 #include "inventory/dtos/InventoryItemDto.hpp"
 #include "inventory/dtos/InventoryOperationResultDto.hpp"
 #include <memory>
@@ -16,7 +16,7 @@ namespace services {
 class InventoryService {
 public:
     explicit InventoryService(std::shared_ptr<repositories::InventoryRepository> repository,
-                             std::shared_ptr<utils::MessageBus> messageBus);
+                             std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher);
     
     // Inventory operations - return DTOs, not domain models
     std::optional<dtos::InventoryItemDto> getById(const std::string& id);
@@ -47,7 +47,7 @@ public:
     
 private:
     std::shared_ptr<repositories::InventoryRepository> repository_;
-    std::shared_ptr<utils::MessageBus> messageBus_;
+    std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher_;
     
     void validateQuantities(int quantity, int available, int reserved, int allocated) const;
     

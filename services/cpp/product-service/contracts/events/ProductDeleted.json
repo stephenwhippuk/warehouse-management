@@ -1,0 +1,19 @@
+{
+  "name": "ProductDeleted",
+  "version": "1.0",
+  "type": "Delete",
+  "description": "Published when a product is deleted",
+  "data": {
+    "id": {"type": "UUID", "required": true},
+    "sku": {"type": "string", "required": true}
+  },
+  "metadata": [
+    {"name": "eventId", "type": "UUID", "required": true},
+    {"name": "eventType", "type": "string", "required": true, "const": "ProductDeleted"},
+    {"name": "eventVersion", "type": "string", "required": true, "const": "1.0"},
+    {"name": "timestamp", "type": "DateTime", "required": true},
+    {"name": "correlationId", "type": "UUID", "required": true},
+    {"name": "causationId", "type": "UUID", "required": false},
+    {"name": "source", "type": "string", "required": true, "const": "product-service"}
+  ]
+}

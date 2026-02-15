@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Add warehouse-messaging library path
+set(WAREHOUSE_MESSAGING_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/warehouse-messaging")
+add_subdirectory(${WAREHOUSE_MESSAGING_DIR} ${CMAKE_CURRENT_BINARY_DIR}/warehouse-messaging)
+
 # Find packages
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(Poco REQUIRED COMPONENTS Net)
@@ -43,6 +47,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
+    warehouse-messaging
     Boost::system
     Boost::thread
     Poco::Net

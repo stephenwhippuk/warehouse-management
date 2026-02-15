@@ -18,9 +18,15 @@ services:
       - LOG_LEVEL=info
       - REDIS_URL=redis://redis:6379
       - SERVICE_API_KEY=warehouse_test_key
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_VHOST=/
+      - RABBITMQ_USER=warehouse
+      - RABBITMQ_PASSWORD=warehouse_dev
     depends_on:
       - postgres
       - redis
+      - rabbitmq
     networks:
       inventory-network:
         aliases:
