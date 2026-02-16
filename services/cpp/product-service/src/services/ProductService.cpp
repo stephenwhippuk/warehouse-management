@@ -1,6 +1,8 @@
 #include "product/services/ProductService.hpp"
+#include "product/repositories/ProductRepository.hpp"
 #include "product/utils/DtoMapper.hpp"
 #include "product/utils/Logger.hpp"
+#include <warehouse/messaging/EventPublisher.hpp>
 #include <warehouse/messaging/Event.hpp>
 #include <stdexcept>
 #include <uuid/uuid.h>
@@ -11,9 +13,9 @@
 
 namespace product::services {
 
-ProductService::ProductService(std::shared_ptr<repositories::ProductRepository> repository,
-                             std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher)
-    : repository_(repository), eventPublisher_(eventPublisher) {
+ProductService::ProductService(http::IServiceProvider& provider)
+    : repository_(provider.getService<repositories::ProductRepository>()),
+      eventPublisher_(provider.getService<warehouse::messaging::EventPublisher>()) {
     if (!repository_) {
         throw std::invalid_argument("Repository cannot be null");
     }

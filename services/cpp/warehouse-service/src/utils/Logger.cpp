@@ -35,6 +35,7 @@ void Logger::init(const std::string& logFile, Level level, bool consoleOutput) {
 }
 
 std::shared_ptr<spdlog::logger> Logger::get(const std::string& name) {
+    (void)name;
     if (!logger_) {
         init();
     }

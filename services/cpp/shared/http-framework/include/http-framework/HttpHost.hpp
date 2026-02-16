@@ -15,6 +15,10 @@
 namespace http {
 
 // Forward declarations
+class IServiceProvider;
+class IExceptionFilter;
+class ServiceCollection;
+class IPlugin;
 class HttpHost;
 
 /**
@@ -53,9 +57,12 @@ private:
  * 
  * Example usage:
  * 
- * auto host = HttpHost(8080);
+ * http::ServiceCollection services;
+ * auto provider = services.buildServiceProvider();
+ * auto host = HttpHost(8080, provider);
  * 
- * // Add middleware
+ * // HttpHost adds ServiceScopeMiddleware + ErrorHandlingMiddleware by default
+ * // Add additional middleware
  * host.use(std::make_shared<LoggingMiddleware>());
  * host.use(std::make_shared<AuthenticationMiddleware>());
  * 
@@ -74,6 +81,18 @@ class HttpHost {
 public:
     /**
      * @brief Constructor
+        * @param port Server port
+        * @param provider Root service provider for DI scope middleware
+        * @param host Server host (default: 0.0.0.0)
+        * @param exceptionFilter Optional exception filter for error handling
+        */
+    explicit HttpHost(int port,
+                      std::shared_ptr<IServiceProvider> provider,
+                      const std::string& host = "0.0.0.0",
+                      std::shared_ptr<IExceptionFilter> exceptionFilter = nullptr);
+
+    /**
+        * @brief Constructor
      * @param port Server port
      * @param host Server host (default: 0.0.0.0)
      */
@@ -152,6 +171,26 @@ public:
     void handleRequest(Poco::Net::HTTPServerRequest& request,
                       Poco::Net::HTTPServerResponse& response);
 
+    /**
+     * @brief Override the exception filter used by error handling middleware
+     * @throws std::runtime_error if called while server is running
+     */
+    void setExceptionFilter(std::shared_ptr<IExceptionFilter> filter);
+
+    /**
+     * @brief Register a plugin's services into the service collection
+     * @param services Service collection to register into
+     * @param plugin Plugin instance
+     */
+    static void registerPlugin(ServiceCollection& services, IPlugin& plugin);
+
+    /**
+     * @brief Add plugin middleware and controllers to this host
+     * @param plugin Plugin instance
+     * @param provider Service provider for resolving middleware dependencies
+     */
+    void usePlugin(IPlugin& plugin, IServiceProvider& provider);
+
 private:
     int port_;
     std::string host_;
@@ -160,6 +199,8 @@ private:
     int timeout_ = 60;
     
     MiddlewarePipeline middleware_;
+    std::shared_ptr<class ServiceScopeMiddleware> serviceScopeMiddleware_;
+    std::shared_ptr<class ErrorHandlingMiddleware> errorHandlingMiddleware_;
     Router router_;
     std::vector<std::shared_ptr<ControllerBase>> controllers_;
     
@@ -168,6 +209,8 @@ private:
     
     void processRequest(HttpContext& ctx);
     void send404(Poco::Net::HTTPServerResponse& response, const std::string& path);
+    void initializeDefaultMiddleware(std::shared_ptr<IServiceProvider> provider,
+                                    std::shared_ptr<IExceptionFilter> exceptionFilter);
 };
 
 } // namespace http

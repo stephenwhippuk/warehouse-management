@@ -95,9 +95,9 @@ Address Address::fromJson(const json& j) {
 OrderLineItem::OrderLineItem(const std::string& id, const std::string& productId,
                              const std::string& productSku, const std::string& productName,
                              int quantity, double unitPrice)
-    : id_(id), productId_(productId), productSku_(productSku), productName_(productName),
-      quantity_(quantity), unitPrice_(unitPrice) {
-    lineTotal_ = quantity * unitPrice;
+    : id(id), productId(productId), productSku(productSku), productName(productName),
+      quantity(quantity), unitPrice(unitPrice) {
+    lineTotal = quantity * unitPrice;
 }
 
 json OrderLineItem::toJson() const {

@@ -169,7 +169,7 @@ External API         Internal
 ### 📝 TODO for Full Implementation
 1. **HTTP Server Setup**: Add Poco HTTP server and routing
 2. **Controllers**: Implement ProductController with all endpoints
-3. **OpenAPI/Swagger**: Add SwaggerController and /api/swagger.json endpoint
+3. **Contracts Plugin**: Use contract-plugin for /api/swagger.json and /api/v1/claims
 4. **Health Endpoint**: Implement /health for liveness checks
 5. **Authentication**: Add service-to-service API key auth
 6. **Integration Tests**: HTTP integration tests with real service

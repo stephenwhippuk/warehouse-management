@@ -67,7 +67,7 @@ std::string Auth::getConfiguredApiKey() {
     }
     
     // Fall back to config file
-    return Config::getString("auth.serviceApiKey", "");
+    return Config::instance().getString("auth.serviceApiKey", "");
 }
 
 void Auth::sendUnauthorized(Poco::Net::HTTPServerResponse& response, const std::string& message) {

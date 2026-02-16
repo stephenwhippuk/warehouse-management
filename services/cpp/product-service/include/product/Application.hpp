@@ -1,8 +1,7 @@
 #pragma once
 
-#include "product/Server.hpp"
-#include "product/services/ProductService.hpp"
-#include <warehouse/messaging/EventPublisher.hpp>
+#include "http-framework/IServiceProvider.hpp"
+#include "http-framework/HttpHost.hpp"
 #include <memory>
 #include <string>
 
@@ -11,7 +10,7 @@ namespace product {
 /**
  * @brief Main application class
  * 
- * Manages service initialization, database connection, and HTTP server
+ * Manages service initialization, DI container, and HTTP server using http-framework
  */
 class Application {
 public:
@@ -20,9 +19,8 @@ public:
     int run(int argc, char* argv[]);
 
 private:
-    std::unique_ptr<Server> server_;
-    std::shared_ptr<services::ProductService> productService_;
-    std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher_;
+    std::shared_ptr<http::IServiceProvider> serviceProvider_;
+    std::unique_ptr<http::HttpHost> httpHost_;
     
     void initialize();
     void start();

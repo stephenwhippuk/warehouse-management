@@ -26,6 +26,12 @@ if(NOT DEFINED HTTP_FRAMEWORK_DIR)
 endif()
 add_subdirectory(${HTTP_FRAMEWORK_DIR} ${CMAKE_BINARY_DIR}/http-framework)
 
+# Add contract-plugin shared library
+if(NOT DEFINED CONTRACT_PLUGIN_DIR)
+    set(CONTRACT_PLUGIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/contract-plugin")
+endif()
+add_subdirectory(${CONTRACT_PLUGIN_DIR} ${CMAKE_BINARY_DIR}/contract-plugin)
+
 # Find required packages
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(Poco REQUIRED COMPONENTS Net NetSSL Util Foundation)
@@ -38,6 +44,7 @@ find_package(spdlog REQUIRED)
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../shared/http-framework/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../shared/contract-plugin/include
     ${Boost_INCLUDE_DIRS}
     ${PostgreSQL_INCLUDE_DIRS}
 )
@@ -46,7 +53,6 @@ include_directories(
 set(SOURCES
     src/main.cpp
     src/Application.cpp
-    src/Server.cpp
     src/models/Inventory.cpp
     src/dtos/ErrorDto.cpp
     src/dtos/InventoryItemDto.cpp
@@ -54,8 +60,6 @@ set(SOURCES
     src/dtos/InventoryOperationResultDto.cpp
     src/controllers/InventoryController.cpp
     src/controllers/HealthController.cpp
-    # src/controllers/SwaggerController.cpp  # Temporarily disabled due to ContractValidator dependency
-    src/controllers/ClaimsController.cpp
     src/repositories/InventoryRepository.cpp
     src/services/InventoryService.cpp
     src/utils/Database.cpp
@@ -64,7 +68,6 @@ set(SOURCES
     src/utils/Auth.cpp
     src/utils/DtoMapper.cpp
     src/utils/JsonValidator.cpp
-    # src/utils/SwaggerGenerator.cpp  # Temporarily disabled due to ContractValidator dependency
     src/handlers/ProductEventHandler.cpp
 )
 
@@ -91,6 +94,7 @@ target_link_libraries(${PROJECT_NAME}
     spdlog::spdlog
     warehouse-messaging
     http-framework
+    contract-plugin
     # ContractValidator::contract-validator  # Disabled for now
 )
 

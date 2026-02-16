@@ -410,11 +410,14 @@ src/dtos/                       # DTO implementations
 
 ### Repositories
 
-**Pattern:**
+**CRITICAL PATTERN**: Repositories MUST use the Database singleton via dependency injection.
+
+**Repository Pattern (REQUIRED for all services):**
 ```cpp
 class InventoryRepository {
 public:
-    explicit InventoryRepository(std::shared_ptr<pqxx::connection> db);
+    // Constructor accepts IServiceProvider for dependency injection
+    explicit InventoryRepository(http::IServiceProvider& provider);
     
     // CRUD operations
     std::optional<models::Inventory> findById(const std::string& id);
@@ -424,18 +427,18 @@ public:
     bool deleteById(const std::string& id);
     
 private:
-    std::shared_ptr<pqxx::connection> db_;
+    // Database singleton (NOT raw pqxx::connection)
+    std::shared_ptr<utils::Database> db_;
 };
-```
 
-**Database Queries:**
-- Always use parameterized queries (prevent SQL injection)
-- Use transactions for multi-statement operations
-- Handle exceptions and convert to domain errors
+// Implementation
+InventoryRepository::InventoryRepository(http::IServiceProvider& provider)
+    : db_(provider.getService<utils::Database>()) {
+}
 
-```cpp
+// Database queries use db_->getConnection()
 std::optional<models::Inventory> InventoryRepository::findById(const std::string& id) {
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());  // Get connection from Database singleton
     auto result = txn.exec_params(
         "SELECT * FROM inventory WHERE id = $1",
         id
@@ -450,30 +453,347 @@ std::optional<models::Inventory> InventoryRepository::findById(const std::string
 }
 ```
 
+### Database Singleton Pattern (MANDATORY)
+
+**WHY Database Singleton**: 
+- Central connection management for a specific database
+- Thread-safe shared state across requests
+- Ready for connection pooling and caching layers
+- Proper resource cleanup on shutdown
+- Consistent architecture across all services
+
+**Database Class Structure (REQUIRED for all services):**
+
+```cpp
+// include/{service}/utils/Database.hpp
+namespace {service}::utils {
+
+class Database {
+public:
+    struct Config {
+        std::string host = "localhost";
+        int port = 5432;
+        std::string database = "{service}_db";
+        std::string user = "{service}";
+        std::string password;
+        int maxConnections = 10;
+    };
+    
+    explicit Database(const Config& config);
+    ~Database();
+    
+    // Connection management
+    bool connect();
+    void disconnect();
+    bool isConnected() const;
+    
+    // Transaction support
+    std::unique_ptr<pqxx::work> beginTransaction();
+    
+    // Query execution
+    pqxx::result execute(const std::string& query);
+    pqxx::result executeParams(const std::string& query, const std::vector<std::string>& params);
+    
+    // Prepared statement support
+    void prepare(const std::string& name, const std::string& query);
+    pqxx::result executePrepared(const std::string& name, const std::vector<std::string>& params = {});
+    
+    // Connection pool (simple implementation)
+    std::shared_ptr<pqxx::connection> getConnection();
+    void releaseConnection(std::shared_ptr<pqxx::connection> conn);
+
+private:
+    Config config_;
+    std::string connectionString_;
+    std::shared_ptr<pqxx::connection> connection_;  // Use shared_ptr, not unique_ptr
+    
+    std::string buildConnectionString() const;
+};
+
+} // namespace
+```
+
+**Database Implementation Pattern:**
+
+```cpp
+// src/utils/Database.cpp
+#include "{service}/utils/Database.hpp"
+#include "{service}/utils/Logger.hpp"
+#include <sstream>
+
+namespace {service}::utils {
+
+Database::Database(const Config& config)
+    : config_(config)
+    , connectionString_(buildConnectionString()) {
+}
+
+Database::~Database() {
+    disconnect();
+}
+
+std::string Database::buildConnectionString() const {
+    std::ostringstream oss;
+    oss << "host=" << config_.host
+        << " port=" << config_.port
+        << " dbname=" << config_.database
+        << " user=" << config_.user
+        << " password=" << config_.password;
+    return oss.str();
+}
+
+bool Database::connect() {
+    try {
+        connection_ = std::make_shared<pqxx::connection>(connectionString_);
+        Logger::info("Database connected successfully");
+        return true;
+    } catch (const pqxx::broken_connection& e) {
+        Logger::error("Database connection failed: {}", e.what());
+        return false;
+    }
+}
+
+void Database::disconnect() {
+    if (connection_ && connection_->is_open()) {
+        connection_->close();
+        Logger::info("Database disconnected");
+    }
+}
+
+bool Database::isConnected() const {
+    return connection_ && connection_->is_open();
+}
+
+std::unique_ptr<pqxx::work> Database::beginTransaction() {
+    if (!isConnected()) {
+        throw std::runtime_error("Database not connected");
+    }
+    return std::make_unique<pqxx::work>(*connection_);
+}
+
+pqxx::result Database::execute(const std::string& query) {
+    auto txn = beginTransaction();
+    auto result = txn->exec(query);
+    txn->commit();
+    return result;
+}
+
+pqxx::result Database::executeParams(const std::string& query, const std::vector<std::string>& params) {
+    (void)params;
+    // TODO: Implement parameterized query execution
+    auto txn = beginTransaction();
+    auto result = txn->exec(query); // Temporary: doesn't use params
+    txn->commit();
+    return result;
+}
+
+void Database::prepare(const std::string& name, const std::string& query) {
+    if (!isConnected()) {
+        throw std::runtime_error("Database not connected");
+    }
+    connection_->prepare(name, query);
+}
+
+pqxx::result Database::executePrepared(const std::string& name, const std::vector<std::string>& params) {
+    (void)params;
+    // TODO: Implement prepared statement execution with params
+    auto txn = beginTransaction();
+    auto result = txn->exec(name);  // Stub implementation
+    txn->commit();
+    return result;
+}
+
+std::shared_ptr<pqxx::connection> Database::getConnection() {
+    if (!isConnected()) {
+        connect();
+    }
+    return connection_;
+}
+
+void Database::releaseConnection(std::shared_ptr<pqxx::connection> conn) {
+    (void)conn;
+    // TODO: Implement connection pool return logic
+}
+
+} // namespace
+```
+
+**Database Registration in Application.cpp (REQUIRED):**
+
+```cpp
+void Application::initialize() {
+    // ... Logger initialization ...
+    
+    http::ServiceCollection services;
+    
+    // =========================================================================
+    // CRITICAL: Register Database as Singleton
+    // =========================================================================
+    auto dbConnStr = dbConnectionString_;  // From environment or config
+    services.addService<utils::Database>(
+        [dbConnStr](http::IServiceProvider& /* provider */) -> std::shared_ptr<utils::Database> {
+            utils::Logger::info("Creating Database singleton");
+            
+            // Parse connection string to Config (TODO: Make robust parser)
+            utils::Database::Config dbConfig;
+            size_t slashPos = dbConnStr.rfind('/');
+            if (slashPos != std::string::npos) {
+                dbConfig.database = dbConnStr.substr(slashPos + 1);
+            }
+            // TODO: Parse host, port, user, password
+            
+            auto db = std::make_shared<utils::Database>(dbConfig);
+            if (!db->connect()) {
+                throw std::runtime_error("Failed to connect to database");
+            }
+            return db;
+        },
+        http::ServiceLifetime::Singleton
+    );
+    
+    // Register repositories and services (they will receive Database via DI)
+    services.addScoped<repositories::InventoryRepository, repositories::InventoryRepository>();
+    services.addScoped<services::IInventoryService, services::InventoryService>();
+    
+    // ... rest of initialization ...
+}
+
+void Application::shutdown() {
+    // Database cleanup handled automatically by DI container
+    // DO NOT call Database::disconnect() manually
+}
+```
+
+**Database Queries:**
+- Always use parameterized queries (prevent SQL injection)
+- Use transactions for multi-statement operations
+- Handle exceptions and convert to domain errors
+- Access connection via `db_->getConnection()`
+
+**Repository Header Pattern:**
+```cpp
+#include "{service}/utils/Database.hpp"
+#include <http-framework/IServiceProvider.hpp>
+
+class ProductRepository {
+public:
+    explicit ProductRepository(http::IServiceProvider& provider);
+    
+private:
+    std::shared_ptr<utils::Database> db_;  // Database singleton, NOT pqxx::connection
+};
+````
+
 ### Services
 
-**Pattern (MUST return DTOs, not models):**
+**CRITICAL PATTERN**: Services MUST use interface-based design with dependency injection.
+
+**Service Interface Pattern (REQUIRED for all services):**
+
 ```cpp
-class InventoryService {
+// include/{service}/services/IInventoryService.hpp
+class IInventoryService {
 public:
-    explicit InventoryService(std::shared_ptr<repositories::InventoryRepository> repository);
+    virtual ~IInventoryService() = default;
     
     // Business operations - return DTOs, not models
-    std::optional<dtos::InventoryItemDto> getById(const std::string& id);
-    std::vector<dtos::InventoryItemDto> getAll();
-    dtos::InventoryItemDto create(const models::Inventory& inventory);
-    dtos::InventoryItemDto update(const models::Inventory& inventory);
+    virtual std::optional<dtos::InventoryItemDto> getById(const std::string& id) = 0;
+    virtual std::vector<dtos::InventoryItemDto> getAll() = 0;
+    virtual dtos::InventoryItemDto create(const models::Inventory& inventory) = 0;
+    virtual dtos::InventoryItemDto update(const models::Inventory& inventory) = 0;
     
     // Stock operations - return operation result DTOs
-    dtos::InventoryOperationResultDto reserve(const std::string& id, int quantity);
-    dtos::InventoryOperationResultDto release(const std::string& id, int quantity);
+    virtual dtos::InventoryOperationResultDto reserve(const std::string& id, int quantity) = 0;
+    virtual dtos::InventoryOperationResultDto release(const std::string& id, int quantity) = 0;
     
     // Validation
-    bool isValidInventory(const models::Inventory& inventory) const;
+    virtual bool isValidInventory(const models::Inventory& inventory) const = 0;
+};
+```
+
+**Service Implementation Pattern (REQUIRED for all services):**
+
+```cpp
+// include/{service}/services/InventoryService.hpp
+#include "{service}/services/IInventoryService.hpp"
+#include "{service}/repositories/InventoryRepository.hpp"
+#include <http-framework/IServiceProvider.hpp>
+
+// CRITICAL: Service MUST inherit from its interface
+class InventoryService : public IInventoryService {
+public:
+    // CRITICAL: Constructor MUST accept IServiceProvider for dependency injection
+    explicit InventoryService(http::IServiceProvider& provider);
+    
+    // Override all interface methods
+    std::optional<dtos::InventoryItemDto> getById(const std::string& id) override;
+    std::vector<dtos::InventoryItemDto> getAll() override;
+    dtos::InventoryItemDto create(const models::Inventory& inventory) override;
+    dtos::InventoryItemDto update(const models::Inventory& inventory) override;
+    dtos::InventoryOperationResultDto reserve(const std::string& id, int quantity) override;
+    dtos::InventoryOperationResultDto release(const std::string& id, int quantity) override;
+    bool isValidInventory(const models::Inventory& inventory) const override;
     
 private:
     std::shared_ptr<repositories::InventoryRepository> repository_;
+    std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher_;
 };
+
+// src/services/InventoryService.cpp
+InventoryService::InventoryService(http::IServiceProvider& provider)
+    : repository_(provider.getService<repositories::InventoryRepository>())
+    , eventPublisher_(provider.getService<warehouse::messaging::EventPublisher>()) {
+    // Dependencies resolved automatically from DI container
+}
+```
+
+**Why This Pattern Is Required:**
+
+1. **Interface Inheritance**: DI container uses `std::is_base_of` to verify implementation inheritance
+2. **Constructor Injection**: Services resolve dependencies via `IServiceProvider`, not direct injection
+3. **No Try-Catch in Constructors**: Let DI container handle missing dependencies
+4. **Override Keywords**: Ensures methods match interface signature
+
+**Common Mistakes (AVOID):**
+
+```cpp
+// ❌ WRONG: No interface inheritance
+class ProductService {
+    explicit ProductService(std::shared_ptr<ProductRepository> repo);
+};
+
+// ❌ WRONG: Direct dependency injection
+class ProductService : public IProductService {
+    explicit ProductService(std::shared_ptr<ProductRepository> repo);
+};
+
+// ❌ WRONG: Missing override keywords
+class ProductService : public IProductService {
+    std::optional<ProductDto> getById(const std::string& id);  // No override
+};
+
+// ✅ CORRECT: Interface inheritance + IServiceProvider constructor
+class ProductService : public IProductService {
+    explicit ProductService(http::IServiceProvider& provider);
+    std::optional<ProductDto> getById(const std::string& id) override;
+};
+```
+
+**Service Registration in Application.cpp:**
+
+```cpp
+void Application::initialize() {
+    http::ServiceCollection services;
+    
+    // Register repositories (Scoped - per request)
+    services.addScoped<repositories::InventoryRepository, repositories::InventoryRepository>();
+    
+    // CRITICAL: Register service with interface and implementation types
+    services.addScoped<services::IInventoryService, services::InventoryService>();
+    
+    // Build service provider
+    serviceProvider_ = services.buildServiceProvider();
+}
 ```
 
 **Service Implementation Pattern:**
@@ -1894,7 +2214,90 @@ public:
 - **LoggingMiddleware**: Request/response logging
 - **AuthenticationMiddleware**: JWT/API key validation
 - **CorsMiddleware**: CORS headers
+- **ErrorHandlingMiddleware**: Catch exceptions and return proper error responses (REQUIRED)
 - **ServiceScopeMiddleware**: Per-request DI scoping (see DI section)
+
+**CRITICAL: Middleware Ordering**:
+
+The order in which middleware is registered matters. Always follow this pattern:
+
+```cpp
+http::HttpHost host(8080, "0.0.0.0");
+
+// 1. ServiceScopeMiddleware MUST be first (enables per-request DI scoping)
+host.use(std::make_shared<http::ServiceScopeMiddleware>(provider));
+
+// 2. ErrorHandlingMiddleware SHOULD be second (catches all downstream exceptions)
+host.use(std::make_shared<http::ErrorHandlingMiddleware>());
+
+// 3. Other middleware follows
+host.use(std::make_shared<LoggingMiddleware>());
+host.use(std::make_shared<AuthenticationMiddleware>());
+host.use(std::make_shared<CorsMiddleware>());
+```
+
+**Why Order Matters**:
+- **ServiceScopeMiddleware first**: Creates per-request scope so controllers can resolve scoped services
+- **ErrorHandlingMiddleware second**: Wraps all other middleware/controllers to catch exceptions
+- If ErrorHandlingMiddleware is last, earlier middleware exceptions won't be caught
+
+**ErrorHandlingMiddleware Pattern**:
+
+```cpp
+class ErrorHandlingMiddleware : public http::Middleware {
+public:
+    void process(http::HttpContext& ctx, std::function<void()> next) override {
+        try {
+            next(); // Call next middleware/controller
+        } catch (const std::invalid_argument& e) {
+            sendErrorResponse(ctx, e.what(), 400);
+        } catch (const std::runtime_error& e) {
+            sendErrorResponse(ctx, e.what(), 500);
+        } catch (const std::exception& e) {
+            sendErrorResponse(ctx, "Internal server error", 500);
+            spdlog::error("Unhandled exception: {}", e.what());
+        }
+    }
+    
+private:
+    void sendErrorResponse(http::HttpContext& ctx, const std::string& message, int status) {
+        ctx.setStatus(status);
+        json errorJson = {
+            {"error", message},
+            {"timestamp", getCurrentIsoTimestamp()},
+            {"path", ctx.request.getURI()}
+        };
+        ctx.setHeader("Content-Type", "application/json");
+        std::ostream& out = ctx.response.send();
+        out << errorJson.dump();
+    }
+};
+```
+
+**Controller Simplification**:
+
+With ErrorHandlingMiddleware, controllers don't need try-catch blocks:
+
+```cpp
+// ❌ OLD WAY: Manual error handling in every handler
+std::string handler(http::HttpContext& ctx) {
+    try {
+        auto service = ctx.getService<IInventoryService>();
+        auto result = service->reserve(id, quantity);
+        return result.toJson().dump();
+    } catch (const std::exception& e) {
+        ctx.setStatus(500);
+        return json{{"error", e.what()}}.dump();
+    }
+}
+
+// ✅ NEW WAY: Just throw, ErrorHandlingMiddleware catches
+std::string handler(http::HttpContext& ctx) {
+    auto service = ctx.getService<IInventoryService>();
+    auto result = service->reserve(id, quantity);  // Throws on error
+    return result.toJson().dump();                 // ErrorHandlingMiddleware handles exceptions
+}
+```
 
 ### Application Setup (Manual DI)
 
@@ -2591,6 +2994,225 @@ TEST_CASE("Service publishes event on reserve", "[service][messaging]") {
 - **Use const correctness** (const methods, const parameters)
 - **Avoid raw pointers** (use smart pointers)
 - **RAII for resources** (always use constructors/destructors)
+
+## Common Pitfalls and Solutions
+
+### DI and Service Registration
+
+**Problem: Service not inheriting from interface**
+```cpp
+// ❌ ERROR: DI container cannot verify inheritance
+class ProductService {  // Missing `: public IProductService`
+    std::optional<ProductDto> getById(const std::string& id);
+};
+
+// ✅ SOLUTION: Always inherit from interface
+class ProductService : public IProductService {
+    std::optional<ProductDto> getById(const std::string& id) override;
+};
+```
+
+**Problem: Missing override keywords**
+```cpp
+// ❌ ERROR: Typo in method signature won't be caught
+class ProductService : public IProductService {
+    std::optional<ProductDto> getByID(const std::string& id);  // Wrong: ID vs Id
+};
+
+// ✅ SOLUTION: Use override keyword (compiler error on mismatch)
+class ProductService : public IProductService {
+    std::optional<ProductDto> getById(const std::string& id) override;
+};
+```
+
+**Problem: Direct dependency injection instead of IServiceProvider**
+```cpp
+// ❌ ERROR: Hard-coded dependencies, not DI-friendly
+class ProductService : public IProductService {
+    explicit ProductService(std::shared_ptr<ProductRepository> repo)
+        : repo_(repo) {}
+};
+
+// ✅ SOLUTION: Accept IServiceProvider, resolve from container
+class ProductService : public IProductService {
+    explicit ProductService(http::IServiceProvider& provider)
+        : repo_(provider.getService<ProductRepository>()) {}
+};
+```
+
+**Problem: Registering concrete type instead of interface**
+```cpp
+// ❌ ERROR: Controllers can't resolve IProductService
+services.addScoped<ProductService, ProductService>();
+
+// ✅ SOLUTION: Register with interface type
+services.addScoped<IProductService, ProductService>();
+```
+
+### Database Singleton Pattern
+
+**Problem: Using static Database methods**
+```cpp
+// ❌ OLD PATTERN: Static methods, not DI-friendly
+class Database {
+public:
+    static void connect(const std::string& connStr);
+    static std::shared_ptr<pqxx::connection> getConnection();
+};
+
+// ✅ NEW PATTERN: Instance-based singleton via DI
+class Database {
+public:
+    struct Config { /* ... */ };
+    explicit Database(const Config& config);
+    bool connect();
+    std::shared_ptr<pqxx::connection> getConnection();
+private:
+    std::shared_ptr<pqxx::connection> connection_;
+};
+```
+
+**Problem: Repository storing pqxx::connection directly**
+```cpp
+// ❌ ERROR: Bypasses Database singleton management
+class ProductRepository {
+    explicit ProductRepository(std::shared_ptr<pqxx::connection> db);
+private:
+    std::shared_ptr<pqxx::connection> db_;
+};
+
+// ✅ SOLUTION: Store Database singleton, call getConnection()
+class ProductRepository {
+    explicit ProductRepository(http::IServiceProvider& provider);
+private:
+    std::shared_ptr<utils::Database> db_;  // Database singleton
+};
+
+// Usage in queries
+pqxx::work txn(*db_->getConnection());
+```
+
+**Problem: Manual Database::disconnect() in shutdown**
+```cpp
+// ❌ ERROR: DI container already manages lifecycle
+void Application::shutdown() {
+    utils::Database::disconnect();  // Don't do this
+}
+
+// ✅ SOLUTION: Let DI container handle cleanup
+void Application::shutdown() {
+    // Database will be destroyed automatically by DI container
+    // No manual cleanup needed
+}
+```
+
+### Middleware Pipeline
+
+**Problem: Wrong middleware order**
+```cpp
+// ❌ ERROR: ServiceScopeMiddleware not first, ErrorHandlingMiddleware not second
+host.use(std::make_shared<LoggingMiddleware>());
+host.use(std::make_shared<ErrorHandlingMiddleware>());
+host.use(std::make_shared<ServiceScopeMiddleware>(provider));
+
+// ✅ SOLUTION: Correct ordering
+host.use(std::make_shared<ServiceScopeMiddleware>(provider));  // 1. FIRST
+host.use(std::make_shared<ErrorHandlingMiddleware>());         // 2. SECOND
+host.use(std::make_shared<LoggingMiddleware>());               // 3. Other middleware
+```
+
+**Problem: Try-catch in every controller handler**
+```cpp
+// ❌ ERROR: Duplicated error handling (use ErrorHandlingMiddleware instead)
+std::string handler(http::HttpContext& ctx) {
+    try {
+        auto service = ctx.getService<IProductService>();
+        return service->getById(id)->toJson().dump();
+    } catch (const std::exception& e) {
+        ctx.setStatus(500);
+        return json{{"error", e.what()}}.dump();
+    }
+}
+
+// ✅ SOLUTION: Let ErrorHandlingMiddleware catch exceptions
+std::string handler(http::HttpContext& ctx) {
+    auto service = ctx.getService<IProductService>();
+    auto product = service->getById(id);
+    if (!product) {
+        throw std::runtime_error("Product not found");  // ErrorHandlingMiddleware catches
+    }
+    return product->toJson().dump();
+}
+```
+
+### Build and Compilation
+
+**Problem: Forward declaration not resolved**
+```cpp
+// ❌ ERROR: Forward declaration insufficient after changing to instance usage
+// ProductService.hpp
+class ProductRepository;  // Forward declaration
+
+class ProductService {
+    std::shared_ptr<ProductRepository> repo_;  // Needs complete type
+};
+
+// ✅ SOLUTION: Include full header
+#include "product/repositories/ProductRepository.hpp"
+
+class ProductService {
+    std::shared_ptr<ProductRepository> repo_;
+};
+```
+
+**Problem: Unused parameter warnings**
+```cpp
+// ❌ WARNING: parameter 'params' set but not used
+pqxx::result Database::executeParams(const std::string& query, 
+                                      const std::vector<std::string>& params) {
+    // TODO: Implement
+    return execute(query);
+}
+
+// ✅ SOLUTION: Cast to void to suppress warning
+pqxx::result Database::executeParams(const std::string& query, 
+                                      const std::vector<std::string>& params) {
+    (void)params;  // Suppress unused warning
+    // TODO: Implement parameterized queries
+    return execute(query);
+}
+```
+
+**Problem: Missing include guards breaking compilation**
+```cpp
+// ❌ ERROR: Multiple definition errors
+// Database.hpp
+class Database { /* ... */ };
+
+// ✅ SOLUTION: Always use include guards
+#ifndef PRODUCT_UTILS_DATABASE_HPP
+#define PRODUCT_UTILS_DATABASE_HPP
+
+class Database { /* ... */ };
+
+#endif // PRODUCT_UTILS_DATABASE_HPP
+```
+
+### Architecture Consistency
+
+**Key Lesson: All services in the project must use the same patterns**
+
+When you update one service's architecture (e.g., Database singleton), update ALL services:
+- ✅ inventory-service: Database singleton ✓
+- ✅ product-service: Database singleton ✓
+- ✅ warehouse-service: Database singleton ✓
+- ❌ order-service: Still using old pattern (TODO)
+
+**Benefits of Consistency**:
+- Easier code review (same patterns everywhere)
+- Faster onboarding (learn once, apply everywhere)
+- Simpler maintenance (fix in one place, know how to fix everywhere)
+- Reduced bugs (proven patterns, fewer surprises)
 
 ## References
 

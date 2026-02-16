@@ -1,19 +1,15 @@
 #pragma once
 
-#include <Poco/Net/HTTPRequestHandler.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/HTTPServerResponse.h>
+#include <http-framework/ControllerBase.hpp>
+#include <http-framework/HttpContext.hpp>
+#include <http-framework/IServiceProvider.hpp>
 #include <memory>
 #include <string>
-
-namespace order::services {
-    class OrderService; // Forward declaration
-}
 
 namespace order::controllers {
 
 /**
- * @brief HTTP controller for order endpoints
+ * @brief HTTP controller for order endpoints using http-framework
  * 
  * Handles:
  * - GET /api/v1/orders - List orders
@@ -22,43 +18,18 @@ namespace order::controllers {
  * - PUT /api/v1/orders/:id - Update order
  * - POST /api/v1/orders/:id/cancel - Cancel order
  */
-class OrderController : public Poco::Net::HTTPRequestHandler {
+class OrderController : public http::ControllerBase {
 public:
-    explicit OrderController(std::shared_ptr<services::OrderService> service);
-    
-    void handleRequest(Poco::Net::HTTPServerRequest& request,
-                      Poco::Net::HTTPServerResponse& response) override;
+    explicit OrderController(http::IServiceProvider& provider);
 
 private:
-    void handleGetAll(Poco::Net::HTTPServerRequest& request,
-                     Poco::Net::HTTPServerResponse& response);
+    std::string getAll(http::HttpContext& ctx);
+    std::string getById(http::HttpContext& ctx);
+    std::string create(http::HttpContext& ctx);
+    std::string update(http::HttpContext& ctx);
+    std::string cancelOrder(http::HttpContext& ctx);
     
-    void handleGetById(const std::string& id,
-                      Poco::Net::HTTPServerRequest& request,
-                      Poco::Net::HTTPServerResponse& response);
-    
-    void handleCreate(Poco::Net::HTTPServerRequest& request,
-                     Poco::Net::HTTPServerResponse& response);
-    
-    void handleUpdate(const std::string& id,
-                     Poco::Net::HTTPServerRequest& request,
-                     Poco::Net::HTTPServerResponse& response);
-    
-    void handleCancel(const std::string& id,
-                     Poco::Net::HTTPServerRequest& request,
-                     Poco::Net::HTTPServerResponse& response);
-    
-    void sendJsonResponse(Poco::Net::HTTPServerResponse& response,
-                         int status,
-                         const std::string& body);
-    
-    void sendErrorResponse(Poco::Net::HTTPServerResponse& response,
-                          int status,
-                          const std::string& message);
-    
-    std::string extractIdFromPath(const std::string& path);
-
-    std::shared_ptr<services::OrderService> service_;
+    http::IServiceProvider& provider_;
 };
 
 } // namespace order::controllers

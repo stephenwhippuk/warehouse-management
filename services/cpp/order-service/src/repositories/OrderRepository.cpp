@@ -4,9 +4,16 @@
 
 namespace order::repositories {
 
+OrderRepository::OrderRepository(http::IServiceProvider& provider)
+    : db_(provider.getService<utils::Database>()) {
+}
+
 std::optional<models::Order> OrderRepository::findById(const std::string& id) {
     utils::Logger::debug("OrderRepository::findById({})", id);
-    // TODO: Implement database query
+    // TODO: Implement database query using db_->getConnection()
+    // pqxx::work txn(*db_->getConnection());
+    // auto result = txn.exec_params("SELECT * FROM orders WHERE id = $1", id);
+    // txn.commit();
     return std::nullopt;
 }
 

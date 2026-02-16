@@ -6,8 +6,10 @@
 
 namespace order::services {
 
-OrderService::OrderService(std::shared_ptr<repositories::OrderRepository> repository)
-    : repository_(repository) {}
+OrderService::OrderService(http::IServiceProvider& provider)
+    : repository_(provider.getService<repositories::OrderRepository>()) {
+    // Dependencies resolved automatically from DI container
+}
 
 std::optional<dtos::OrderDto> OrderService::getById(const std::string& id) {
     utils::Logger::debug("OrderService::getById({})", id);

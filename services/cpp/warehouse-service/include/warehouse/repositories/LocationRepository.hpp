@@ -1,13 +1,14 @@
 #pragma once
 
 #include "warehouse/models/Location.hpp"
+#include <http-framework/IServiceProvider.hpp>
 #include <memory>
 #include <vector>
 #include <optional>
 #include <string>
 
 namespace warehouse::utils {
-    class Database; // Forward declaration
+    class Database;
 }
 
 namespace warehouse::repositories {
@@ -17,7 +18,7 @@ namespace warehouse::repositories {
  */
 class LocationRepository {
 public:
-    explicit LocationRepository(std::shared_ptr<utils::Database> db);
+    explicit LocationRepository(http::IServiceProvider& provider);
     
     // CRUD operations
     std::optional<models::Location> findById(const std::string& id);

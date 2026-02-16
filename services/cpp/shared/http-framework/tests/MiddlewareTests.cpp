@@ -1,10 +1,111 @@
 #include <catch2/catch_all.hpp>
 #include "http-framework/Middleware.hpp"
 #include "http-framework/HttpContext.hpp"
+#include "http-framework/ExceptionFilter.hpp"
+#include <Poco/Net/HTTPServerParams.h>
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/HTTPServerResponse.h>
+#include <Poco/Net/SocketAddress.h>
+#include <sstream>
 
 using namespace http;
+
+class MockServerResponse : public Poco::Net::HTTPServerResponse {
+public:
+    void sendContinue() override {
+        continued_ = true;
+    }
+
+    std::ostream& send() override {
+        sent_ = true;
+        return body_;
+    }
+
+    void sendFile(const std::string& /* path */, const std::string& /* mediaType */) override {
+        sent_ = true;
+    }
+
+    void sendBuffer(const void* /* pBuffer */, std::size_t /* length */) override {
+        sent_ = true;
+    }
+
+    void redirect(const std::string& /* uri */, HTTPStatus status = HTTP_FOUND) override {
+        setStatus(status);
+        sent_ = true;
+    }
+
+    void requireAuthentication(const std::string& /* realm */) override {
+        setStatus(HTTP_UNAUTHORIZED);
+        sent_ = true;
+    }
+
+    bool sent() const override {
+        return sent_;
+    }
+
+private:
+    bool sent_ = false;
+    bool continued_ = false;
+    std::ostringstream body_;
+};
+
+class MockServerRequest : public Poco::Net::HTTPServerRequest {
+public:
+    explicit MockServerRequest(Poco::Net::HTTPServerResponse& response)
+        : response_(response)
+        , clientAddress_("127.0.0.1", 12345)
+        , serverAddress_("127.0.0.1", 8080)
+        , serverParams_(new Poco::Net::HTTPServerParams()) {
+        setMethod("GET");
+        setURI("/test");
+    }
+
+    std::istream& stream() override {
+        return bodyStream_;
+    }
+
+    const Poco::Net::SocketAddress& clientAddress() const override {
+        return clientAddress_;
+    }
+
+    const Poco::Net::SocketAddress& serverAddress() const override {
+        return serverAddress_;
+    }
+
+    const Poco::Net::HTTPServerParams& serverParams() const override {
+        return *serverParams_;
+    }
+
+    Poco::Net::HTTPServerResponse& response() const override {
+        return response_;
+    }
+
+    bool secure() const override {
+        return false;
+    }
+
+private:
+    Poco::Net::HTTPServerResponse& response_;
+    Poco::Net::SocketAddress clientAddress_;
+    Poco::Net::SocketAddress serverAddress_;
+    Poco::Net::HTTPServerParams::Ptr serverParams_;
+    std::istringstream bodyStream_;
+};
+
+class TestExceptionFilter : public IExceptionFilter {
+public:
+    bool handleException(HttpContext& /* ctx */, const std::exception& /* e */) override {
+        called_ = true;
+        return true;
+    }
+
+    bool wasCalled() const {
+        return called_;
+    }
+
+private:
+    bool called_ = false;
+};
 
 // Mock middleware for testing
 class TestMiddleware : public Middleware {
@@ -151,4 +252,21 @@ TEST_CASE("QueryParams getBool method", "[middleware][query]") {
     SECTION("Return nullopt for invalid") {
         REQUIRE_FALSE(qp.getBool("invalid").has_value());
     }
+}
+
+TEST_CASE("ErrorHandlingMiddleware uses overridden exception filter", "[middleware][error][filter]") {
+    MockServerResponse response;
+    MockServerRequest request(response);
+    Poco::URI uri(request.getURI());
+    HttpContext ctx(request, response, uri.getQueryParameters());
+
+    auto filter = std::make_shared<TestExceptionFilter>();
+    ErrorHandlingMiddleware middleware;
+
+    middleware.setExceptionFilter(filter);
+    middleware.process(ctx, []() {
+        throw std::runtime_error("boom");
+    });
+
+    REQUIRE(filter->wasCalled());
 }

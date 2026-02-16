@@ -1,30 +1,19 @@
 #pragma once
 
-#include <Poco/Net/HTTPRequestHandler.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/HTTPServerResponse.h>
+#include "http-framework/ControllerBase.hpp"
+#include "http-framework/HttpContext.hpp"
 
-namespace warehouse {
-namespace controllers {
+namespace warehouse::controllers {
 
 /**
  * @brief Simple health check controller
- *
- * Exposes a lightweight /health endpoint that reports basic
- * service status along with authentication metrics.
  */
-class HealthController : public Poco::Net::HTTPRequestHandler {
+class HealthController : public http::ControllerBase {
 public:
-    HealthController() = default;
-
-    void handleRequest(Poco::Net::HTTPServerRequest& request,
-                       Poco::Net::HTTPServerResponse& response) override;
+    HealthController();
 
 private:
-    void sendJsonResponse(Poco::Net::HTTPServerResponse& response,
-                          const std::string& jsonContent,
-                          int statusCode = 200);
+    std::string handleHealth(http::HttpContext& ctx);
 };
 
-} // namespace controllers
-} // namespace warehouse
+}  // namespace warehouse::controllers

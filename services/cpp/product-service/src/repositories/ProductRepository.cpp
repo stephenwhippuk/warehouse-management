@@ -5,16 +5,13 @@ using namespace std::string_literals;
 
 namespace product::repositories {
 
-ProductRepository::ProductRepository(std::shared_ptr<pqxx::connection> db)
-    : db_(db) {
-    if (!db_) {
-        throw std::invalid_argument("Database connection cannot be null");
-    }
+ProductRepository::ProductRepository(http::IServiceProvider& provider)
+    : db_(provider.getService<utils::Database>()) {
 }
 
 std::optional<models::Product> ProductRepository::findById(const std::string& id) {
     try {
-        pqxx::work txn(*db_);
+        pqxx::work txn(*db_->getConnection());
         auto result = txn.exec_params(
             "SELECT id, sku, name, description, category, status FROM products WHERE id = $1",
             id
@@ -33,7 +30,7 @@ std::optional<models::Product> ProductRepository::findById(const std::string& id
 
 std::optional<models::Product> ProductRepository::findBySku(const std::string& sku) {
     try {
-        pqxx::work txn(*db_);
+        pqxx::work txn(*db_->getConnection());
         auto result = txn.exec_params(
             "SELECT id, sku, name, description, category, status FROM products WHERE sku = $1",
             sku
@@ -52,7 +49,7 @@ std::optional<models::Product> ProductRepository::findBySku(const std::string& s
 
 std::vector<models::Product> ProductRepository::findAll() {
     try {
-        pqxx::work txn(*db_);
+        pqxx::work txn(*db_->getConnection());
         auto result = txn.exec("SELECT id, sku, name, description, category, status FROM products ORDER BY sku");
         txn.commit();
         
@@ -68,7 +65,7 @@ std::vector<models::Product> ProductRepository::findAll() {
 
 std::vector<models::Product> ProductRepository::findActive() {
     try {
-        pqxx::work txn(*db_);
+        pqxx::work txn(*db_->getConnection());
         auto result = txn.exec("SELECT id, sku, name, description, category, status FROM products WHERE status = 'active' ORDER BY sku");
         txn.commit();
         
@@ -84,7 +81,7 @@ std::vector<models::Product> ProductRepository::findActive() {
 
 models::Product ProductRepository::create(const models::Product& product) {
     try {
-        pqxx::work txn(*db_);
+        pqxx::work txn(*db_->getConnection());
         txn.exec_params(
             "INSERT INTO products (id, sku, name, description, category, status) VALUES ($1, $2, $3, $4, $5, $6)",
             product.getId(),
@@ -109,7 +106,7 @@ models::Product ProductRepository::create(const models::Product& product) {
 
 models::Product ProductRepository::update(const models::Product& product) {
     try {
-        pqxx::work txn(*db_);
+        pqxx::work txn(*db_->getConnection());
         txn.exec_params(
             "UPDATE products SET name = $2, description = $3, category = $4, status = $5 WHERE id = $1",
             product.getId(),
@@ -133,7 +130,7 @@ models::Product ProductRepository::update(const models::Product& product) {
 
 bool ProductRepository::deleteById(const std::string& id) {
     try {
-        pqxx::work txn(*db_);
+        pqxx::work txn(*db_->getConnection());
         auto result = txn.exec_params("DELETE FROM products WHERE id = $1", id);
         txn.commit();
         return result.affected_rows() > 0;

@@ -12,6 +12,8 @@ namespace http {
 class NamespacedServiceCollection;
 class ControllerBase;
 class Router;
+class Middleware;
+class IServiceProvider;
 
 /**
  * @brief Plugin metadata and initialization information
@@ -79,6 +81,17 @@ public:
      * Default implementation returns empty vector (optional feature).
      */
     virtual std::vector<std::shared_ptr<ControllerBase>> getControllers() {
+        return {};
+    }
+
+    /**
+     * @brief Register plugin middleware (optional)
+     * @param provider Service provider to resolve dependencies
+     * @return Vector of middleware to add to the host
+     *
+     * Default implementation returns empty vector (optional feature).
+     */
+    virtual std::vector<std::shared_ptr<Middleware>> getMiddleware(IServiceProvider& /* provider */) {
         return {};
     }
 

@@ -1,6 +1,7 @@
 #include "warehouse/utils/Auth.hpp"
 #include "warehouse/utils/Config.hpp"
 #include "warehouse/utils/Logger.hpp"
+#include <cstdlib>
 
 namespace warehouse {
 namespace utils {
@@ -13,13 +14,13 @@ std::atomic<std::uint64_t> g_invalidTokenCount{0};
 
 std::string getConfiguredApiKey() {
     // Environment variable takes precedence
-    std::string fromEnv = Config::getEnv("SERVICE_API_KEY", "");
-    if (!fromEnv.empty()) {
-        return fromEnv;
+    const char* envValue = std::getenv("SERVICE_API_KEY");
+    if (envValue != nullptr && envValue[0] != '\0') {
+        return std::string(envValue);
     }
 
     // Fallback to config file value
-    return Config::getString("auth.serviceApiKey", "");
+    return Config::instance().getString("auth.serviceApiKey", "");
 }
 
 } // namespace

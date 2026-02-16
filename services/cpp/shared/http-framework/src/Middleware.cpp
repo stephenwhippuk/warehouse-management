@@ -98,6 +98,13 @@ ErrorHandlingMiddleware::ErrorHandlingMiddleware(std::shared_ptr<IExceptionFilte
     : filter_(filter ? filter : std::make_shared<DefaultExceptionFilter>()) {
 }
 
+void ErrorHandlingMiddleware::setExceptionFilter(std::shared_ptr<IExceptionFilter> filter) {
+    if (!filter) {
+        throw std::invalid_argument("Exception filter cannot be null");
+    }
+    filter_ = std::move(filter);
+}
+
 void ErrorHandlingMiddleware::process(HttpContext& ctx, std::function<void()> next) {
     try {
         next();

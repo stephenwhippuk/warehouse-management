@@ -90,8 +90,8 @@ json inventoryRowToJson(const pqxx::row& row) {
 } // namespace
 
 InventoryRepository::InventoryRepository(http::IServiceProvider& provider) {
-    // Resolve database connection from service provider
-    db_ = provider.getService<pqxx::connection>();
+    // Resolve database from service provider
+    db_ = provider.getService<utils::Database>();
 }
 
 std::optional<models::Inventory> InventoryRepository::findById(const std::string& id) {
@@ -99,7 +99,7 @@ std::optional<models::Inventory> InventoryRepository::findById(const std::string
         throw std::invalid_argument("Invalid inventory id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "SELECT * FROM inventory WHERE id = $1",
         id
@@ -116,7 +116,7 @@ std::optional<models::Inventory> InventoryRepository::findById(const std::string
 }
 
 std::vector<models::Inventory> InventoryRepository::findAll() {
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec(
         "SELECT * FROM inventory ORDER BY created_at DESC"
     );
@@ -138,7 +138,7 @@ std::vector<models::Inventory> InventoryRepository::findByProductId(const std::s
         throw std::invalid_argument("Invalid product id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "SELECT * FROM inventory WHERE product_id = $1 ORDER BY created_at DESC",
         productId
@@ -161,7 +161,7 @@ std::vector<models::Inventory> InventoryRepository::findByWarehouseId(const std:
         throw std::invalid_argument("Invalid warehouse id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "SELECT * FROM inventory WHERE warehouse_id = $1 ORDER BY created_at DESC",
         warehouseId
@@ -184,7 +184,7 @@ std::vector<models::Inventory> InventoryRepository::findByLocationId(const std::
         throw std::invalid_argument("Invalid location id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "SELECT * FROM inventory WHERE location_id = $1 ORDER BY created_at DESC",
         locationId
@@ -207,7 +207,7 @@ std::vector<models::Inventory> InventoryRepository::findLowStock(int threshold) 
         throw std::invalid_argument("Threshold must be non-negative");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "SELECT * FROM inventory WHERE available_quantity < $1 ORDER BY available_quantity ASC",
         threshold
@@ -226,7 +226,7 @@ std::vector<models::Inventory> InventoryRepository::findLowStock(int threshold) 
 }
 
 std::vector<models::Inventory> InventoryRepository::findExpired() {
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec(
         "SELECT * FROM inventory WHERE expiration_date < CURRENT_DATE AND expiration_date IS NOT NULL ORDER BY expiration_date ASC"
     );
@@ -253,7 +253,7 @@ std::optional<models::Inventory> InventoryRepository::findByProductAndLocation(
         throw std::invalid_argument("Invalid location id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "SELECT * FROM inventory WHERE product_id = $1 AND location_id = $2 LIMIT 1",
         productId,
@@ -284,7 +284,7 @@ models::Inventory InventoryRepository::create(const models::Inventory& inventory
         throw std::invalid_argument("Invalid location id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
 
     std::optional<std::string> metadataText;
     if (inventory.getMetadata().has_value()) {
@@ -356,7 +356,7 @@ models::Inventory InventoryRepository::update(const models::Inventory& inventory
         throw std::invalid_argument("Invalid location id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
 
     std::optional<std::string> metadataText;
     if (inventory.getMetadata().has_value()) {
@@ -426,7 +426,7 @@ bool InventoryRepository::deleteById(const std::string& id) {
         throw std::invalid_argument("Invalid inventory id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "DELETE FROM inventory WHERE id = $1",
         id
@@ -442,7 +442,7 @@ int InventoryRepository::getTotalQuantityByProduct(const std::string& productId)
         throw std::invalid_argument("Invalid product id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "SELECT COALESCE(SUM(quantity), 0) AS total "
         "FROM inventory WHERE product_id = $1",
@@ -462,7 +462,7 @@ int InventoryRepository::getAvailableQuantityByProduct(const std::string& produc
         throw std::invalid_argument("Invalid product id format");
     }
 
-    pqxx::work txn(*db_);
+    pqxx::work txn(*db_->getConnection());
     auto result = txn.exec_params(
         "SELECT COALESCE(SUM(available_quantity), 0) AS total "
         "FROM inventory WHERE product_id = $1",

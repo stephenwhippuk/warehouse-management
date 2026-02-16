@@ -1,10 +1,16 @@
 #include "http-framework/HttpHost.hpp"
+#include "http-framework/ServiceCollection.hpp"
+#include "http-framework/ServiceScopeMiddleware.hpp"
+#include "http-framework/NamespacedServiceCollection.hpp"
+#include "http-framework/ServiceNamespace.hpp"
+#include "http-framework/IPlugin.hpp"
 #include <Poco/Net/HTTPServerParams.h>
 #include <atomic>
 #include <csignal>
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <stdexcept>
 
 namespace http {
 
@@ -22,6 +28,11 @@ void waitForTerminationRequest() {
     while (g_running) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+}
+
+std::shared_ptr<IServiceProvider> createDefaultProvider() {
+    ServiceCollection services;
+    return services.buildServiceProvider();
 }
 
 } // anonymous namespace
@@ -56,9 +67,20 @@ Poco::Net::HTTPRequestHandler* FrameworkHandlerFactory::createRequestHandler(
 // HttpHost Implementation
 // ============================================================================
 
-HttpHost::HttpHost(int port, const std::string& host) 
+HttpHost::HttpHost(int port,
+                   std::shared_ptr<IServiceProvider> provider,
+                   const std::string& host,
+                   std::shared_ptr<IExceptionFilter> exceptionFilter)
     : port_(port)
     , host_(host) {
+    initializeDefaultMiddleware(provider, exceptionFilter);
+}
+
+HttpHost::HttpHost(int port, const std::string& host)
+    : port_(port)
+    , host_(host) {
+    auto provider = createDefaultProvider();
+    initializeDefaultMiddleware(provider, nullptr);
 }
 
 HttpHost::~HttpHost() {
@@ -187,6 +209,43 @@ void HttpHost::handleRequest(Poco::Net::HTTPServerRequest& request,
     });
 }
 
+void HttpHost::setExceptionFilter(std::shared_ptr<IExceptionFilter> filter) {
+    if (running_) {
+        throw std::runtime_error("Cannot update exception filter while server is running");
+    }
+    if (!errorHandlingMiddleware_) {
+        throw std::runtime_error("Error handling middleware is not initialized");
+    }
+    errorHandlingMiddleware_->setExceptionFilter(std::move(filter));
+}
+
+void HttpHost::registerPlugin(ServiceCollection& services, IPlugin& plugin) {
+    auto info = plugin.getInfo();
+    std::string pluginNamespace = ServiceNamespace::pluginNamespace(info.name);
+    NamespacedServiceCollection namespacedServices(services, pluginNamespace);
+    plugin.registerServices(namespacedServices);
+}
+
+void HttpHost::usePlugin(IPlugin& plugin, IServiceProvider& provider) {
+    if (running_) {
+        throw std::runtime_error("Cannot add plugins while server is running");
+    }
+
+    for (const auto& middleware : plugin.getMiddleware(provider)) {
+        if (!middleware) {
+            throw std::runtime_error("Plugin returned null middleware");
+        }
+        use(middleware);
+    }
+
+    for (const auto& controller : plugin.getControllers()) {
+        if (!controller) {
+            throw std::runtime_error("Plugin returned null controller");
+        }
+        addController(controller);
+    }
+}
+
 void HttpHost::processRequest(HttpContext& ctx) {
     std::string method = ctx.getMethod();
     std::string path = ctx.getPath();
@@ -238,6 +297,19 @@ void HttpHost::send404(Poco::Net::HTTPServerResponse& response, const std::strin
     
     std::ostream& out = response.send();
     out << body;
+}
+
+void HttpHost::initializeDefaultMiddleware(std::shared_ptr<IServiceProvider> provider,
+                                           std::shared_ptr<IExceptionFilter> exceptionFilter) {
+    if (!provider) {
+        throw std::invalid_argument("Service provider cannot be null");
+    }
+
+    serviceScopeMiddleware_ = std::make_shared<ServiceScopeMiddleware>(provider);
+    errorHandlingMiddleware_ = std::make_shared<ErrorHandlingMiddleware>(exceptionFilter);
+
+    middleware_.use(serviceScopeMiddleware_);
+    middleware_.use(errorHandlingMiddleware_);
 }
 
 } // namespace http

@@ -25,7 +25,7 @@ std::string Database::buildConnectionString() const {
 
 bool Database::connect() {
     try {
-        connection_ = std::make_unique<pqxx::connection>(connectionString_);
+        connection_ = std::make_shared<pqxx::connection>(connectionString_);
         Logger::info("Database connected successfully");
         return true;
     } catch (const pqxx::broken_connection& e) {
@@ -60,6 +60,7 @@ pqxx::result Database::execute(const std::string& query) {
 }
 
 pqxx::result Database::executeParams(const std::string& query, const std::vector<std::string>& params) {
+    (void)params;
     // TODO: Implement parameterized query execution
     auto txn = beginTransaction();
     auto result = txn->exec(query); // Temporary: doesn't use params
@@ -75,9 +76,11 @@ void Database::prepare(const std::string& name, const std::string& query) {
 }
 
 pqxx::result Database::executePrepared(const std::string& name, const std::vector<std::string>& params) {
+    (void)params;
     // TODO: Implement prepared statement execution with params
+    // For now, just execute as a simple query (stub)
     auto txn = beginTransaction();
-    auto result = txn->exec_prepared(name);
+    auto result = txn->exec(name);
     txn->commit();
     return result;
 }
@@ -91,6 +94,7 @@ std::shared_ptr<pqxx::connection> Database::getConnection() {
 }
 
 void Database::releaseConnection(std::shared_ptr<pqxx::connection> conn) {
+    (void)conn;
     // TODO: Implement connection pool return logic
 }
 

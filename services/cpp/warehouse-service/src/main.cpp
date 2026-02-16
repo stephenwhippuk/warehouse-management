@@ -12,46 +12,22 @@ Application* g_app = nullptr;
 void signalHandler(int signal) {
     if (g_app) {
         utils::Logger::info("Received signal {}, shutting down...", signal);
-        g_app->shutdown();
+        g_app->stop();
     }
 }
 
 int main(int argc, char** argv) {
     try {
-        // Initialize logger
-        utils::Logger::init("logs/warehouse-service.log", 
-                           utils::Logger::Level::Info, 
-                           true);
-        
-        utils::Logger::info("Starting Warehouse Service...");
-        
-        // Determine config file
-        std::string configFile = "config/application.json";
-        if (argc > 1) {
-            configFile = argv[1];
-        }
-        
-        // Create and initialize application
-        Application& app = Application::instance();
+        // Create application
+        Application app;
         g_app = &app;
         
         // Setup signal handlers
         std::signal(SIGINT, signalHandler);
         std::signal(SIGTERM, signalHandler);
         
-        if (!app.initialize(configFile)) {
-            utils::Logger::error("Failed to initialize application");
-            return 1;
-        }
-        
-        utils::Logger::info("Warehouse Service initialized successfully");
-        utils::Logger::info("Starting HTTP server...");
-        
-        // Run the application
-        app.run();
-        
-        utils::Logger::info("Warehouse Service stopped");
-        return 0;
+        // Run the application (handles initialization internally)
+        return app.run(argc, argv);
         
     } catch (const std::exception& e) {
         std::cerr << "Fatal error: " << e.what() << std::endl;

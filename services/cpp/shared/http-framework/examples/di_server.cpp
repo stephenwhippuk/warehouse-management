@@ -24,7 +24,6 @@
 #include "http-framework/ControllerBase.hpp"
 #include "http-framework/Middleware.hpp"
 #include "http-framework/ServiceCollection.hpp"
-#include "http-framework/ServiceScopeMiddleware.hpp"
 #include "http-framework/PluginManager.hpp"
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -491,12 +490,8 @@ int main() {
         // ====================================================================
         
         spdlog::info("🌐 [Step 3] Configuring HTTP host...");
-        http::HttpHost host(8088, "0.0.0.0");
-        
-        // Add ServiceScopeMiddleware FIRST
-        // Creates a new scope for each request, auto cleanup after response
-        spdlog::info("   → Adding ServiceScopeMiddleware (per-request scoping)");
-        host.use(std::make_shared<http::ServiceScopeMiddleware>(provider));
+        http::HttpHost host(8088, provider, "0.0.0.0");
+        spdlog::info("   → Default middleware enabled (ServiceScope + ErrorHandling)");
         
         // ====================================================================
         // Step 4: Register Controllers (resolved from DI)

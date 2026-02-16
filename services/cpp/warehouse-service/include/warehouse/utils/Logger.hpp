@@ -28,35 +28,36 @@ public:
     
     static void setLevel(Level level);
     
-    // Convenience methods
+    // Convenience methods using runtime format strings to avoid
+    // compile-time format string constraints in spdlog
     template<typename... Args>
-    static void trace(Args&&... args) {
-        get()->trace(std::forward<Args>(args)...);
+    static void trace(const std::string& fmt, Args&&... args) {
+        get()->trace(SPDLOG_FMT_RUNTIME(fmt), std::forward<Args>(args)...);
     }
     
     template<typename... Args>
-    static void debug(Args&&... args) {
-        get()->debug(std::forward<Args>(args)...);
+    static void debug(const std::string& fmt, Args&&... args) {
+        get()->debug(SPDLOG_FMT_RUNTIME(fmt), std::forward<Args>(args)...);
     }
     
     template<typename... Args>
-    static void info(Args&&... args) {
-        get()->info(std::forward<Args>(args)...);
+    static void info(const std::string& fmt, Args&&... args) {
+        get()->info(SPDLOG_FMT_RUNTIME(fmt), std::forward<Args>(args)...);
     }
     
     template<typename... Args>
-    static void warn(Args&&... args) {
-        get()->warn(std::forward<Args>(args)...);
+    static void warn(const std::string& fmt, Args&&... args) {
+        get()->warn(SPDLOG_FMT_RUNTIME(fmt), std::forward<Args>(args)...);
     }
     
     template<typename... Args>
-    static void error(Args&&... args) {
-        get()->error(std::forward<Args>(args)...);
+    static void error(const std::string& fmt, Args&&... args) {
+        get()->error(SPDLOG_FMT_RUNTIME(fmt), std::forward<Args>(args)...);
     }
     
     template<typename... Args>
-    static void critical(Args&&... args) {
-        get()->critical(std::forward<Args>(args)...);
+    static void critical(const std::string& fmt, Args&&... args) {
+        get()->critical(SPDLOG_FMT_RUNTIME(fmt), std::forward<Args>(args)...);
     }
 
 private:

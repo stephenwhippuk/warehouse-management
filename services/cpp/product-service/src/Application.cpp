@@ -3,12 +3,21 @@
 #include "product/utils/Config.hpp"
 #include "product/utils/Database.hpp"
 #include "product/repositories/ProductRepository.hpp"
+#include "product/services/IProductService.hpp"
+#include "product/services/ProductService.hpp"
+#include "product/controllers/ProductController.hpp"
+#include "product/controllers/HealthController.hpp"
+#include "contract-plugin/ContractPlugin.hpp"
+#include "http-framework/ServiceCollection.hpp"
+#include "http-framework/HttpHost.hpp"
+#include "http-framework/IPlugin.hpp"
 #include <warehouse/messaging/EventPublisher.hpp>
 #include <iostream>
 #include <thread>
 #include <chrono>
 #include <signal.h>
-
+#include <functional>
+#include <memory>
 namespace product {
 
 // Global app instance for signal handling
@@ -61,50 +70,108 @@ void Application::initialize() {
         utils::Config::getString("database.connectionString", 
             "postgresql://warehouse:warehouse@localhost:5432/warehouse_db"));
     
-    // Connect to database
-    if (auto logger = utils::Logger::getLogger()) logger->info("Connecting to database...");
-    utils::Database::connect(dbUrl);
-    if (auto logger = utils::Logger::getLogger()) logger->info("Database connected successfully");
+    // Database will be created and connected via DI container
+    if (auto logger = utils::Logger::getLogger()) logger->info("Database will be initialized via DI container...");
     
-    // Initialize event publisher (uses environment variables)
-    if (auto logger = utils::Logger::getLogger()) logger->info("Initializing event publisher...");
-    eventPublisher_ = std::shared_ptr<warehouse::messaging::EventPublisher>(
-        warehouse::messaging::EventPublisher::create("product-service")
-    );
-    if (auto logger = utils::Logger::getLogger()) logger->info("Event publisher initialized");
+    // =========================================================================
+    // Setup Dependency Injection Container
+    // =========================================================================
+    if (auto logger = utils::Logger::getLogger()) logger->info("Configuring DI container...");
+    http::ServiceCollection services;
     
-    // Initialize repository and service
-    auto repository = std::make_shared<repositories::ProductRepository>(
-        utils::Database::getConnection()
-    );
+    // Singleton services
+    services.addService<utils::Database>([dbUrl](http::IServiceProvider& /* provider */) {
+        if (auto logger = utils::Logger::getLogger()) logger->info("Creating Database (Singleton)");
+        
+        // Parse connection string to extract components
+        // Format: postgresql://user:pass@host:port/dbname
+        utils::Database::Config dbConfig;
+        
+        // Simple parsing (TODO: Make more robust)
+        size_t slashPos = dbUrl.rfind('/');
+        if (slashPos != std::string::npos) {
+            dbConfig.database = dbUrl.substr(slashPos + 1);
+        }
+        
+        auto db = std::make_shared<utils::Database>(dbConfig);
+        if (!db->connect()) {
+            throw std::runtime_error("Failed to connect to database");
+        }
+        return db;
+    }, http::ServiceLifetime::Singleton);
     
-    productService_ = std::make_shared<services::ProductService>(repository, eventPublisher_);
-    if (auto logger = utils::Logger::getLogger()) logger->info("Product service initialized");
+    services.addService<warehouse::messaging::EventPublisher>([](http::IServiceProvider& provider) {
+        if (auto logger = utils::Logger::getLogger()) logger->info("Creating EventPublisher (Singleton)");
+        return std::shared_ptr<warehouse::messaging::EventPublisher>(
+            warehouse::messaging::EventPublisher::create("product-service")
+        );
+    }, http::ServiceLifetime::Singleton);
     
-    // Initialize server
+    // Scoped services (per-request)
+    services.addScoped<repositories::ProductRepository, repositories::ProductRepository>();
+    
+    services.addScoped<services::IProductService, services::ProductService>();
+    
+    // =========================================================================
+    // Register Contract Plugin (Claims + Swagger)
+    // =========================================================================
+    contract::ContractConfig contractConfig = contract::ContractConfig::fromEnvironment();
+    contractConfig.claimsPath = utils::Config::getString("contracts.claimsPath", "claims.json");
+    contractConfig.contractsPath = utils::Config::getString("contracts.contractsPath", "contracts");
+    contractConfig.globalContractsPath = utils::Config::getString("contracts.globalContractsPath", "../../contracts");
+    contractConfig.enableClaims = utils::Config::getBool("contracts.enableClaims", true);
+    contractConfig.enableSwagger = utils::Config::getBool("contracts.enableSwagger", true);
+    contractConfig.enableValidation = utils::Config::getBool("contracts.enableValidation", false);
+
+    contractConfig.swaggerTitle = utils::Config::getString("service.name", "product-service") + " API";
+    contractConfig.swaggerVersion = utils::Config::getString("service.version", "1.0.0");
+    contractConfig.swaggerDescription = "Product master data management service";
+
+    contract::ContractPlugin contractPlugin(contractConfig);
+    http::HttpHost::registerPlugin(services, contractPlugin);
+
+    // Build service provider
+    serviceProvider_ = services.buildServiceProvider();
+    if (auto logger = utils::Logger::getLogger()) logger->info("DI container configured");
+    
+    // =========================================================================
+    // Setup HTTP Host
+    // =========================================================================
     int port = utils::Config::getInt("server.port", 8082);
     std::string host = utils::Config::getString("server.host", "0.0.0.0");
     
-    server_ = std::make_unique<Server>(port, host);
-    if (auto logger = utils::Logger::getLogger()) logger->info("HTTP server configured on {}:{}", host, port);
+    httpHost_ = std::make_unique<http::HttpHost>(port, serviceProvider_, host);
+
+    httpHost_->usePlugin(contractPlugin, *serviceProvider_);
+
+    // TODO: Add other middleware (Logging, Auth, CORS) here
+    
+    // Register controllers
+    httpHost_->addController(std::make_shared<controllers::ProductController>());
+    httpHost_->addController(std::make_shared<controllers::HealthController>());
+
+    
+    if (auto logger = utils::Logger::getLogger()) {
+        logger->info("HTTP host configured on {}:{}", host, port);
+    }
 }
 
 void Application::start() {
-    if (server_ && productService_) {
-        server_->setService(productService_);
-        server_->start();
-        if (auto logger = utils::Logger::getLogger()) logger->info("HTTP server started");
+    if (httpHost_) {
+        if (auto logger = utils::Logger::getLogger()) logger->info("Starting HTTP host...");
+        httpHost_->start();
+        if (auto logger = utils::Logger::getLogger()) logger->info("HTTP host started");
     }
 }
 
 void Application::stop() {
     if (auto logger = utils::Logger::getLogger()) logger->info("Shutting down...");
     
-    if (server_) {
-        server_->stop();
+    if (httpHost_) {
+        // HttpHost will stop automatically on destruction
     }
     
-    utils::Database::disconnect();
+    // Database will be cleaned up by DI container
     if (auto logger = utils::Logger::getLogger()) logger->info("Shutdown complete");
 }
 

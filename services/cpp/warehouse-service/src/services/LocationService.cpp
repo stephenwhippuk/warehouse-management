@@ -7,8 +7,8 @@
 
 namespace warehouse::services {
 
-LocationService::LocationService(std::shared_ptr<repositories::LocationRepository> repo)
-    : repo_(repo) {
+LocationService::LocationService(http::IServiceProvider& provider)
+    : repo_(provider.getService<repositories::LocationRepository>()) {
 }
 
 std::optional<dtos::LocationDto> LocationService::getById(const std::string& id) {
@@ -125,7 +125,7 @@ dtos::LocationDto LocationService::releaseLocation(const std::string& id) {
     }
     
     // TODO: Implement status change back to active
-    location->setStatus(models::LocationStatus::Available);
+    location->setStatus(models::LocationStatus::Active);
     
     bool success = repo_->update(*location);
     if (!success) {

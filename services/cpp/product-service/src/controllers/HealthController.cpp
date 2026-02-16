@@ -9,12 +9,19 @@ using json = nlohmann::json;
 
 namespace product::controllers {
 
-void HealthController::handleRequest(Poco::Net::HTTPServerRequest& request,
-                                    Poco::Net::HTTPServerResponse& response) {
-    if (auto logger = utils::Logger::getLogger()) logger->debug("Health check request: {} {}", request.getMethod(), request.getURI());
+HealthController::HealthController()
+    : http::ControllerBase("/health") {
     
-    response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
-    response.setContentType("application/json");
+    // GET /health
+    Get("/", [this](http::HttpContext& ctx) {
+        return this->handleHealth(ctx);
+    });
+}
+
+std::string HealthController::handleHealth(http::HttpContext& ctx) {
+    if (auto logger = utils::Logger::getLogger()) {
+        logger->debug("Health check request");
+    }
     
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
@@ -27,7 +34,7 @@ void HealthController::handleRequest(Poco::Net::HTTPServerRequest& request,
         {"timestamp", ss.str()}
     };
     
-    response.send() << body.dump();
+    return body.dump();
 }
 
 }  // namespace product::controllers

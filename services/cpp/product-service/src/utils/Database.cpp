@@ -1,40 +1,102 @@
 #include "product/utils/Database.hpp"
 #include "product/utils/Logger.hpp"
+#include <sstream>
+#include <stdexcept>
 
 namespace product::utils {
 
-std::shared_ptr<pqxx::connection> Database::connection_;
-std::string Database::connectionString_;
+Database::Database(const Config& config)
+    : config_(config)
+    , connectionString_(buildConnectionString()) {
+}
 
-void Database::connect(const std::string& connectionString) {
+Database::~Database() {
+    disconnect();
+}
+
+std::string Database::buildConnectionString() const {
+    std::ostringstream oss;
+    oss << "host=" << config_.host
+        << " port=" << config_.port
+        << " dbname=" << config_.database
+        << " user=" << config_.user
+        << " password=" << config_.password;
+    return oss.str();
+}
+
+bool Database::connect() {
     try {
-        connectionString_ = connectionString;
-        connection_ = std::make_shared<pqxx::connection>(connectionString);
-        
-        if (connection_->is_open()) {
-            if (auto logger = Logger::getLogger()) logger->info("Connected to PostgreSQL database");
-        } else {
-            throw std::runtime_error("Failed to open database connection");
-        }
-    } catch (const std::exception& e) {
+        connection_ = std::make_shared<pqxx::connection>(connectionString_);
+        if (auto logger = Logger::getLogger()) logger->info("Database connected successfully");
+        return true;
+    } catch (const pqxx::broken_connection& e) {
         if (auto logger = Logger::getLogger()) logger->error("Database connection failed: {}", e.what());
-        throw;
+        return false;
     }
 }
 
 void Database::disconnect() {
     if (connection_ && connection_->is_open()) {
-        // pqxx::connection closes automatically when shared_ptr is destroyed
-        // Just ensure we're logged
-        if (auto logger = Logger::getLogger()) logger->info("Disconnected from database");
+        connection_->close();
+        if (auto logger = Logger::getLogger()) logger->info("Database disconnected");
     }
 }
 
+bool Database::isConnected() const {
+    return connection_ && connection_->is_open();
+}
+
+std::unique_ptr<pqxx::work> Database::beginTransaction() {
+    if (!isConnected()) {
+        throw std::runtime_error("Database not connected");
+    }
+    return std::make_unique<pqxx::work>(*connection_);
+}
+
+pqxx::result Database::execute(const std::string& query) {
+    auto txn = beginTransaction();
+    auto result = txn->exec(query);
+    txn->commit();
+    return result;
+}
+
+pqxx::result Database::executeParams(const std::string& query, const std::vector<std::string>& params) {
+    (void)params;
+    // TODO: Implement parameterized query execution
+    auto txn = beginTransaction();
+    auto result = txn->exec(query); // Temporary: doesn't use params
+    txn->commit();
+    return result;
+}
+
+void Database::prepare(const std::string& name, const std::string& query) {
+    if (!isConnected()) {
+        throw std::runtime_error("Database not connected");
+    }
+    connection_->prepare(name, query);
+}
+
+pqxx::result Database::executePrepared(const std::string& name, const std::vector<std::string>& params) {
+    (void)params;
+    // TODO: Implement prepared statement execution with params
+    // For now, just execute as a simple query (stub)
+    auto txn = beginTransaction();
+    auto result = txn->exec(name);
+    txn->commit();
+    return result;
+}
+
 std::shared_ptr<pqxx::connection> Database::getConnection() {
-    if (!connection_ || !connection_->is_open()) {
-        throw std::runtime_error("Database connection not initialized or closed");
+    // TODO: Implement connection pooling
+    if (!isConnected()) {
+        connect();
     }
     return connection_;
+}
+
+void Database::releaseConnection(std::shared_ptr<pqxx::connection> conn) {
+    (void)conn;
+    // TODO: Implement connection pool return logic
 }
 
 }  // namespace product::utils

@@ -4,6 +4,8 @@
 
 namespace warehouse::utils {
 
+using json = nlohmann::json;
+
 JsonValidator::JsonValidator() {
 #ifdef HAVE_JSON_SCHEMA_VALIDATOR
     schemaLoaded_ = false;
@@ -28,6 +30,7 @@ bool JsonValidator::loadSchema(const std::string& schemaPath) {
         return false;
     }
 #else
+    (void)schemaPath;
     Logger::warn("JSON Schema validation not available (library not found)");
     return false;
 #endif
@@ -45,6 +48,7 @@ bool JsonValidator::loadSchemaFromString(const std::string& schemaJson) {
         return false;
     }
 #else
+    (void)schemaJson;
     return false;
 #endif
 }
@@ -64,6 +68,8 @@ bool JsonValidator::validate(const json& data, std::string& errorMessage) const 
         return false;
     }
 #else
+    (void)data;
+    (void)errorMessage;
     // If validator not available, accept everything
     return true;
 #endif

@@ -1,10 +1,11 @@
 #pragma once
 
 #include "product/models/Product.hpp"
+#include "product/utils/Database.hpp"
+#include <http-framework/IServiceProvider.hpp>
 #include <optional>
 #include <vector>
 #include <memory>
-#include <pqxx/pqxx>
 
 namespace product::repositories {
 
@@ -16,7 +17,7 @@ namespace product::repositories {
  */
 class ProductRepository {
 public:
-    explicit ProductRepository(std::shared_ptr<pqxx::connection> db);
+    explicit ProductRepository(http::IServiceProvider& provider);
 
     // CRUD operations
     std::optional<models::Product> findById(const std::string& id);
@@ -28,7 +29,7 @@ public:
     bool deleteById(const std::string& id);
 
 private:
-    std::shared_ptr<pqxx::connection> db_;
+    std::shared_ptr<utils::Database> db_;
 
     // Helper to convert row to Product
     models::Product rowToProduct(const pqxx::row& row);

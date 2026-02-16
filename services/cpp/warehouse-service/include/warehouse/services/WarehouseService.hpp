@@ -1,7 +1,9 @@
 #pragma once
 
+#include "warehouse/services/IWarehouseService.hpp"
 #include "warehouse/models/Warehouse.hpp"
 #include "warehouse/dtos/WarehouseDto.hpp"
+#include <http-framework/IServiceProvider.hpp>
 #include <memory>
 #include <vector>
 #include <optional>
@@ -19,24 +21,24 @@ namespace warehouse::services {
  * CRITICAL: Services return DTOs, not domain models.
  * Models remain internal to service/repository layers.
  */
-class WarehouseService {
+class WarehouseService : public IWarehouseService {
 public:
-    explicit WarehouseService(std::shared_ptr<repositories::WarehouseRepository> repo);
+    explicit WarehouseService(http::IServiceProvider& provider);
     
     // Business operations - return DTOs, not models
-    std::optional<dtos::WarehouseDto> getById(const std::string& id);
-    std::optional<dtos::WarehouseDto> getByCode(const std::string& code);
-    std::vector<dtos::WarehouseDto> getAll();
-    std::vector<dtos::WarehouseDto> getActiveWarehouses();
+    std::optional<dtos::WarehouseDto> getById(const std::string& id) override;
+    std::optional<dtos::WarehouseDto> getByCode(const std::string& code) override;
+    std::vector<dtos::WarehouseDto> getAll() override;
+    std::vector<dtos::WarehouseDto> getActiveWarehouses() override;
     
-    dtos::WarehouseDto createWarehouse(const models::Warehouse& warehouse);
-    dtos::WarehouseDto updateWarehouse(const models::Warehouse& warehouse);
-    bool deleteWarehouse(const std::string& id);
-    dtos::WarehouseDto activateWarehouse(const std::string& id);
-    dtos::WarehouseDto deactivateWarehouse(const std::string& id);
+    dtos::WarehouseDto createWarehouse(const models::Warehouse& warehouse) override;
+    dtos::WarehouseDto updateWarehouse(const models::Warehouse& warehouse) override;
+    bool deleteWarehouse(const std::string& id) override;
+    dtos::WarehouseDto activateWarehouse(const std::string& id) override;
+    dtos::WarehouseDto deactivateWarehouse(const std::string& id) override;
     
     // Validation
-    bool isValidWarehouse(const models::Warehouse& warehouse, std::string& errorMessage);
+    bool isValidWarehouse(const models::Warehouse& warehouse, std::string& errorMessage) override;
     
 private:
     std::shared_ptr<repositories::WarehouseRepository> repo_;

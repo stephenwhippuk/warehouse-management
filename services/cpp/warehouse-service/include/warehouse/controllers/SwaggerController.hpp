@@ -1,36 +1,19 @@
-#ifndef WAREHOUSE_CONTROLLERS_SWAGGERCONTROLLER_HPP
-#define WAREHOUSE_CONTROLLERS_SWAGGERCONTROLLER_HPP
+#pragma once
 
-#include <Poco/Net/HTTPRequestHandler.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/HTTPServerResponse.h>
-#include <nlohmann/json.hpp>
+#include "http-framework/ControllerBase.hpp"
+#include "http-framework/HttpContext.hpp"
 
-using json = nlohmann::json;
-
-namespace warehouse {
-namespace controllers {
+namespace warehouse::controllers {
 
 /**
- * @brief Controller for serving OpenAPI/Swagger documentation
+ * @brief Swagger/OpenAPI spec endpoint handler
  */
-class SwaggerController : public Poco::Net::HTTPRequestHandler {
+class SwaggerController : public http::ControllerBase {
 public:
-    SwaggerController() = default;
-
-    void handleRequest(Poco::Net::HTTPServerRequest& request,
-                      Poco::Net::HTTPServerResponse& response) override;
+    SwaggerController();
 
 private:
-    json generateSpecification();
-    void addSchemas(json& spec);
-    void addEndpoints(json& spec);
-    void sendJsonResponse(Poco::Net::HTTPServerResponse& response,
-                         const std::string& jsonContent,
-                         int statusCode = 200);
+    std::string handleSwagger(http::HttpContext& ctx);
 };
 
-} // namespace controllers
-} // namespace warehouse
-
-#endif // WAREHOUSE_CONTROLLERS_SWAGGERCONTROLLER_HPP
+}  // namespace warehouse::controllers

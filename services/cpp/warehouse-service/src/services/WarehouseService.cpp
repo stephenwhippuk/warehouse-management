@@ -6,8 +6,8 @@
 
 namespace warehouse::services {
 
-WarehouseService::WarehouseService(std::shared_ptr<repositories::WarehouseRepository> repo)
-    : repo_(repo) {
+WarehouseService::WarehouseService(http::IServiceProvider& provider)
+    : repo_(provider.getService<repositories::WarehouseRepository>()) {
 }
 
 std::optional<dtos::WarehouseDto> WarehouseService::getById(const std::string& id) {

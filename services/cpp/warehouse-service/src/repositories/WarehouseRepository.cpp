@@ -4,8 +4,8 @@
 
 namespace warehouse::repositories {
 
-WarehouseRepository::WarehouseRepository(std::shared_ptr<utils::Database> db)
-    : db_(db) {
+WarehouseRepository::WarehouseRepository(http::IServiceProvider& provider)
+    : db_(provider.getService<utils::Database>()) {
 }
 
 std::optional<models::Warehouse> WarehouseRepository::findById(const std::string& id) {
@@ -27,18 +27,21 @@ std::vector<models::Warehouse> WarehouseRepository::findAll() {
 }
 
 std::vector<models::Warehouse> WarehouseRepository::findByStatus(models::Status status) {
+    (void)status;  // TODO: Use in query
     // TODO: Implement database query
     utils::Logger::debug("WarehouseRepository::findByStatus()");
     return {};
 }
 
 std::string WarehouseRepository::create(const models::Warehouse& warehouse) {
+    (void)warehouse;  // TODO: Use in insert
     // TODO: Implement database insert
     utils::Logger::debug("WarehouseRepository::create()");
-    return warehouse.getId();
+    return "temp-id"; // Return placeholder ID
 }
 
 bool WarehouseRepository::update(const models::Warehouse& warehouse) {
+    (void)warehouse;  // TODO: Use in update
     // TODO: Implement database update
     utils::Logger::debug("WarehouseRepository::update()");
     return false;
@@ -51,16 +54,19 @@ bool WarehouseRepository::deleteById(const std::string& id) {
 }
 
 bool WarehouseRepository::exists(const std::string& id) {
+    (void)id;  // TODO: Use in query
     // TODO: Implement existence check
     return false;
 }
 
 bool WarehouseRepository::codeExists(const std::string& code) {
+    (void)code;  // TODO: Use in query
     // TODO: Implement code existence check
     return false;
 }
 
 models::Warehouse WarehouseRepository::mapRowToWarehouse(const void* row) {
+    (void)row;
     // TODO: Map database row to Warehouse model
     return models::Warehouse();
 }

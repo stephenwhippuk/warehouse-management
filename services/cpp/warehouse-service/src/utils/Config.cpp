@@ -5,6 +5,8 @@
 
 namespace warehouse::utils {
 
+using json = nlohmann::json;
+
 Config& Config::instance() {
     static Config config;
     return config;

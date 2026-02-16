@@ -1,40 +1,28 @@
 #include "order/controllers/HealthController.hpp"
-#include "order/utils/Logger.hpp"
-#include <Poco/Net/HTTPResponse.h>
-#include <chrono>
-#include <sstream>
+#include <nlohmann/json.hpp>
 
-namespace order {
-namespace controllers {
+using json = nlohmann::json;
 
-void HealthController::handleRequest(
-    Poco::Net::HTTPServerRequest& request,
-    Poco::Net::HTTPServerResponse& response
-) {
-    utils::Logger::debug("Health check requested");
-    sendHealthResponse(response);
+namespace order::controllers {
+
+HealthController::HealthController(http::IServiceProvider& provider)
+    : http::ControllerBase("/health") {
+    
+    Get("/", [this](http::HttpContext& ctx) {
+        return this->health(ctx);
+    });
 }
 
-void HealthController::sendHealthResponse(Poco::Net::HTTPServerResponse& response) {
-    response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
-    response.setContentType("application/json");
+std::string HealthController::health(http::HttpContext& ctx) {
+    (void)ctx;  // Unused parameter
     
-    auto now = std::chrono::system_clock::now();
-    auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(
-        now.time_since_epoch()
-    ).count();
+    json response = {
+        {"status", "healthy"},
+        {"service", "order-service"},
+        {"timestamp", std::time(nullptr)}
+    };
     
-    std::ostringstream oss;
-    oss << "{"
-        << R"("status":"healthy",)"
-        << R"("service":"order-service",)"
-        << R"("timestamp":)" << timestamp << ","
-        << R"("version":"1.0.0")"
-        << "}";
-    
-    std::ostream& out = response.send();
-    out << oss.str();
+    return response.dump();
 }
 
-} // namespace controllers
-} // namespace order
+} // namespace order::controllers

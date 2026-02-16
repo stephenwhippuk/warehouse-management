@@ -3,7 +3,9 @@
 #include "inventory/handlers/ProductEventHandler.hpp"
 #include <warehouse/messaging/EventPublisher.hpp>
 #include <warehouse/messaging/EventConsumer.hpp>
+#include <http-framework/HttpHost.hpp>
 #include <http-framework/IServiceProvider.hpp>
+#include "contract-plugin/ContractPlugin.hpp"
 #include <memory>
 #include <string>
 
@@ -24,10 +26,14 @@ private:
     void initializeDatabase();
     void initializeServices();
     
+    // HTTP host
+    std::unique_ptr<http::HttpHost> httpHost_;
+    std::shared_ptr<contract::ContractPlugin> contractPlugin_;
+    
     // Dependency injection
     std::shared_ptr<http::IServiceProvider> serviceProvider_;
     
-    // Legacy services (for event consumer setup)
+    // Event services (for event consumer setup)
     std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher_;
     std::unique_ptr<warehouse::messaging::EventConsumer> eventConsumer_;
     std::shared_ptr<handlers::ProductEventHandler> productEventHandler_;

@@ -110,6 +110,11 @@ public:
      * @param filter Exception filter to use (defaults to DefaultExceptionFilter)
      */
     explicit ErrorHandlingMiddleware(std::shared_ptr<class IExceptionFilter> filter = nullptr);
+
+    /**
+     * @brief Replace the exception filter (must be non-null)
+     */
+    void setExceptionFilter(std::shared_ptr<class IExceptionFilter> filter);
     
     void process(HttpContext& ctx, std::function<void()> next) override;
 

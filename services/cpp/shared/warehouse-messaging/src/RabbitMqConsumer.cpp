@@ -563,7 +563,7 @@ int RabbitMqConsumer::getRetryCount(const amqp_envelope_t& envelope) {
         return 0;
     }
     
-    for (size_t i = 0; i < headers->num_entries; i++) {
+    for (size_t i = 0; i < static_cast<size_t>(headers->num_entries); i++) {
         if (std::string((char*)headers->entries[i].key.bytes, headers->entries[i].key.len) == "x-death") {
             if (headers->entries[i].value.kind == AMQP_FIELD_KIND_ARRAY) {
                 amqp_array_t* deathArray = &headers->entries[i].value.value.array;

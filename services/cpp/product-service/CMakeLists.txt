@@ -11,6 +11,18 @@ if(NOT DEFINED WAREHOUSE_MESSAGING_DIR)
 endif()
 add_subdirectory(${WAREHOUSE_MESSAGING_DIR} ${CMAKE_CURRENT_BINARY_DIR}/warehouse-messaging)
 
+# Add http-framework library path
+if(NOT DEFINED HTTP_FRAMEWORK_DIR)
+    set(HTTP_FRAMEWORK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/http-framework")
+endif()
+add_subdirectory(${HTTP_FRAMEWORK_DIR} ${CMAKE_BINARY_DIR}/http-framework)
+
+# Add contract-plugin library path
+if(NOT DEFINED CONTRACT_PLUGIN_DIR)
+    set(CONTRACT_PLUGIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/contract-plugin")
+endif()
+add_subdirectory(${CONTRACT_PLUGIN_DIR} ${CMAKE_BINARY_DIR}/contract-plugin)
+
 # Find packages
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(Poco REQUIRED COMPONENTS Net)
@@ -20,13 +32,15 @@ find_package(spdlog REQUIRED)
 find_package(Catch2 QUIET)  # Optional - only for tests
 
 # Include directories
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CONTRACT_PLUGIN_DIR}/include
+)
 
 # Sources
 set(SOURCES
     src/main.cpp
     src/Application.cpp
-    src/Server.cpp
     src/models/Product.cpp
     src/dtos/ProductItemDto.cpp
     src/dtos/ProductListDto.cpp
@@ -35,13 +49,11 @@ set(SOURCES
     src/services/ProductService.cpp
     src/controllers/ProductController.cpp
     src/controllers/HealthController.cpp
-    src/controllers/SwaggerController.cpp
     src/utils/Config.cpp
     src/utils/Logger.cpp
     src/utils/Database.cpp
     src/utils/Auth.cpp
     src/utils/DtoMapper.cpp
-    src/utils/SwaggerGenerator.cpp
 )
 
 # Executable
@@ -50,6 +62,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
     warehouse-messaging
+    http-framework
     Boost::system
     Boost::thread
     Poco::Net
@@ -58,6 +71,7 @@ target_link_libraries(${PROJECT_NAME}
     nlohmann_json::nlohmann_json
     spdlog::spdlog
     uuid
+    contract-plugin
 )
 
 # Tests (optional - only if Catch2 is found)

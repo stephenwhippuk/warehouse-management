@@ -1,7 +1,4 @@
-#include "order/Server.hpp"
-#include "order/services/OrderService.hpp"
-#include "order/repositories/OrderRepository.hpp"
-#include "order/utils/Config.hpp"
+#include "order/Application.hpp"
 #include "order/utils/Logger.hpp"
 #include <csignal>
 #include <atomic>
@@ -14,48 +11,34 @@ void signalHandler(int signal) {
 }
 
 int main(int argc, char** argv) {
+    (void)argc;  // Unused parameter
+    (void)argv;  // Unused parameter
+    
+
     try {
-        // Initialize logger
-        order::utils::Logger::init("logs/order-service.log",
-                                  order::utils::Logger::Level::Info,
-                                  true);
+        // Create and initialize application
+        order::Application app;
         
-        order::utils::Logger::info("Order Service starting...");
-        
-        // Load configuration
-        auto& config = order::utils::Config::instance();
-        if (!config.load("config/application.json")) {
-            order::utils::Logger::warn("Failed to load config file, using defaults");
+        if (!app.initialize()) {
+            order::utils::Logger::critical("Failed to initialize application");
+            return 1;
         }
-        
-        // Override with environment variables
-        const char* portEnv = std::getenv("ORDER_SERVICE_PORT");
-        if (portEnv) {
-            config.set("server.port", std::atoi(portEnv));
-        }
-        
-        // Create dependencies
-        auto repository = std::make_shared<order::repositories::OrderRepository>();
-        auto service = std::make_shared<order::services::OrderService>(repository);
-        
-        // Create and start server
-        order::Config serverConfig = config.getServerConfig();
-        order::Server server(serverConfig, service);
         
         // Set up signal handling
         std::signal(SIGINT, signalHandler);
         std::signal(SIGTERM, signalHandler);
         
-        server.start();
-        
-        order::utils::Logger::info("Order Service is running. Press Ctrl+C to stop.");
+        // Start application
+        app.run();
         
         // Main loop
-        while (running && server.isRunning()) {
+        order::utils::Logger::info("Order Service is running. Press Ctrl+C to stop.");
+        while (running) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         
-        server.stop();
+        // Shutdown
+        app.shutdown();
         order::utils::Logger::info("Order Service stopped");
         
         return 0;

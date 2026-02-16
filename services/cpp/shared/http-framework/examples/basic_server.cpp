@@ -1,6 +1,7 @@
 #include "http-framework/HttpHost.hpp"
 #include "http-framework/ControllerBase.hpp"
 #include "http-framework/Middleware.hpp"
+#include "http-framework/ServiceCollection.hpp"
 #include <nlohmann/json.hpp>
 #include <memory>
 #include <vector>
@@ -273,11 +274,12 @@ private:
 int main() {
     try {
         // Create HTTP host on port 8085 (8080 might be in use)
-        http::HttpHost host(8085);
+        http::ServiceCollection services;
+        auto provider = services.buildServiceProvider();
+        http::HttpHost host(8085, provider);
         
-        // Add middleware
+        // Add middleware (ServiceScope + ErrorHandling are added by HttpHost)
         host.use(std::make_shared<http::LoggingMiddleware>());
-        host.use(std::make_shared<http::ErrorHandlingMiddleware>());
         host.use(std::make_shared<http::CorsMiddleware>());
         
         // Optionally add authentication (uncomment to enable)

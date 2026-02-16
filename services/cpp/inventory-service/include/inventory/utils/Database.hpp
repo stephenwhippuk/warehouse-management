@@ -7,17 +7,49 @@
 namespace inventory {
 namespace utils {
 
+/**
+ * @brief Database connection and query utilities for PostgreSQL
+ */
 class Database {
 public:
-    static std::shared_ptr<pqxx::connection> connect(const std::string& connectionString);
-    static void disconnect();
+    struct Config {
+        std::string host = "localhost";
+        int port = 5432;
+        std::string database = "inventory_db";
+        std::string user = "inventory";
+        std::string password;
+        int maxConnections = 10;
+    };
     
-    // Connection pool methods (TODO: Implement connection pooling)
-    static std::shared_ptr<pqxx::connection> getConnection();
-    static void releaseConnection(std::shared_ptr<pqxx::connection> conn);
+    explicit Database(const Config& config);
+    ~Database();
     
+    // Connection management
+    bool connect();
+    void disconnect();
+    bool isConnected() const;
+    
+    // Transaction support
+    std::unique_ptr<pqxx::work> beginTransaction();
+    
+    // Query execution
+    pqxx::result execute(const std::string& query);
+    pqxx::result executeParams(const std::string& query, const std::vector<std::string>& params);
+    
+    // Prepared statement support
+    void prepare(const std::string& name, const std::string& query);
+    pqxx::result executePrepared(const std::string& name, const std::vector<std::string>& params = {});
+    
+    // Connection pool (simple implementation)
+    std::shared_ptr<pqxx::connection> getConnection();
+    void releaseConnection(std::shared_ptr<pqxx::connection> conn);
+
 private:
-    static std::shared_ptr<pqxx::connection> connection_;
+    Config config_;
+    std::string connectionString_;
+    std::shared_ptr<pqxx::connection> connection_;
+    
+    std::string buildConnectionString() const;
 };
 
 } // namespace utils

@@ -1,26 +1,20 @@
 #pragma once
 
-#include <Poco/Net/HTTPRequestHandler.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/HTTPServerResponse.h>
+#include <http-framework/ControllerBase.hpp>
+#include <http-framework/HttpContext.hpp>
+#include <http-framework/IServiceProvider.hpp>
 
-namespace order {
-namespace controllers {
+namespace order::controllers {
 
-class ClaimsController : public Poco::Net::HTTPRequestHandler {
+/**
+ * @brief Claims controller for contract system
+ */
+class ClaimsController : public http::ControllerBase {
 public:
-    void handleRequest(
-        Poco::Net::HTTPServerRequest& request,
-        Poco::Net::HTTPServerResponse& response
-    ) override;
+    explicit ClaimsController(http::IServiceProvider& provider);
 
 private:
-    void handleGetClaims(Poco::Net::HTTPServerResponse& response);
-    void handleGetFulfilments(Poco::Net::HTTPServerResponse& response);
-    void handleGetReferences(Poco::Net::HTTPServerResponse& response);
-    void sendJsonResponse(Poco::Net::HTTPServerResponse& response, const std::string& json);
-    void sendNotFound(Poco::Net::HTTPServerResponse& response);
+    std::string getClaims(http::HttpContext& ctx);
 };
 
-} // namespace controllers
-} // namespace order
+} // namespace order::controllers

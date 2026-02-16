@@ -1,7 +1,9 @@
 #pragma once
 
+#include "warehouse/services/ILocationService.hpp"
 #include "warehouse/models/Location.hpp"
 #include "warehouse/dtos/LocationDto.hpp"
+#include <http-framework/IServiceProvider.hpp>
 #include <memory>
 #include <vector>
 #include <optional>
@@ -19,29 +21,29 @@ namespace warehouse::services {
  * CRITICAL: Services return DTOs, not domain models.
  * Models remain internal to service/repository layers.
  */
-class LocationService {
+class LocationService : public ILocationService {
 public:
-    explicit LocationService(std::shared_ptr<repositories::LocationRepository> repo);
+    explicit LocationService(http::IServiceProvider& provider);
     
     // Business operations - return DTOs, not models
-    std::optional<dtos::LocationDto> getById(const std::string& id);
-    std::vector<dtos::LocationDto> getAll();
-    std::vector<dtos::LocationDto> getByWarehouse(const std::string& warehouseId);
-    std::vector<dtos::LocationDto> getByWarehouseAndZone(const std::string& warehouseId, const std::string& zone);
-    std::vector<dtos::LocationDto> getAvailablePickingLocations(const std::string& warehouseId);
+    std::optional<dtos::LocationDto> getById(const std::string& id) override;
+    std::vector<dtos::LocationDto> getAll() override;
+    std::vector<dtos::LocationDto> getByWarehouse(const std::string& warehouseId) override;
+    std::vector<dtos::LocationDto> getByWarehouseAndZone(const std::string& warehouseId, const std::string& zone) override;
+    std::vector<dtos::LocationDto> getAvailablePickingLocations(const std::string& warehouseId) override;
     
-    dtos::LocationDto createLocation(const models::Location& location);
-    dtos::LocationDto updateLocation(const models::Location& location);
-    bool deleteLocation(const std::string& id);
-    dtos::LocationDto reserveLocation(const std::string& id);
-    dtos::LocationDto releaseLocation(const std::string& id);
-    dtos::LocationDto markLocationFull(const std::string& id);
+    dtos::LocationDto createLocation(const models::Location& location) override;
+    dtos::LocationDto updateLocation(const models::Location& location) override;
+    bool deleteLocation(const std::string& id) override;
+    dtos::LocationDto reserveLocation(const std::string& id) override;
+    dtos::LocationDto releaseLocation(const std::string& id) override;
+    dtos::LocationDto markLocationFull(const std::string& id) override;
     
     // Validation
-    bool isValidLocation(const models::Location& location, std::string& errorMessage);
+    bool isValidLocation(const models::Location& location, std::string& errorMessage) override;
     
     // Route optimization
-    std::vector<dtos::LocationDto> optimizePickingRoute(const std::vector<std::string>& locationIds);
+    std::vector<dtos::LocationDto> optimizePickingRoute(const std::vector<std::string>& locationIds) override;
     
 private:
     std::shared_ptr<repositories::LocationRepository> repo_;

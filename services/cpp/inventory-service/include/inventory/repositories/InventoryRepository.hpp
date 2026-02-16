@@ -1,8 +1,8 @@
 #pragma once
 
 #include "inventory/models/Inventory.hpp"
+#include "inventory/utils/Database.hpp"
 #include <http-framework/IServiceProvider.hpp>
-#include <pqxx/pqxx>
 #include <memory>
 #include <vector>
 #include <string>
@@ -37,7 +37,7 @@ public:
     int getAvailableQuantityByProduct(const std::string& productId);
     
 private:
-    std::shared_ptr<pqxx::connection> db_;
+    std::shared_ptr<utils::Database> db_;
 };
 
 } // namespace repositories

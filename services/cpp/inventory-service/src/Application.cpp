@@ -2,21 +2,39 @@
 #include "inventory/utils/Config.hpp"
 #include "inventory/utils/Logger.hpp"
 #include "inventory/utils/Database.hpp"
+#include "inventory/repositories/InventoryRepository.hpp"
 #include "inventory/services/IInventoryService.hpp"
 #include "inventory/services/InventoryService.hpp"
-#include "inventory/Server.hpp"
+#include "inventory/controllers/InventoryController.hpp"
+#include "inventory/controllers/HealthController.hpp"
+#include "contract-plugin/ContractPlugin.hpp"
 #include <warehouse/messaging/EventConsumer.hpp>
 #include <warehouse/messaging/EventPublisher.hpp>
 #include <http-framework/ServiceCollection.hpp>
+#include <http-framework/HttpHost.hpp>
 #include <http-framework/IServiceScope.hpp>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
+#include <csignal>
+#include <thread>
+#include <chrono>
 
 using json = nlohmann::json;
 
 namespace inventory {
 
-Application::Application() : initialized_(false), serverPort_(8080) {}
+// Global app instance for signal handling
+Application* g_app = nullptr;
+
+void signalHandler(int /* signal */) {
+    if (g_app) {
+        g_app->shutdown();  // Gracefully shutdown on signal
+    }
+}
+
+Application::Application() : initialized_(false), serverPort_(8080) {
+    g_app = this;
+}
 
 Application::~Application() {
     shutdown();
@@ -43,9 +61,41 @@ void Application::run() {
     
     utils::Logger::info("Starting Inventory Service on port {}", serverPort_);
     
-    Server server(serverPort_);
-    server.setServiceProvider(serviceProvider_);
-    server.start();
+    // =========================================================================
+    // Setup HTTP Host with Contract Plugin
+    // =========================================================================
+    httpHost_ = std::make_unique<http::HttpHost>(serverPort_, serviceProvider_, "0.0.0.0");
+    
+    // Apply contract plugin (claims + swagger)
+    if (contractPlugin_) {
+        httpHost_->usePlugin(*contractPlugin_, *serviceProvider_);
+    }
+    
+    // Add additional middleware
+    httpHost_->use(std::make_shared<http::LoggingMiddleware>());
+    httpHost_->use(std::make_shared<http::CorsMiddleware>());
+    
+    // Register controllers
+    httpHost_->addController(std::make_shared<controllers::HealthController>());
+    httpHost_->addController(std::make_shared<controllers::InventoryController>());
+    
+    // Configure server
+    httpHost_->setMaxThreads(16);
+    httpHost_->setMaxQueued(100);
+    httpHost_->setTimeout(60);
+    
+    // Start the server
+    httpHost_->start();
+    utils::Logger::info("HTTP Server started on port {}", serverPort_);
+    
+    // Setup signal handlers for graceful shutdown
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
+    
+    // Keep running until interrupted
+    while (initialized_) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
     
     utils::Logger::info("Inventory Service stopped");
 }
@@ -57,12 +107,18 @@ void Application::shutdown() {
     
     utils::Logger::info("Shutting down Inventory Service");
     
+    // Stop HTTP host
+    if (httpHost_) {
+        httpHost_->stop();
+        httpHost_.reset();
+    }
+    
     // Stop event consumer gracefully
     if (eventConsumer_ && eventConsumer_->isRunning()) {
         eventConsumer_->stop();
     }
     
-    utils::Database::disconnect();
+    // Database will be cleaned up by DI container
     initialized_ = false;
 }
 
@@ -89,9 +145,8 @@ void Application::initializeLogging() {
 }
 
 void Application::initializeDatabase() {
-    utils::Logger::info("Connecting to database...");
-    auto db = utils::Database::connect(dbConnectionString_);
-    utils::Logger::info("Database connected successfully");
+    // Database will be created and connected via DI container
+    utils::Logger::info("Database will be initialized via DI container...");
 }
 
 void Application::initializeServices() {
@@ -99,12 +154,27 @@ void Application::initializeServices() {
     
     http::ServiceCollection services;
     
-    // Register database connection as singleton
+    // Register database as singleton
     auto dbConnStr = dbConnectionString_;
-    services.addService<pqxx::connection>(
-        [dbConnStr](http::IServiceProvider& provider) -> std::shared_ptr<pqxx::connection> {
-            (void)provider;  // Unused
-            return utils::Database::getConnection();
+    services.addService<utils::Database>(
+        [dbConnStr](http::IServiceProvider& /* provider */) -> std::shared_ptr<utils::Database> {
+            utils::Logger::info("Creating Database singleton");
+            
+            // Parse connection string to extract components
+            // Format: postgresql://user:pass@host:port/dbname
+            utils::Database::Config dbConfig;
+            
+            // Simple parsing (TODO: Make more robust)
+            size_t slashPos = dbConnStr.rfind('/');
+            if (slashPos != std::string::npos) {
+                dbConfig.database = dbConnStr.substr(slashPos + 1);
+            }
+            
+            auto db = std::make_shared<utils::Database>(dbConfig);
+            if (!db->connect()) {
+                throw std::runtime_error("Failed to connect to database");
+            }
+            return db;
         },
         http::ServiceLifetime::Singleton
     );
@@ -126,6 +196,24 @@ void Application::initializeServices() {
     // Register service as scoped (per-request reuse)
     services.addScoped<services::IInventoryService, services::InventoryService>();
     
+    // =========================================================================
+    // Register Contract Plugin (Claims + Swagger)
+    // =========================================================================
+    contract::ContractConfig contractConfig = contract::ContractConfig::fromEnvironment();
+    contractConfig.claimsPath = utils::Config::getString("contracts.claimsPath", "claims.json");
+    contractConfig.contractsPath = utils::Config::getString("contracts.contractsPath", "contracts");
+    contractConfig.globalContractsPath = utils::Config::getString("contracts.globalContractsPath", "../../contracts");
+    contractConfig.enableClaims = utils::Config::getBool("contracts.enableClaims", true);
+    contractConfig.enableSwagger = utils::Config::getBool("contracts.enableSwagger", true);
+    contractConfig.enableValidation = utils::Config::getBool("contracts.enableValidation", false);
+
+    contractConfig.swaggerTitle = utils::Config::getString("service.name", "inventory-service") + " API";
+    contractConfig.swaggerVersion = utils::Config::getString("service.version", "1.0.0");
+    contractConfig.swaggerDescription = "Inventory allocation and fulfillment service";
+
+    contractPlugin_ = std::make_shared<contract::ContractPlugin>(contractConfig);
+    http::HttpHost::registerPlugin(services, *contractPlugin_);
+    
     // Build service provider
     serviceProvider_ = services.buildServiceProvider();
     
@@ -134,8 +222,8 @@ void Application::initializeServices() {
     eventPublisher_ = scope->getServiceProvider().getService<warehouse::messaging::EventPublisher>();
     
     // Initialize event handlers
-    auto db = utils::Database::getConnection();
-    productEventHandler_ = std::make_shared<handlers::ProductEventHandler>(db);
+    auto db = scope->getServiceProvider().getService<utils::Database>();
+    productEventHandler_ = std::make_shared<handlers::ProductEventHandler>(db->getConnection());
     
     // Initialize event consumer (for receiving product events)
     utils::Logger::info("Initializing event consumer...");

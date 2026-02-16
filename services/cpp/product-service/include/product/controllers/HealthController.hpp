@@ -1,19 +1,20 @@
 #pragma once
 
-#include <Poco/Net/HTTPRequestHandler.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/HTTPServerResponse.h>
-#include <memory>
+#include "http-framework/ControllerBase.hpp"
+#include "http-framework/HttpContext.hpp"
+#include <string>
 
 namespace product::controllers {
 
 /**
  * @brief Health check endpoint handler
  */
-class HealthController : public Poco::Net::HTTPRequestHandler {
+class HealthController : public http::ControllerBase {
 public:
-    void handleRequest(Poco::Net::HTTPServerRequest& request,
-                      Poco::Net::HTTPServerResponse& response) override;
+    HealthController();
+
+private:
+    std::string handleHealth(http::HttpContext& ctx);
 };
 
 }  // namespace product::controllers

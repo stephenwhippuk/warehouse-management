@@ -2,6 +2,7 @@
 #include <http-framework/PluginManager.hpp>
 #include <http-framework/ServiceCollection.hpp>
 #include <http-framework/IServiceProvider.hpp>
+#include <http-framework/ServiceNamespace.hpp>
 #include <filesystem>
 #include <memory>
 #include "../plugins/ICalculator.hpp"
@@ -70,7 +71,9 @@ TEST_CASE("PluginManager registers plugin services", "[plugin][manager][services
 
         // Build provider and verify service is available
         auto provider = services.buildServiceProvider();
-        auto calc = provider->getService<ICalculator>();
+        auto calc = provider->getService<ICalculator>(
+            ServiceNamespace::pluginNamespace("test-calculator")
+        );
 
         REQUIRE(calc);
         REQUIRE(calc->add(2, 3) == 5);
@@ -81,8 +84,12 @@ TEST_CASE("PluginManager registers plugin services", "[plugin][manager][services
         mgr.loadPlugin(pluginPath);
         auto provider = services.buildServiceProvider();
 
-        auto calc1 = provider->getService<ICalculator>();
-        auto calc2 = provider->getService<ICalculator>();
+        auto calc1 = provider->getService<ICalculator>(
+            ServiceNamespace::pluginNamespace("test-calculator")
+        );
+        auto calc2 = provider->getService<ICalculator>(
+            ServiceNamespace::pluginNamespace("test-calculator")
+        );
 
         // Transient services should be different instances
         REQUIRE(calc1.get() != calc2.get());
@@ -152,13 +159,14 @@ TEST_CASE("Multiple plugins can be loaded together", "[plugin][manager][multiple
     ServiceCollection services;
     PluginManager mgr(services);
 
-    SECTION("Load same plugin multiple times has no effect (same name)") {
+    SECTION("Load same plugin multiple times throws when services already registered") {
         mgr.loadPlugin(pluginPath);
-        
-        // Loading the same plugin again replaces the previous one
-        // (Since it has the same name)
-        REQUIRE_NOTHROW(mgr.loadPlugin(pluginPath));
-        
+
+        REQUIRE_THROWS_WITH(
+            mgr.loadPlugin(pluginPath),
+            Catch::Matchers::ContainsSubstring("Service already registered")
+        );
+
         auto plugins = mgr.getLoadedPlugins();
         REQUIRE(plugins.size() == 1);
     }

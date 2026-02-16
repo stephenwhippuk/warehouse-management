@@ -1,197 +1,100 @@
 #include "warehouse/controllers/WarehouseController.hpp"
-#include "warehouse/services/WarehouseService.hpp"
-#include "warehouse/dtos/ErrorDto.hpp"
+#include "warehouse/services/IWarehouseService.hpp"
 #include "warehouse/models/Warehouse.hpp"
-#include "warehouse/utils/Auth.hpp"
 #include "warehouse/utils/Logger.hpp"
-#include <Poco/Net/HTTPResponse.h>
 #include <nlohmann/json.hpp>
-#include <sstream>
 
 using json = nlohmann::json;
 
 namespace warehouse::controllers {
 
-using namespace Poco::Net;
-
-WarehouseController::WarehouseController(std::shared_ptr<services::WarehouseService> service)
-    : service_(service) {
-}
-
-void WarehouseController::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response) {
-    // Service-to-service authentication
-    auto authStatus = utils::Auth::authorizeServiceRequest(request);
-    if (authStatus == utils::AuthStatus::MissingToken) {
-        sendErrorResponse(response, HTTPResponse::HTTP_UNAUTHORIZED, "Missing service authentication");
-        return;
-    }
-    if (authStatus == utils::AuthStatus::InvalidToken) {
-        sendErrorResponse(response, HTTPResponse::HTTP_FORBIDDEN, "Invalid service authentication");
-        return;
-    }
-
-    try {
-        const std::string& method = request.getMethod();
-        const std::string& uri = request.getURI();
-        
-        utils::Logger::info("Request: {} {}", method, uri);
-        
-        if (method == "GET") {
-            if (uri == "/api/v1/warehouses") {
-                handleGetAll(request, response);
-            } else {
-                std::string id = extractIdFromPath(uri);
-                if (!id.empty()) {
-                    handleGetById(id, request, response);
-                } else {
-                    sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, "Invalid request");
-                }
-            }
-        } else if (method == "POST" && uri == "/api/v1/warehouses") {
-            handleCreate(request, response);
-        } else if (method == "PUT") {
-            std::string id = extractIdFromPath(uri);
-            if (!id.empty()) {
-                handleUpdate(id, request, response);
-            } else {
-                sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, "Invalid request");
-            }
-        } else if (method == "DELETE") {
-            std::string id = extractIdFromPath(uri);
-            if (!id.empty()) {
-                handleDelete(id, request, response);
-            } else {
-                sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, "Invalid request");
-            }
-        } else {
-            sendErrorResponse(response, HTTPResponse::HTTP_METHOD_NOT_ALLOWED, "Method not allowed");
-        }
-    } catch (const std::exception& e) {
-        utils::Logger::error("Error handling request: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Internal server error");
-    }
-}
-
-void WarehouseController::handleGetAll(HTTPServerRequest&, HTTPServerResponse& response) {
-    try {
-        auto dtos = service_->getAll();
-        json j = json::array();
-        for (const auto& dto : dtos) {
-            j.push_back(dto.toJson());
-        }
-        sendJsonResponse(response, HTTPResponse::HTTP_OK, j.dump());
-    } catch (const std::exception& e) {
-        utils::Logger::error("Error in handleGetAll: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to retrieve warehouses");
-    }
-}
-
-void WarehouseController::handleGetById(const std::string& id, HTTPServerRequest&, HTTPServerResponse& response) {
-    try {
-        auto dto = service_->getById(id);
-        if (!dto) {
-            sendErrorResponse(response, HTTPResponse::HTTP_NOT_FOUND, "Warehouse not found");
-            return;
-        }
-        sendJsonResponse(response, HTTPResponse::HTTP_OK, dto->toJson().dump());
-    } catch (const std::exception& e) {
-        utils::Logger::error("Error in handleGetById: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to retrieve warehouse");
-    }
-}
-
-void WarehouseController::handleCreate(HTTPServerRequest& request, HTTPServerResponse& response) {
-    try {
-        std::istream& input = request.stream();
-        json requestBody = json::parse(input);
-        
-        // Create Warehouse model from JSON
-        auto warehouse = models::Warehouse::fromJson(requestBody);
-        
-        // Call service which returns WarehouseDto
-        auto dto = service_->createWarehouse(warehouse);
-        
-        sendJsonResponse(response, HTTPResponse::HTTP_CREATED, dto.toJson().dump());
-    } catch (const json::exception& e) {
-        utils::Logger::error("JSON parse error in handleCreate: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, "Invalid JSON");
-    } catch (const std::invalid_argument& e) {
-        utils::Logger::error("Validation error in handleCreate: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, e.what());
-    } catch (const std::exception& e) {
-        utils::Logger::error("Error in handleCreate: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to create warehouse");
-    }
-}
-
-void WarehouseController::handleUpdate(const std::string& id, HTTPServerRequest& request, HTTPServerResponse& response) {
-    try {
-        std::istream& input = request.stream();
-        json requestBody = json::parse(input);
-        
-        // Ensure id is set in the JSON
-        requestBody["id"] = id;
-        
-        // Create Warehouse model from JSON
-        auto warehouse = models::Warehouse::fromJson(requestBody);
-        
-        // Call service which returns WarehouseDto
-        auto dto = service_->updateWarehouse(warehouse);
-        
-        sendJsonResponse(response, HTTPResponse::HTTP_OK, dto.toJson().dump());
-    } catch (const json::exception& e) {
-        utils::Logger::error("JSON parse error in handleUpdate: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, "Invalid JSON");
-    } catch (const std::invalid_argument& e) {
-        utils::Logger::error("Validation error in handleUpdate: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_BAD_REQUEST, e.what());
-    } catch (const std::runtime_error& e) {
-        utils::Logger::error("Error in handleUpdate: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_NOT_FOUND, e.what());
-    } catch (const std::exception& e) {
-        utils::Logger::error("Error in handleUpdate: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to update warehouse");
-    }
-}
-
-void WarehouseController::handleDelete(const std::string& id, HTTPServerRequest&, HTTPServerResponse& response) {
-    try {
-        bool deleted = service_->deleteWarehouse(id);
-        if (deleted) {
-            response.setStatus(HTTPResponse::HTTP_NO_CONTENT);
-            response.send();
-        } else {
-            sendErrorResponse(response, HTTPResponse::HTTP_NOT_FOUND, "Warehouse not found");
-        }
-    } catch (const std::exception& e) {
-        utils::Logger::error("Error in handleDelete: {}", e.what());
-        sendErrorResponse(response, HTTPResponse::HTTP_INTERNAL_SERVER_ERROR, "Failed to delete warehouse");
-    }
-}
-
-void WarehouseController::sendJsonResponse(HTTPServerResponse& response, int status, const std::string& body) {
-    response.setStatus(static_cast<HTTPResponse::HTTPStatus>(status));
-    response.setContentType("application/json");
-    response.setContentLength(body.length());
+WarehouseController::WarehouseController()
+    : http::ControllerBase("/api/v1/warehouses") {
     
-    auto& out = response.send();
-    out << body;
+    // GET /api/v1/warehouses (list all)
+    Get("/", [this](http::HttpContext& ctx) {
+        return this->handleGetAll(ctx);
+    });
+    
+    // GET /api/v1/warehouses/{id} (get by ID)
+    Get("/{id:uuid}", [this](http::HttpContext& ctx) {
+        return this->handleGetById(ctx);
+    });
+    
+    // POST /api/v1/warehouses (create)
+    Post("/", [this](http::HttpContext& ctx) {
+        return this->handleCreate(ctx);
+    });
+    
+    // PUT /api/v1/warehouses/{id} (update)
+    Put("/{id:uuid}", [this](http::HttpContext& ctx) {
+        return this->handleUpdate(ctx);
+    });
+    
+    // DELETE /api/v1/warehouses/{id} (delete)
+    Delete("/{id:uuid}", [this](http::HttpContext& ctx) {
+        return this->handleDelete(ctx);
+    });
 }
 
-void WarehouseController::sendErrorResponse(HTTPServerResponse& response, int status, const std::string& message) {
-    nlohmann::json error;
-    error["error"] = message;
-    error["status"] = status;
-    sendJsonResponse(response, status, error.dump());
-}
-
-std::string WarehouseController::extractIdFromPath(const std::string& path) {
-    // Extract UUID from path like /api/v1/warehouses/{id}
-    auto pos = path.rfind('/');
-    if (pos != std::string::npos) {
-        return path.substr(pos + 1);
+std::string WarehouseController::handleGetAll(http::HttpContext& ctx) {
+    auto service = ctx.getService<services::IWarehouseService>();
+    auto dtos = service->getAll();
+    json j = json::array();
+    for (const auto& dto : dtos) {
+        j.push_back(dto.toJson());
     }
-    return "";
+    return j.dump();
 }
 
-} // namespace warehouse::controllers
+std::string WarehouseController::handleGetById(http::HttpContext& ctx) {
+    std::string id = ctx.routeParams["id"];
+    auto service = ctx.getService<services::IWarehouseService>();
+    auto dto = service->getById(id);
+    
+    if (!dto) {
+        ctx.setStatus(Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
+        throw std::runtime_error("Warehouse not found");
+    }
+    
+    return dto->toJson().dump();
+}
+
+std::string WarehouseController::handleCreate(http::HttpContext& ctx) {
+    json body = ctx.getBodyAsJson();
+    auto service = ctx.getService<services::IWarehouseService>();
+    
+    auto warehouse = models::Warehouse::fromJson(body);
+    auto dto = service->createWarehouse(warehouse);
+    
+    ctx.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
+    return dto.toJson().dump();
+}
+
+std::string WarehouseController::handleUpdate(http::HttpContext& ctx) {
+    std::string id = ctx.routeParams["id"];
+    json body = ctx.getBodyAsJson();
+    body["id"] = id;  // Ensure ID matches route parameter
+    
+    auto service = ctx.getService<services::IWarehouseService>();
+    auto warehouse = models::Warehouse::fromJson(body);
+    auto dto = service->updateWarehouse(warehouse);
+    
+    return dto.toJson().dump();
+}
+
+std::string WarehouseController::handleDelete(http::HttpContext& ctx) {
+    std::string id = ctx.routeParams["id"];
+    auto service = ctx.getService<services::IWarehouseService>();
+    
+    bool deleted = service->deleteWarehouse(id);
+    if (!deleted) {
+        ctx.setStatus(Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
+        throw std::runtime_error("Warehouse not found");
+    }
+    
+    ctx.setStatus(Poco::Net::HTTPResponse::HTTP_NO_CONTENT);
+    return "";  // No content for 204
+}
+
+}  // namespace warehouse::controllers

@@ -46,7 +46,7 @@ public:
 private:
     Config config_;
     std::string connectionString_;
-    std::unique_ptr<pqxx::connection> connection_;
+    std::shared_ptr<pqxx::connection> connection_;
     
     std::string buildConnectionString() const;
 };

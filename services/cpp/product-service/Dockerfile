@@ -46,6 +46,8 @@ WORKDIR /app
 
 COPY --from=builder /warehouse-management/services/cpp/product-service/build/product-service /app/
 COPY --from=builder /warehouse-management/services/cpp/product-service/migrations /app/migrations
+COPY --from=builder /warehouse-management/services/cpp/product-service/claims.json /app/claims.json
+COPY --from=builder /warehouse-management/services/cpp/product-service/contracts /app/contracts
 COPY services/cpp/product-service/sqitch.conf services/cpp/product-service/sqitch.plan /app/
 COPY services/cpp/product-service/config/ /app/config/
 COPY services/cpp/product-service/docker-entrypoint.sh /app/

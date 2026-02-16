@@ -18,6 +18,24 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+# Add warehouse-messaging library path
+if(NOT DEFINED WAREHOUSE_MESSAGING_DIR)
+    set(WAREHOUSE_MESSAGING_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/warehouse-messaging")
+endif()
+add_subdirectory(${WAREHOUSE_MESSAGING_DIR} ${CMAKE_CURRENT_BINARY_DIR}/warehouse-messaging)
+
+# Add http-framework library path
+if(NOT DEFINED HTTP_FRAMEWORK_DIR)
+    set(HTTP_FRAMEWORK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/http-framework")
+endif()
+add_subdirectory(${HTTP_FRAMEWORK_DIR} ${CMAKE_BINARY_DIR}/http-framework)
+
+# Add contract-plugin library path
+if(NOT DEFINED CONTRACT_PLUGIN_DIR)
+    set(CONTRACT_PLUGIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../shared/contract-plugin")
+endif()
+add_subdirectory(${CONTRACT_PLUGIN_DIR} ${CMAKE_BINARY_DIR}/contract-plugin)
+
 # Find packages
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(PostgreSQL REQUIRED)
@@ -35,6 +53,7 @@ find_package(nlohmann_json_schema_validator QUIET)
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CONTRACT_PLUGIN_DIR}/include
     ${Boost_INCLUDE_DIRS}
     ${PostgreSQL_INCLUDE_DIRS}
 )
@@ -43,7 +62,6 @@ include_directories(
 set(SOURCES
     src/main.cpp
     src/Application.cpp
-    src/Server.cpp
     src/models/Warehouse.cpp
     src/models/Location.cpp
     src/models/Common.cpp
@@ -54,9 +72,7 @@ set(SOURCES
     src/dtos/LocationListDto.cpp
     src/controllers/WarehouseController.cpp
     src/controllers/LocationController.cpp
-    src/controllers/SwaggerController.cpp
     src/controllers/HealthController.cpp
-    src/controllers/ClaimsController.cpp
     src/repositories/WarehouseRepository.cpp
     src/repositories/LocationRepository.cpp
     src/services/WarehouseService.cpp
@@ -66,7 +82,6 @@ set(SOURCES
     src/utils/DtoMapper.cpp
     src/utils/Config.cpp
     src/utils/JsonValidator.cpp
-    src/utils/SwaggerGenerator.cpp
     src/utils/Auth.cpp
 )
 
@@ -79,9 +94,7 @@ set(HEADERS
     include/warehouse/models/Common.hpp
     include/warehouse/controllers/WarehouseController.hpp
     include/warehouse/controllers/LocationController.hpp
-    include/warehouse/controllers/SwaggerController.hpp
     include/warehouse/controllers/HealthController.hpp
-    include/warehouse/controllers/ClaimsController.hpp
     include/warehouse/repositories/WarehouseRepository.hpp
     include/warehouse/repositories/LocationRepository.hpp
     include/warehouse/services/WarehouseService.hpp
@@ -90,7 +103,6 @@ set(HEADERS
     include/warehouse/utils/Logger.hpp
     include/warehouse/utils/Config.hpp
     include/warehouse/utils/JsonValidator.hpp
-    include/warehouse/utils/SwaggerGenerator.hpp
     include/warehouse/utils/Auth.hpp
 )
 
@@ -100,9 +112,13 @@ add_executable(warehouse-service ${SOURCES} ${HEADERS})
 # Link libraries
 target_link_libraries(warehouse-service
     PRIVATE
+        warehouse-messaging
+        http-framework
+        contract-plugin
         Boost::system
         Boost::thread
         PostgreSQL::PostgreSQL
+        pqxx
         nlohmann_json::nlohmann_json
         spdlog::spdlog
         Poco::Net

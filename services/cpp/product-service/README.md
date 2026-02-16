@@ -24,6 +24,7 @@ Manages product/SKU information including name, description, category, and opera
 - `DELETE /api/v1/products/{id}` - Delete product
 - `GET /health` - Health check
 - `GET /api/swagger.json` - OpenAPI specification
+- `GET /api/v1/claims` - Service claims
 
 ## Building
 

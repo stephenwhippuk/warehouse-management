@@ -127,11 +127,18 @@ public:
 
 ```cpp
 #include "http-framework/HttpHost.hpp"
+#include "http-framework/ServiceCollection.hpp"
+#include "http-framework/ExceptionFilter.hpp"
 
 int main() {
-    auto host = http::HttpHost(8080);
+    http::ServiceCollection services;
+    auto provider = services.buildServiceProvider();
+    auto host = http::HttpHost(8080, provider);
     
-    // Add middleware
+    // HttpHost adds ServiceScopeMiddleware + ErrorHandlingMiddleware by default
+    // Optional: override default exception filter
+    // host.setExceptionFilter(std::make_shared<CustomExceptionFilter>());
+    // Add additional middleware
     host.use(std::make_shared<LoggingMiddleware>());
     host.use(std::make_shared<AuthenticationMiddleware>());
     host.use(std::make_shared<CorsMiddleware>());
