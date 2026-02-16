@@ -8,9 +8,11 @@
 namespace inventory {
 namespace services {
 
-InventoryService::InventoryService(std::shared_ptr<repositories::InventoryRepository> repository,
-                                   std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher)
-    : repository_(repository), eventPublisher_(std::move(eventPublisher)) {}
+InventoryService::InventoryService(http::IServiceProvider& provider) {
+    // Resolve dependencies from service provider
+    repository_ = provider.getService<repositories::InventoryRepository>();
+    eventPublisher_ = provider.getService<warehouse::messaging::EventPublisher>();
+}
 
 std::optional<dtos::InventoryItemDto> InventoryService::getById(const std::string& id) {
     auto inventory = repository_->findById(id);

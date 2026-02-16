@@ -76,8 +76,17 @@ void HttpHost::addController(std::shared_ptr<ControllerBase> controller) {
     if (running_) {
         throw std::runtime_error("Cannot add controllers while server is running");
     }
-    controllers_.push_back(controller);
-    controller->registerRoutes(router_);
+    
+    try {
+        controllers_.push_back(controller);
+        controller->registerRoutes(router_);
+    } catch (const std::runtime_error& e) {
+        controllers_.pop_back();  // Remove the controller we just added
+        throw std::runtime_error(
+            "Failed to register controller '" + controller->getBaseRoute() + "': " + 
+            std::string(e.what())
+        );
+    }
 }
 
 void HttpHost::addRoute(const std::string& method, const std::string& pattern, EndpointHandler handler) {

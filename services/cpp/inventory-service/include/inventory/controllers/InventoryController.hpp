@@ -1,7 +1,7 @@
 #pragma once
 
-#include "inventory/services/InventoryService.hpp"
 #include <http-framework/ControllerBase.hpp>
+#include <http-framework/IServiceProvider.hpp>
 #include <memory>
 
 namespace inventory {
@@ -9,12 +9,11 @@ namespace controllers {
 
 class InventoryController : public http::ControllerBase {
 public:
-    explicit InventoryController(std::shared_ptr<services::InventoryService> service);
+    InventoryController();
     
 private:
-    std::shared_ptr<services::InventoryService> service_;
-    
     // Helper methods
+    http::IServiceProvider& getScopedProvider(http::HttpContext& ctx);
     void requireServiceAuth(http::HttpContext& ctx);
     
     // Handler methods

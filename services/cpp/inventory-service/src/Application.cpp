@@ -2,9 +2,13 @@
 #include "inventory/utils/Config.hpp"
 #include "inventory/utils/Logger.hpp"
 #include "inventory/utils/Database.hpp"
+#include "inventory/services/IInventoryService.hpp"
+#include "inventory/services/InventoryService.hpp"
 #include "inventory/Server.hpp"
 #include <warehouse/messaging/EventConsumer.hpp>
 #include <warehouse/messaging/EventPublisher.hpp>
+#include <http-framework/ServiceCollection.hpp>
+#include <http-framework/IServiceScope.hpp>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 
@@ -40,7 +44,7 @@ void Application::run() {
     utils::Logger::info("Starting Inventory Service on port {}", serverPort_);
     
     Server server(serverPort_);
-    server.setInventoryService(inventoryService_);
+    server.setServiceProvider(serviceProvider_);
     server.start();
     
     utils::Logger::info("Inventory Service stopped");
@@ -91,21 +95,46 @@ void Application::initializeDatabase() {
 }
 
 void Application::initializeServices() {
-    auto db = utils::Database::getConnection();
+    utils::Logger::info("Initializing dependency injection container...");
     
-    // Initialize repositories
-    inventoryRepository_ = std::make_shared<repositories::InventoryRepository>(db);
-
-    // Initialize event publisher (for publishing inventory events)
-    utils::Logger::info("Initializing event publisher...");
-    eventPublisher_ = std::shared_ptr<warehouse::messaging::EventPublisher>(
-        warehouse::messaging::EventPublisher::create("inventory-service")
+    http::ServiceCollection services;
+    
+    // Register database connection as singleton
+    auto dbConnStr = dbConnectionString_;
+    services.addService<pqxx::connection>(
+        [dbConnStr](http::IServiceProvider& provider) -> std::shared_ptr<pqxx::connection> {
+            (void)provider;  // Unused
+            return utils::Database::getConnection();
+        },
+        http::ServiceLifetime::Singleton
     );
-
-    // Initialize services
-    inventoryService_ = std::make_shared<services::InventoryService>(inventoryRepository_, eventPublisher_);
+    
+    // Register event publisher as singleton
+    services.addService<warehouse::messaging::EventPublisher>(
+        [](http::IServiceProvider& provider) -> std::shared_ptr<warehouse::messaging::EventPublisher> {
+            (void)provider;  // Unused
+            return std::shared_ptr<warehouse::messaging::EventPublisher>(
+                warehouse::messaging::EventPublisher::create("inventory-service")
+            );
+        },
+        http::ServiceLifetime::Singleton
+    );
+    
+    // Register repository as scoped (per-request reuse)
+    services.addScoped<repositories::InventoryRepository, repositories::InventoryRepository>();
+    
+    // Register service as scoped (per-request reuse)
+    services.addScoped<services::IInventoryService, services::InventoryService>();
+    
+    // Build service provider
+    serviceProvider_ = services.buildServiceProvider();
+    
+    // Get event publisher for event consumer setup
+    auto scope = serviceProvider_->createScope();
+    eventPublisher_ = scope->getServiceProvider().getService<warehouse::messaging::EventPublisher>();
     
     // Initialize event handlers
+    auto db = utils::Database::getConnection();
     productEventHandler_ = std::make_shared<handlers::ProductEventHandler>(db);
     
     // Initialize event consumer (for receiving product events)

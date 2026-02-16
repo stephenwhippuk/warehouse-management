@@ -112,6 +112,7 @@ class Router {
 public:
     /**
      * @brief Add a route to the router
+     * @throws std::runtime_error if a route with same method and pattern already exists
      */
     void addRoute(const std::string& method, 
                   const std::string& pattern, 
@@ -119,6 +120,7 @@ public:
     
     /**
      * @brief Add a route from Route object
+     * @throws std::runtime_error if a route with same method and pattern already exists
      */
     void addRoute(std::shared_ptr<Route> route);
     
@@ -129,6 +131,14 @@ public:
      * @return Matching route or nullptr if no match
      */
     std::shared_ptr<Route> findRoute(const std::string& method, const std::string& path) const;
+    
+    /**
+     * @brief Check if a route with the same method and pattern already exists
+     * @param method HTTP method
+     * @param pattern Route pattern
+     * @return true if a matching route exists, false otherwise
+     */
+    bool hasRoute(const std::string& method, const std::string& pattern) const;
     
     /**
      * @brief Get all routes
@@ -147,6 +157,12 @@ public:
 
 private:
     std::vector<std::shared_ptr<Route>> routes_;
+    
+    /**
+     * @brief Check for duplicate route and throw if found
+     * @throws std::runtime_error if duplicate detected
+     */
+    void checkDuplicate(const std::string& method, const std::string& pattern) const;
 };
 
 /**

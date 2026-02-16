@@ -160,13 +160,38 @@ std::string Route::getConstraintRegex(RouteConstraint constraint) const {
 // Router Implementation
 // ============================================================================
 
+void Router::checkDuplicate(const std::string& method, const std::string& pattern) const {
+    for (const auto& route : routes_) {
+        if (route->getMethod() == method && route->getPattern() == pattern) {
+            throw std::runtime_error(
+                "Duplicate route: " + method + " " + pattern + 
+                " (already registered)"
+            );
+        }
+    }
+}
+
+bool Router::hasRoute(const std::string& method, const std::string& pattern) const {
+    for (const auto& route : routes_) {
+        if (route->getMethod() == method && route->getPattern() == pattern) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Router::addRoute(const std::string& method, 
                      const std::string& pattern, 
                      EndpointHandler handler) {
+    checkDuplicate(method, pattern);
     routes_.push_back(std::make_shared<Route>(method, pattern, handler));
 }
 
 void Router::addRoute(std::shared_ptr<Route> route) {
+    if (!route) {
+        throw std::invalid_argument("Route cannot be null");
+    }
+    checkDuplicate(route->getMethod(), route->getPattern());
     routes_.push_back(route);
 }
 

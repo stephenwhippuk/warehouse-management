@@ -1,7 +1,7 @@
 #pragma once
 
-#include "inventory/services/InventoryService.hpp"
 #include <http-framework/HttpHost.hpp>
+#include <http-framework/IServiceProvider.hpp>
 #include <memory>
 #include <string>
 
@@ -12,14 +12,14 @@ public:
     explicit Server(int port);
     ~Server();
     
-    void setInventoryService(std::shared_ptr<services::InventoryService> service);
+    void setServiceProvider(std::shared_ptr<http::IServiceProvider> provider);
     void start();
     void stop();
     
 private:
     int port_;
     std::unique_ptr<http::HttpHost> httpHost_;
-    std::shared_ptr<services::InventoryService> inventoryService_;
+    std::shared_ptr<http::IServiceProvider> serviceProvider_;
 };
 
 } // namespace inventory

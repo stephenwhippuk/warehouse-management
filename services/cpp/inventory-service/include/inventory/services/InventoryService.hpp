@@ -1,10 +1,12 @@
 #pragma once
 
+#include "inventory/services/IInventoryService.hpp"
 #include "inventory/models/Inventory.hpp"
 #include "inventory/repositories/InventoryRepository.hpp"
 #include <warehouse/messaging/EventPublisher.hpp>
 #include "inventory/dtos/InventoryItemDto.hpp"
 #include "inventory/dtos/InventoryOperationResultDto.hpp"
+#include <http-framework/IServiceProvider.hpp>
 #include <memory>
 #include <vector>
 #include <string>
@@ -13,37 +15,37 @@
 namespace inventory {
 namespace services {
 
-class InventoryService {
+class InventoryService : public IInventoryService {
 public:
-    explicit InventoryService(std::shared_ptr<repositories::InventoryRepository> repository,
-                             std::shared_ptr<warehouse::messaging::EventPublisher> eventPublisher);
+    // Constructor receives IServiceProvider for dependency resolution
+    explicit InventoryService(http::IServiceProvider& provider);
     
     // Inventory operations - return DTOs, not domain models
-    std::optional<dtos::InventoryItemDto> getById(const std::string& id);
-    std::vector<dtos::InventoryItemDto> getAll();
-    std::vector<dtos::InventoryItemDto> getByProductId(const std::string& productId);
-    std::vector<dtos::InventoryItemDto> getByWarehouseId(const std::string& warehouseId);
-    std::vector<dtos::InventoryItemDto> getByLocationId(const std::string& locationId);
-    std::vector<dtos::InventoryItemDto> getLowStock(int threshold);
-    std::vector<dtos::InventoryItemDto> getExpired();
+    std::optional<dtos::InventoryItemDto> getById(const std::string& id) override;
+    std::vector<dtos::InventoryItemDto> getAll() override;
+    std::vector<dtos::InventoryItemDto> getByProductId(const std::string& productId) override;
+    std::vector<dtos::InventoryItemDto> getByWarehouseId(const std::string& warehouseId) override;
+    std::vector<dtos::InventoryItemDto> getByLocationId(const std::string& locationId) override;
+    std::vector<dtos::InventoryItemDto> getLowStock(int threshold) override;
+    std::vector<dtos::InventoryItemDto> getExpired() override;
     
-    dtos::InventoryItemDto create(const models::Inventory& inventory);
-    dtos::InventoryItemDto update(const models::Inventory& inventory);
-    bool remove(const std::string& id);
+    dtos::InventoryItemDto create(const models::Inventory& inventory) override;
+    dtos::InventoryItemDto update(const models::Inventory& inventory) override;
+    bool remove(const std::string& id) override;
     
     // Stock operations - return operation result DTOs
-    dtos::InventoryOperationResultDto reserve(const std::string& id, int quantity);
-    dtos::InventoryOperationResultDto release(const std::string& id, int quantity);
-    dtos::InventoryOperationResultDto allocate(const std::string& id, int quantity);
-    dtos::InventoryOperationResultDto deallocate(const std::string& id, int quantity);
-    dtos::InventoryOperationResultDto adjust(const std::string& id, int quantityChange, const std::string& reason);
+    dtos::InventoryOperationResultDto reserve(const std::string& id, int quantity) override;
+    dtos::InventoryOperationResultDto release(const std::string& id, int quantity) override;
+    dtos::InventoryOperationResultDto allocate(const std::string& id, int quantity) override;
+    dtos::InventoryOperationResultDto deallocate(const std::string& id, int quantity) override;
+    dtos::InventoryOperationResultDto adjust(const std::string& id, int quantityChange, const std::string& reason) override;
     
     // Validation
-    bool isValidInventory(const models::Inventory& inventory) const;
+    bool isValidInventory(const models::Inventory& inventory) const override;
     
     // Aggregate queries
-    int getTotalQuantityForProduct(const std::string& productId);
-    int getAvailableQuantityForProduct(const std::string& productId);
+    int getTotalQuantityForProduct(const std::string& productId) override;
+    int getAvailableQuantityForProduct(const std::string& productId) override;
     
 private:
     std::shared_ptr<repositories::InventoryRepository> repository_;

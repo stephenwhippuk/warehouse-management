@@ -10,6 +10,10 @@ This is a microservices-based warehouse management system with:
 - **Redis**: Caching layer
 - **Sqitch**: Database migration management
 
+**Shared C++ Frameworks** (REQUIRED for all C++ services):
+- **HTTP Framework**: Controller-based routing, middleware pipeline, dependency injection (`/services/cpp/shared/http-framework/`)
+- **Messaging Framework**: RabbitMQ event publishing/consuming with production-ready resilience (`/services/cpp/shared/warehouse-messaging/`)
+
 **IMPORTANT**: This project uses a comprehensive **Contract System** to ensure consistency across services. All services must declare contracts (fulfilments/references), define DTOs/Requests/Events/Endpoints, and maintain a `claims.json` manifest. See "Contract System" section below and `/contracts/docs/overview.md` for full details.
 
 **CRITICAL ARCHITECTURE POLICY**: Services MUST return DTOs, NOT domain models. Domain models remain internal to the service/repository layers. DTOs are the external API contract. See "Data Transfer Objects (DTOs)" section and `/docs/dto-architecture-pattern.md` for complete implementation guide.
@@ -1589,39 +1593,54 @@ void reserve(const std::string& id, int quantity);
 1. Create directory structure (include/, src/, tests/, migrations/)
 2. Create contracts directory structure (/contracts/dtos/, /contracts/requests/, /contracts/events/, /contracts/endpoints/)
 3. Create claims.json manifest (declare fulfilments and references)
-4. Set up CMakeLists.txt
+4. **Add shared frameworks to CMakeLists.txt**:
+   - Add `http-framework` subdirectory and link
+   - Add `warehouse-messaging` subdirectory and link
 5. Create Dockerfile and docker-compose.yml
 6. Initialize Sqitch (sqitch.conf, sqitch.plan)
 7. Create initial migration
 8. Create models matching entity contracts (with toJson/fromJson) - **models remain internal**
-9. **Create DTO directory structure** (include/{service}/dtos/, src/dtos/)
-10. **Define DTO classes for all API responses:**
+9. **Create service interfaces** (IInventoryService, IInventoryRepository, etc.) for DI
+10. **Implement services with constructor injection** using `http::IServiceProvider&`
+11. **Create DTO directory structure** (include/{service}/dtos/, src/dtos/)
+12. **Define DTO classes for all API responses:**
     - ErrorDto (standard error)
     - EntityItemDto (single entity with references)
     - EntityListDto (paginated lists)
     - OperationResultDto (operation results)
-11. **Implement DTOs** (immutable, validated, with toJson())
-12. **Create DtoMapper utility** (utils/DtoMapper for model → DTO conversion)
-13. Define contract DTOs in /contracts/dtos/
-14. Define Requests for all API inputs (in /contracts/requests/)
-15. Define Events for all messages (in /contracts/events/)
-16. Define Endpoints for all HTTP endpoints (in /contracts/endpoints/)
-17. Validate field exposure (all fulfilled fields in DTOs or marked private)
-18. Implement repositories (returns models, not DTOs)
-19. **Implement services with DTO returns** (convert models to DTOs via DtoMapper)
-20. **Implement controllers** (work exclusively with DTOs, never touch models)
-21. Add DTO source files to CMakeLists.txt
-22. Implement SwaggerGenerator utility
-23. Add `/api/swagger.json` endpoint
-24. **CRITICAL: Create tests/DtoMapperTests.cpp** (comprehensive DTO validation tests)
-25. **Add test helpers** (createIso8601Timestamp, createValidEntity)
-26. **Test all enum conversions** (every enum value for every enum type)
-27. **Test DTO constructor validation** (UUID, empty fields, invalid enums, timestamps, quantities)
-28. **Test model→DTO conversions** (required fields, optional fields, identity fields)
-29. **Update tests/CMakeLists.txt** (add DtoMapperTests.cpp + DTO sources + DtoMapper.cpp)
-30. Create HTTP integration tests (verify API returns DTOs)
-31. Update README.md with API endpoints
-32. Create PROJECT_STRUCTURE.md
+13. **Implement DTOs** (immutable, validated, with toJson())
+14. **Create DtoMapper utility** (utils/DtoMapper for model → DTO conversion)
+15. Define contract DTOs in /contracts/dtos/
+16. Define Requests for all API inputs (in /contracts/requests/)
+17. Define Events for all messages (in /contracts/events/)
+18. Define Endpoints for all HTTP endpoints (in /contracts/endpoints/)
+19. Validate field exposure (all fulfilled fields in DTOs or marked private)
+20. Implement repositories (returns models, not DTOs)
+21. **Implement services with DTO returns** (convert models to DTOs via DtoMapper)
+22. **Create controllers using http::ControllerBase** (register routes with Get/Post/Put/Delete)
+23. **Implement controller handlers** (return std::string, work exclusively with DTOs)
+24. **Configure DI container** in Application.cpp:
+    - Register singletons (Database, Logger, Cache)
+    - Register scoped services (Repositories, Services)
+    - Add ServiceScopeMiddleware FIRST
+25. **Initialize messaging**:
+    - Create EventPublisher for service
+    - Create EventConsumer with routing keys
+    - Register event handlers
+26. **Set up HttpHost** with middleware and controllers
+27. Add DTO source files to CMakeLists.txt
+28. Implement SwaggerGenerator utility
+29. Add `/api/swagger.json` endpoint
+30. **CRITICAL: Create tests/DtoMapperTests.cpp** (comprehensive DTO validation tests)
+31. **Add test helpers** (createIso8601Timestamp, createValidEntity)
+32. **Test all enum conversions** (every enum value for every enum type)
+33. **Test DTO constructor validation** (UUID, empty fields, invalid enums, timestamps, quantities)
+34. **Test model→DTO conversions** (required fields, optional fields, identity fields)
+35. **Update tests/CMakeLists.txt** (add DtoMapperTests.cpp + DTO sources + DtoMapper.cpp)
+36. Create HTTP integration tests (verify API returns DTOs)
+37. **Test event publishing/consuming** (with mock publisher in unit tests)
+38. Update README.md with API endpoints
+39. Create PROJECT_STRUCTURE.md
 
 **New Endpoint Checklist:**
 1. Define Request in service's `/contracts/requests/`
@@ -1630,13 +1649,14 @@ void reserve(const std::string& id, int quantity);
 4. Define Endpoint in service's `/contracts/endpoints/`
 5. Ensure Request `basis` matches service's fulfilments/references
 6. **Implement service method** (returns DTO, not model)
-7. **Implement controller method** (calls service, gets DTO, returns JSON)
-8. **Add DTO tests to DtoMapperTests.cpp** (if new DTO created)
-9. **Test DTO constructor validation** (all validation rules)
-10. **Test DtoMapper conversion** (model → new DTO)
-11. Add endpoint to OpenAPI/Swagger
-12. Add HTTP integration test
-13. Update README.md
+7. **Add route to controller** using Get/Post/Put/Delete with lambda
+8. **Implement handler method** (calls service, gets DTO, returns JSON string)
+9. **Add DTO tests to DtoMapperTests.cpp** (if new DTO created)
+10. **Test DTO constructor validation** (all validation rules)
+11. **Test DtoMapper conversion** (model → new DTO)
+12. Add endpoint to OpenAPI/Swagger
+13. Add HTTP integration test
+14. Update README.md
 
 **Adding Field to Fulfilled Entity:**
 1. Update entity contract in `/contracts/entities/v1/` (new version if breaking)
@@ -1662,9 +1682,12 @@ void reserve(const std::string& id, int quantity);
 2. Ensure event's data Dto exists in `/contracts/dtos/`
 3. **Create C++ DTO class for event payload**
 4. Include standard metadata fields (eventId, timestamp, correlationId, source)
-5. Implement event publishing after successful state changes
-6. Use correlation IDs for tracing
-7. Update README.md with event documentation
+5. **Inject EventPublisher into service** via constructor or DI
+6. **Publish event AFTER successful state change** (after DB update)
+7. Use warehouse::messaging::Event with routing key format: `domain.action`
+8. Use correlation IDs for tracing
+9. **Add unit test with mock publisher** to verify event is published
+10. Update README.md with event documentation
 
 **New Migration Checklist:**
 1. Add with Sqitch: `sqitch add NNN_name -n "Description"`
@@ -1673,6 +1696,889 @@ void reserve(const std::string& id, int quantity);
 4. Write verify script (test changes exist)
 5. Test locally: deploy → verify → revert → deploy
 6. Commit to Git with plan file
+
+## HTTP Framework (Shared Library)
+
+### Overview
+
+All C++ services MUST use the **shared HTTP framework** (`/services/cpp/shared/http-framework/`) for consistent API behavior. The framework provides:
+
+- **Controller-based routing** with automatic parameter extraction
+- **Middleware pipeline** for cross-cutting concerns (auth, logging, CORS)
+- **Dependency Injection (DI)** container with service lifetimes
+- **Plugin system** for extensibility
+- **Reduced boilerplate**: 10-20 lines vs 200+ lines of manual routing
+
+**Location**: `/services/cpp/shared/http-framework/`  
+**Documentation**: 
+- `/services/cpp/shared/http-framework/README.md`
+- `/services/cpp/shared/http-framework/MIGRATION_GUIDE.md`
+- `/services/cpp/shared/http-framework/examples/di_server.cpp` (complete example)
+
+### Quick Start: Controller Pattern
+
+**Standard Controller Structure**:
+
+```cpp
+#include "http-framework/ControllerBase.hpp"
+#include "http-framework/HttpContext.hpp"
+
+class InventoryController : public http::ControllerBase {
+public:
+    explicit InventoryController(std::shared_ptr<InventoryService> service)
+        : http::ControllerBase("/api/v1/inventory")
+        , service_(service) {
+        
+        // Register endpoints with fluent API
+        Get("/", [this](http::HttpContext& ctx) {
+            return this->getAll(ctx);
+        });
+        
+        Get("/{id:uuid}", [this](http::HttpContext& ctx) {
+            return this->getById(ctx);
+        });
+        
+        Post("/", [this](http::HttpContext& ctx) {
+            return this->create(ctx);
+        });
+        
+        Put("/{id:uuid}", [this](http::HttpContext& ctx) {
+            return this->update(ctx);
+        });
+        
+        Delete("/{id:uuid}", [this](http::HttpContext& ctx) {
+            return this->deleteById(ctx);
+        });
+        
+        Post("/{id:uuid}/reserve", [this](http::HttpContext& ctx) {
+            return this->reserve(ctx);
+        });
+    }
+
+private:
+    std::shared_ptr<InventoryService> service_;
+    
+    std::string getAll(http::HttpContext& ctx) {
+        // Query parameters
+        int page = ctx.queryParams.getInt("page").value_or(1);
+        int pageSize = ctx.queryParams.getInt("pageSize").value_or(20);
+        
+        auto items = service_->getAll(page, pageSize);
+        json j = json::array();
+        for (const auto& item : items) {
+            j.push_back(item.toJson());
+        }
+        return j.dump();
+    }
+    
+    std::string getById(http::HttpContext& ctx) {
+        // Route parameters automatically extracted
+        std::string id = ctx.routeParams["id"];
+        auto item = service_->getById(id);
+        
+        if (!item) {
+            ctx.setStatus(Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
+            return R"({"error": "Item not found"})";
+        }
+        
+        return item->toJson().dump();
+    }
+    
+    std::string create(http::HttpContext& ctx) {
+        // Parse JSON body
+        json body = ctx.getBodyAsJson();
+        std::string productId = body["productId"];
+        int quantity = body["quantity"];
+        
+        auto item = service_->create(productId, quantity);
+        
+        ctx.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
+        return item->toJson().dump();
+    }
+    
+    std::string reserve(http::HttpContext& ctx) {
+        std::string id = ctx.routeParams["id"];
+        json body = ctx.getBodyAsJson();
+        int quantity = body["quantity"];
+        
+        auto result = service_->reserve(id, quantity);
+        if (!result.success) {
+            ctx.setStatus(Poco::Net::HTTPResponse::HTTP_CONFLICT);
+            return json{{"error", result.message}}.dump();
+        }
+        
+        return result.toJson().dump();
+    }
+};
+```
+
+### HttpContext API
+
+**Route Parameters** (from URL path):
+```cpp
+std::string id = ctx.routeParams["id"];
+```
+
+**Query Parameters** (from URL query string):
+```cpp
+// With default value
+int page = ctx.queryParams.getInt("page").value_or(1);
+std::string filter = ctx.queryParams.get("filter", "all");
+
+// Check existence
+if (ctx.queryParams.has("includeArchived")) { /* ... */ }
+```
+
+**Request Body**:
+```cpp
+// Parse JSON body
+json body = ctx.getBodyAsJson();
+
+// Or get raw string
+std::string raw = ctx.getBodyAsString();
+```
+
+**Headers**:
+```cpp
+std::string authHeader = ctx.getHeader("Authorization", "");
+bool hasAuth = ctx.hasHeader("X-Api-Key");
+ctx.setHeader("X-Request-Id", requestId);
+```
+
+**Response Status**:
+```cpp
+ctx.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);        // 201
+ctx.setStatus(Poco::Net::HTTPResponse::HTTP_NOT_FOUND);      // 404
+ctx.setStatus(Poco::Net::HTTPResponse::HTTP_CONFLICT);       // 409
+ctx.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR); // 500
+```
+
+**Return Value**: All handlers MUST return `std::string` (JSON serialized response)
+
+### Route Constraints
+
+Use constraints for type validation:
+
+```cpp
+Get("/{id:uuid}", ...);     // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Get("/{id:int}", ...);      // Integer: \d+
+Post("/{id:alpha}", ...);   // Alphabetic: [a-zA-Z]+
+```
+
+### Middleware Pattern
+
+**Standard Middleware Structure**:
+
+```cpp
+#include "http-framework/Middleware.hpp"
+
+class LoggingMiddleware : public http::Middleware {
+public:
+    void process(http::HttpContext& ctx, std::function<void()> next) override {
+        // Before request
+        spdlog::info("→ {} {}", ctx.request.getMethod(), ctx.request.getURI());
+        auto start = std::chrono::steady_clock::now();
+        
+        // Call next middleware in pipeline
+        next();
+        
+        // After request
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start);
+        spdlog::info("← {} {}ms", ctx.response.getStatus(), duration.count());
+    }
+};
+```
+
+**Common Middleware Examples**:
+- **LoggingMiddleware**: Request/response logging
+- **AuthenticationMiddleware**: JWT/API key validation
+- **CorsMiddleware**: CORS headers
+- **ServiceScopeMiddleware**: Per-request DI scoping (see DI section)
+
+### Application Setup (Manual DI)
+
+**Basic setup without DI container**:
+
+```cpp
+#include "http-framework/HttpHost.hpp"
+#include "controllers/InventoryController.hpp"
+
+int main() {
+    // Create services manually
+    auto db = std::make_shared<Database>(/* config */);
+    auto repository = std::make_shared<InventoryRepository>(db);
+    auto service = std::make_shared<InventoryService>(repository);
+    
+    // Create HTTP host
+    http::HttpHost host(8080, "0.0.0.0");
+    
+    // Add middleware (order matters!)
+    host.use(std::make_shared<LoggingMiddleware>());
+    host.use(std::make_shared<AuthenticationMiddleware>());
+    host.use(std::make_shared<CorsMiddleware>());
+    
+    // Register controllers
+    host.addController(std::make_shared<InventoryController>(service));
+    
+    // Start server
+    spdlog::info("Starting server on port 8080");
+    host.start();
+    
+    return 0;
+}
+```
+
+### CMakeLists.txt Integration
+
+```cmake
+# Add http-framework subdirectory
+add_subdirectory(${CMAKE_SOURCE_DIR}/../shared/http-framework http-framework)
+
+# Link against http-framework
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        http-framework
+        # ... other dependencies
+)
+```
+
+## Dependency Injection (DI) System
+
+### Overview
+
+The HTTP framework includes a **production-ready DI container** for managing service lifecycles and dependencies. Use DI for ALL new services.
+
+**Benefits**:
+- Automatic dependency resolution
+- Testable architecture (mockable services)
+- Clear lifecycle management (Singleton, Scoped, Transient)
+- Reduced boilerplate (no manual instantiation)
+
+**Documentation**:
+- `/services/cpp/shared/http-framework/MIGRATION_GUIDE.md` (Part 2: DI Migration)
+- `/services/cpp/shared/http-framework/examples/di_server.cpp` (complete working example)
+- `/services/cpp/shared/http-framework/ORIGINAL_PHASE_5_COMPLETE.md` (validation results)
+
+### Service Lifetimes
+
+**Singleton** (created once, shared across entire application):
+- Use for: Database connections, connection pools, caches, loggers
+- Example: `IDatabase`, `ILogger`, `ICache`
+- Thread-safe, shared state
+
+**Scoped** (created per HTTP request, disposed after response):
+- Use for: Repositories, business services, per-request context
+- Example: `IInventoryRepository`, `IInventoryService`
+- Isolated per request, no shared state between requests
+
+**Transient** (created every time requested):
+- Use for: Lightweight, stateless operations
+- Example: Validators, mappers
+- New instance each time
+
+### Quick Start: DI-Enabled Service
+
+#### Step 1: Define Service Interface
+
+```cpp
+// include/{service}/services/IInventoryService.hpp
+class IInventoryService {
+public:
+    virtual ~IInventoryService() = default;
+    virtual std::vector<InventoryItem> getAll() const = 0;
+    virtual std::optional<InventoryItem> getById(const std::string& id) const = 0;
+    virtual InventoryItem create(const std::string& productId, int quantity) = 0;
+    virtual bool reserve(const std::string& id, int quantity) = 0;
+};
+```
+
+#### Step 2: Implement with Constructor Injection
+
+```cpp
+// src/services/InventoryService.cpp
+#include "http-framework/ServiceProvider.hpp"
+
+class InventoryService : public IInventoryService {
+public:
+    // Constructor takes IServiceProvider and resolves dependencies
+    explicit InventoryService(http::IServiceProvider& provider)
+        : repository_(provider.getService<IInventoryRepository>())
+        , logger_(provider.getService<ILogger>()) {
+        logger_->info("InventoryService created (Scoped)");
+    }
+    
+    ~InventoryService() override {
+        logger_->info("InventoryService destroyed (Scoped - request complete)");
+    }
+    
+    std::vector<InventoryItem> getAll() const override {
+        return repository_->findAll();
+    }
+    
+    std::optional<InventoryItem> getById(const std::string& id) const override {
+        return repository_->findById(id);
+    }
+    
+private:
+    std::shared_ptr<IInventoryRepository> repository_;
+    std::shared_ptr<ILogger> logger_;
+};
+```
+
+#### Step 3: Register Services in Application
+
+```cpp
+#include "http-framework/ServiceCollection.hpp"
+#include "http-framework/ServiceProvider.hpp"
+#include "http-framework/ServiceScopeMiddleware.hpp"
+
+int main() {
+    // =========================================================================
+    // Step 1: Configure DI Container
+    // =========================================================================
+    http::ServiceCollection services;
+    
+    // Infrastructure (Singleton - shared across app)
+    services.addService<IDatabase, Database>(http::ServiceLifetime::Singleton);
+    services.addService<ILogger, Logger>(http::ServiceLifetime::Singleton);
+    services.addService<ICache, RedisCache>(http::ServiceLifetime::Singleton);
+    
+    // Data Access (Scoped - per request)
+    services.addService<IInventoryRepository, InventoryRepository>(
+        http::ServiceLifetime::Scoped
+    );
+    
+    // Business Logic (Scoped - per request)
+    services.addService<IInventoryService, InventoryService>(
+        http::ServiceLifetime::Scoped
+    );
+    
+    // Build service provider
+    auto provider = services.buildServiceProvider();
+    
+    // =========================================================================
+    // Step 2: Configure HTTP Host
+    // =========================================================================
+    http::HttpHost host(8080, "0.0.0.0");
+    
+    // CRITICAL: Add ServiceScopeMiddleware FIRST to enable per-request scoping
+    host.use(std::make_shared<http::ServiceScopeMiddleware>(provider));
+    
+    // Other middleware
+    host.use(std::make_shared<LoggingMiddleware>());
+    host.use(std::make_shared<AuthenticationMiddleware>());
+    
+    // =========================================================================
+    // Step 3: Register Controllers (can now use DI)
+    // =========================================================================
+    host.addController(std::make_shared<InventoryController>(*provider));
+    
+    // =========================================================================
+    // Step 4: Start Server
+    // =========================================================================
+    spdlog::info("Server running at http://localhost:8080");
+    host.start();
+    
+    return 0;
+}
+```
+
+#### Step 4: Controllers Resolve Services from Request Scope
+
+```cpp
+class InventoryController : public http::ControllerBase {
+public:
+    // Controller stores reference to root provider
+    explicit InventoryController(http::IServiceProvider& provider)
+        : http::ControllerBase("/api/v1/inventory")
+        , provider_(provider) {
+        
+        Get("/", [this](http::HttpContext& ctx) {
+            return this->getAll(ctx);
+        });
+    }
+
+private:
+    http::IServiceProvider& provider_;
+    
+    std::string getAll(http::HttpContext& ctx) {
+        // Resolve scoped service from REQUEST SCOPE (via HttpContext)
+        // ServiceScopeMiddleware creates a new scope for each request
+        auto service = ctx.getService<IInventoryService>();
+        
+        // Service is created fresh for this request
+        // Dependencies (repository, logger) also created in this scope
+        auto items = service->getAll();
+        
+        // After response, scope is destroyed and all scoped services cleaned up
+        json j = json::array();
+        for (const auto& item : items) {
+            j.push_back(item.toJson());
+        }
+        return j.dump();
+    }
+};
+```
+
+### DI Service Resolution Pattern
+
+**From HttpContext** (recommended for handlers):
+```cpp
+std::string handler(http::HttpContext& ctx) {
+    // Resolve service from request scope
+    auto service = ctx.getService<IInventoryService>();
+    
+    // Use service (automatically destroyed after response)
+    auto result = service->doWork();
+    return result.toJson().dump();
+}
+```
+
+**From IServiceProvider** (for constructors):
+```cpp
+class MyService {
+public:
+    explicit MyService(http::IServiceProvider& provider)
+        : dependency_(provider.getService<IDependency>()) {
+    }
+private:
+    std::shared_ptr<IDependency> dependency_;
+};
+```
+
+### Service Lifecycle Example
+
+**Singleton Lifecycle** (created once at startup):
+```
+App Start:
+  [Database] ✅ Created (Singleton)
+  [Logger] ✅ Created (Singleton)
+
+Request 1:
+  (singletons reused)
+
+Request 2:
+  (singletons reused)
+
+App Shutdown:
+  [Logger] 🗑️ Destroyed
+  [Database] 🗑️ Destroyed
+```
+
+**Scoped Lifecycle** (created per request):
+```
+Request 1:
+  [ServiceScope] ✅ Created for request
+  [InventoryRepository] ✅ Created (Scoped) - uses Singleton Database
+  [InventoryService] ✅ Created (Scoped) - uses Repository
+  → Handler executes
+  [InventoryService] 🗑️ Destroyed (Scoped)
+  [InventoryRepository] 🗑️ Destroyed (Scoped)
+  [ServiceScope] 🗑️ Destroyed
+
+Request 2:
+  [ServiceScope] ✅ Created for request
+  [InventoryRepository] ✅ Created (Scoped) - NEW instance
+  [InventoryService] ✅ Created (Scoped) - NEW instance
+  → Handler executes
+  [InventoryService] 🗑️ Destroyed (Scoped)
+  [InventoryRepository] 🗑️ Destroyed (Scoped)
+  [ServiceScope] 🗑️ Destroyed
+```
+
+### Testing with DI
+
+**Mock services for unit tests**:
+
+```cpp
+#include <catch2/catch_all.hpp>
+#include "http-framework/ServiceCollection.hpp"
+
+// Mock implementation
+class MockInventoryRepository : public IInventoryRepository {
+public:
+    MOCK_METHOD(std::optional<InventoryItem>, findById, (const std::string&), (override));
+    MOCK_METHOD(std::vector<InventoryItem>, findAll, (), (override));
+};
+
+TEST_CASE("InventoryService with mocked dependencies", "[service][di]") {
+    // Setup DI container with mocks
+    http::ServiceCollection services;
+    services.addService<IInventoryRepository, MockInventoryRepository>(
+        http::ServiceLifetime::Scoped
+    );
+    services.addService<IInventoryService, InventoryService>(
+        http::ServiceLifetime::Scoped
+    );
+    
+    auto provider = services.buildServiceProvider();
+    auto scope = provider->createScope();
+    
+    // Get service to test
+    auto service = scope->getServiceProvider().getService<IInventoryService>();
+    
+    // Test behavior
+    REQUIRE(service != nullptr);
+    auto items = service->getAll();
+    REQUIRE(items.empty()); // Mock returns empty
+}
+```
+
+### Common DI Patterns
+
+**Pattern 1: Service depends on other services**:
+```cpp
+class InventoryService {
+    explicit InventoryService(http::IServiceProvider& provider)
+        : repository_(provider.getService<IInventoryRepository>())
+        , logger_(provider.getService<ILogger>())
+        , cache_(provider.getService<ICache>()) {
+    }
+};
+```
+
+**Pattern 2: Service depends on configuration**:
+```cpp
+class Database {
+    explicit Database(http::IServiceProvider& provider) {
+        // Get config from environment or config service
+        std::string connectionString = std::getenv("DATABASE_URL");
+        connect(connectionString);
+    }
+};
+```
+
+**Pattern 3: Factory pattern**:
+```cpp
+services.addService<IInventoryRepository>(
+    http::ServiceLifetime::Scoped,
+    [](http::IServiceProvider& provider) {
+        auto db = provider.getService<IDatabase>();
+        auto logger = provider.getService<ILogger>();
+        return std::make_shared<InventoryRepository>(db, logger);
+    }
+);
+```
+
+### DI Best Practices
+
+1. **Always use interfaces** - Services should depend on abstractions (`IService`), not concrete implementations
+2. **Use constructor injection** - Dependencies passed via constructor, stored as members
+3. **Choose correct lifetime**:
+   - Singleton: Shared resources (DB, cache, logger)
+   - Scoped: Request-specific (repositories, services)
+   - Transient: Stateless utilities (validators)
+4. **ServiceScopeMiddleware first** - Must be first middleware to enable per-request scoping
+5. **Resolve from HttpContext** - In handlers, use `ctx.getService<T>()` for request scope
+6. **No circular dependencies** - If Service A needs Service B needs Service A, refactor
+7. **Test with mocks** - Mock interfaces for unit testing
+
+## Messaging Framework (RabbitMQ)
+
+### Overview
+
+All C++ services MUST use the **shared messaging library** (`/services/cpp/shared/warehouse-messaging/`) for event-driven communication. The library provides:
+
+- **Simple API**: 10-20 lines vs 200+ lines of RabbitMQ boilerplate
+- **Production-ready resilience**: Durable queues, manual ACK, auto-retry, DLQ
+- **Automatic reconnection**: Survives broker restarts
+- **Thread-safe**: Safe for concurrent use
+
+**Location**: `/services/cpp/shared/warehouse-messaging/`  
+**Documentation**: `/services/cpp/shared/warehouse-messaging/README.md`
+
+### Quick Start: Publishing Events
+
+```cpp
+#include "warehouse/messaging/EventPublisher.hpp"
+#include "warehouse/messaging/Event.hpp"
+
+using namespace warehouse::messaging;
+
+int main() {
+    // Create publisher (uses environment variables for config)
+    auto publisher = EventPublisher::create("inventory-service");
+    
+    // Create event
+    json data = {
+        {"id", "550e8400-e29b-41d4-a716-446655440000"},
+        {"productId", "prod-123"},
+        {"quantity", 50},
+        {"status", "reserved"}
+    };
+    
+    Event event("inventory.reserved", data, "inventory-service");
+    
+    // Publish (fire-and-forget)
+    publisher->publish(event);
+    
+    spdlog::info("Published inventory.reserved event");
+    
+    return 0;
+}
+```
+
+### Quick Start: Consuming Events
+
+```cpp
+#include "warehouse/messaging/EventConsumer.hpp"
+#include "warehouse/messaging/Event.hpp"
+
+using namespace warehouse::messaging;
+
+int main() {
+    // Create consumer
+    std::vector<std::string> routingKeys = {
+        "inventory.reserved",
+        "inventory.released",
+        "inventory.allocated"
+    };
+    
+    auto consumer = EventConsumer::create("order-service", routingKeys);
+    
+    // Register event handlers
+    consumer->onEvent("inventory.reserved", [](const Event& event) {
+        std::string id = event.getData()["id"];
+        int quantity = event.getData()["quantity"];
+        spdlog::info("Inventory reserved: {} units of {}", quantity, id);
+        
+        // Process event (update order status, etc.)
+        // If this throws, event is automatically retried (max 3 times)
+        // After retries exhaused, message moves to DLQ
+    });
+    
+    consumer->onEvent("inventory.released", [](const Event& event) {
+        spdlog::info("Inventory released: {}", event.getData()["id"].dump());
+        // Handle release...
+    });
+    
+    // Start consuming (blocking or background thread)
+    consumer->start();
+    
+    // Keep app running...
+    std::this_thread::sleep_for(std::chrono::hours(24));
+    
+    // Graceful shutdown
+    consumer->stop();
+    
+    return 0;
+}
+```
+
+### Event Structure
+
+**Standard Event Fields**:
+```cpp
+Event event(
+    "domain.action",           // Routing key (e.g., "product.created")
+    jsonData,                  // Event payload (JSON)
+    "source-service"           // Source service name
+);
+
+// Automatically includes:
+event.getEventId();          // UUID
+event.getTimestamp();        // ISO 8601 timestamp
+event.getCorrelationId();    // Optional correlation ID
+event.getRoutingKey();       // Routing key
+event.getData();             // JSON payload
+event.getSource();           // Source service
+```
+
+### Configuration
+
+**Environment Variables** (production-ready defaults):
+
+```bash
+# RabbitMQ Connection
+export RABBITMQ_HOST=localhost
+export RABBITMQ_PORT=5672
+export RABBITMQ_USER=warehouse
+export RABBITMQ_PASSWORD=warehouse_dev
+export RABBITMQ_VHOST=/
+export RABBITMQ_EXCHANGE=warehouse.events
+
+# Service Identity
+export SERVICE_NAME=inventory-service
+```
+
+**Embedded Resilience (No Config Needed)**:
+- ✅ Durable queues (survive broker restart)
+- ✅ Persistent messages (survive broker crash)
+- ✅ Manual ACK (reliable processing)
+- ✅ Auto-retry (3 attempts with exponential backoff)
+- ✅ Dead Letter Queue (failed messages)
+- ✅ Auto-reconnect (recover from connection loss)
+- ✅ QoS Prefetch (load balancing)
+
+### Integration with Services
+
+**In Application.cpp**:
+
+```cpp
+#include "warehouse/messaging/EventPublisher.hpp"
+#include "warehouse/messaging/EventConsumer.hpp"
+
+class Application {
+public:
+    void initialize() {
+        // Initialize publisher
+        publisher_ = EventPublisher::create("inventory-service");
+        
+        // Initialize consumer
+        std::vector<std::string> routingKeys = {"product.created", "product.updated"};
+        consumer_ = EventConsumer::create("inventory-service", routingKeys);
+        
+        // Register handlers
+        consumer_->onEvent("product.created", [this](const Event& event) {
+            handleProductCreated(event);
+        });
+        
+        // Start consuming in background
+        consumer_->start();
+        
+        // Start HTTP server
+        startHttpServer();
+    }
+    
+    void shutdown() {
+        consumer_->stop();
+        // Clean shutdown
+    }
+    
+private:
+    std::shared_ptr<EventPublisher> publisher_;
+    std::shared_ptr<EventConsumer> consumer_;
+    
+    void handleProductCreated(const Event& event) {
+        // Business logic here
+        // Throws exception on failure → automatic retry
+    }
+};
+```
+
+### Publishing Events from Services
+
+**Pattern: Publish after successful state change**:
+
+```cpp
+class InventoryService {
+public:
+    InventoryService(
+        std::shared_ptr<IInventoryRepository> repository,
+        std::shared_ptr<EventPublisher> publisher)
+        : repository_(repository)
+        , publisher_(publisher) {
+    }
+    
+    bool reserve(const std::string& id, int quantity) {
+        // 1. Update database
+        auto inventory = repository_->findById(id);
+        if (!inventory || inventory->getAvailableQuantity() < quantity) {
+            return false;
+        }
+        
+        inventory->reserve(quantity);
+        repository_->update(*inventory);
+        
+        // 2. Publish event (fire-and-forget)
+        json eventData = {
+            {"id", id},
+            {"productId", inventory->getProductId()},
+            {"quantity", quantity},
+            {"reservedQuantity", inventory->getReservedQuantity()},
+            {"availableQuantity", inventory->getAvailableQuantity()}
+        };
+        
+        Event event("inventory.reserved", eventData, "inventory-service");
+        publisher_->publish(event);
+        
+        return true;
+    }
+    
+private:
+    std::shared_ptr<IInventoryRepository> repository_;
+    std::shared_ptr<EventPublisher> publisher_;
+};
+```
+
+### Event Handler Best Practices
+
+1. **Idempotent handlers** - Handle duplicate messages gracefully (check if already processed)
+2. **Fast processing** - Keep handlers lightweight (< 1 second)
+3. **Error handling** - Throw exceptions to trigger automatic retry
+4. **Dead letter monitoring** - Monitor DLQ for persistent failures
+5. **Correlation IDs** - Use for request tracing across services
+
+### Messaging Patterns
+
+**Pattern 1: Domain Events** (notify other services of state changes):
+```cpp
+// Routing keys: domain.action
+"inventory.reserved"
+"inventory.released"
+"product.created"
+"order.placed"
+```
+
+**Pattern 2: Integration Events** (cross-service workflows):
+```cpp
+// order-service publishes
+Event("order.placed", {...}, "order-service");
+
+// inventory-service consumes and publishes
+Event("inventory.allocated", {...}, "inventory-service");
+
+// warehouse-service consumes
+// (order.placed → inventory.allocated → warehouse.pick_requested)
+```
+
+**Pattern 3: Event Sourcing** (audit trail):
+```cpp
+// Store all state changes as events
+Event("inventory.quantity_adjusted", {...});
+Event("inventory.status_changed", {...});
+// Rebuild state by replaying events
+```
+
+### CMakeLists.txt Integration
+
+```cmake
+# Add warehouse-messaging subdirectory
+add_subdirectory(${CMAKE_SOURCE_DIR}/../shared/warehouse-messaging warehouse-messaging)
+
+# Link against warehouse-messaging
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        warehouse::warehouse-messaging
+        # ... other dependencies
+)
+```
+
+### Testing Messaging
+
+**Mock EventPublisher for unit tests**:
+
+```cpp
+class MockEventPublisher : public EventPublisher {
+public:
+    std::vector<Event> publishedEvents;
+    
+    void publish(const Event& event) override {
+        publishedEvents.push_back(event);
+    }
+};
+
+TEST_CASE("Service publishes event on reserve", "[service][messaging]") {
+    auto mockPublisher = std::make_shared<MockEventPublisher>();
+    InventoryService service(repository, mockPublisher);
+    
+    service->reserve("id-123", 10);
+    
+    REQUIRE(mockPublisher->publishedEvents.size() == 1);
+    REQUIRE(mockPublisher->publishedEvents[0].getRoutingKey() == "inventory.reserved");
+}
+```
 
 ## General Best Practices
 
@@ -1696,3 +2602,19 @@ void reserve(const std::string& id, int quantity);
 - **DTO Architecture Pattern**: `/docs/dto-architecture-pattern.md` (REQUIRED READING for all service development)
 - Contract System: `/contracts/docs/overview.md` (REQUIRED READING)
 - Contracts Directory: `/contracts/README.md`
+
+### HTTP Framework & Dependency Injection
+
+- **HTTP Framework README**: `/services/cpp/shared/http-framework/README.md`
+- **Migration Guide**: `/services/cpp/shared/http-framework/MIGRATION_GUIDE.md` (REQUIRED - comprehensive HTTP + DI migration)
+- **DI Example Server**: `/services/cpp/shared/http-framework/examples/di_server.cpp` (complete working example)
+- **DI Completion Report**: `/services/cpp/shared/http-framework/ORIGINAL_PHASE_5_COMPLETE.md` (validation & testing results)
+- **DI Example Documentation**: `/services/cpp/shared/http-framework/examples/DI_SERVER_EXAMPLE.md` (how to run example)
+
+### Messaging Framework (RabbitMQ)
+
+- **Messaging Library README**: `/services/cpp/shared/warehouse-messaging/README.md` (REQUIRED - production-ready messaging)
+- **Publisher Example**: `/services/cpp/shared/warehouse-messaging/examples/simple_publisher.cpp`
+- **Consumer Example**: `/services/cpp/shared/warehouse-messaging/examples/simple_consumer.cpp`
+- **Message Flow Test Results**: `/MESSAGE_FLOW_TEST_RESULTS.md` (end-to-end validation)
+

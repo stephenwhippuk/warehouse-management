@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find required packages
 find_package(Poco REQUIRED COMPONENTS Net NetSSL Util Foundation)
 find_package(nlohmann_json REQUIRED)
+find_package(fmt REQUIRED)
 
 # Source files
 set(SOURCES
@@ -16,6 +17,9 @@ set(SOURCES
     src/Router.cpp
     src/ControllerBase.cpp
     src/HttpHost.cpp
+    src/ServiceProvider.cpp
+    src/ServiceScopeMiddleware.cpp
+    src/PluginManager.cpp
 )
 
 # Headers
@@ -27,6 +31,16 @@ set(HEADERS
     include/http-framework/Router.hpp
     include/http-framework/ControllerBase.hpp
     include/http-framework/HttpHost.hpp
+    include/http-framework/ServiceLifetime.hpp
+    include/http-framework/IServiceProvider.hpp
+    include/http-framework/IServiceScope.hpp
+    include/http-framework/ServiceDescriptor.hpp
+    include/http-framework/ServiceCollection.hpp
+    include/http-framework/ServiceNamespace.hpp
+    include/http-framework/ServiceScopeMiddleware.hpp
+    include/http-framework/IPlugin.hpp
+    include/http-framework/NamespacedServiceCollection.hpp
+    include/http-framework/PluginManager.hpp
 )
 
 # Create library
@@ -48,6 +62,8 @@ target_link_libraries(${PROJECT_NAME}
         Poco::Util
         Poco::Foundation
         nlohmann_json::nlohmann_json
+        fmt::fmt
+        dl  # For dlopen, dlsym, dlclose
 )
 
 # Compiler options

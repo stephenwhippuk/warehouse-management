@@ -89,8 +89,10 @@ json inventoryRowToJson(const pqxx::row& row) {
 
 } // namespace
 
-InventoryRepository::InventoryRepository(std::shared_ptr<pqxx::connection> db)
-    : db_(db) {}
+InventoryRepository::InventoryRepository(http::IServiceProvider& provider) {
+    // Resolve database connection from service provider
+    db_ = provider.getService<pqxx::connection>();
+}
 
 std::optional<models::Inventory> InventoryRepository::findById(const std::string& id) {
     if (!isValidUuid(id)) {

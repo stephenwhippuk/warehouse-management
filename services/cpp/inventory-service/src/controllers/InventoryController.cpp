@@ -1,7 +1,9 @@
 #include "inventory/controllers/InventoryController.hpp"
+#include "inventory/services/IInventoryService.hpp"
 #include "inventory/utils/Auth.hpp"
 #include "inventory/models/Inventory.hpp"
 #include <http-framework/HttpException.hpp>
+#include <http-framework/IServiceScope.hpp>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -9,8 +11,8 @@ using json = nlohmann::json;
 namespace inventory {
 namespace controllers {
 
-InventoryController::InventoryController(std::shared_ptr<services::InventoryService> service)
-    : ControllerBase("/api/v1/inventory"), service_(service) {
+InventoryController::InventoryController()
+    : ControllerBase("/api/v1/inventory") {
     
     // List and filter endpoints - order matters: specific routes before parameterized routes
     Get("/low-stock", [this](http::HttpContext& ctx) {
@@ -80,6 +82,16 @@ InventoryController::InventoryController(std::shared_ptr<services::InventoryServ
 // Helper Methods
 // ============================================================================
 
+http::IServiceProvider& InventoryController::getScopedProvider(http::HttpContext& ctx) {
+    auto scope = ctx.getServiceScope();
+    if (!scope) {
+        throw std::runtime_error(
+            "Service scope not available - ensure ServiceScopeMiddleware is registered FIRST in middleware pipeline"
+        );
+    }
+    return scope->getServiceProvider();
+}
+
 void InventoryController::requireServiceAuth(http::HttpContext& ctx) {
     auto authStatus = utils::Auth::authorizeServiceRequest(ctx.request);
     if (authStatus == utils::AuthStatus::MissingToken) {
@@ -97,9 +109,10 @@ void InventoryController::requireServiceAuth(http::HttpContext& ctx) {
 std::string InventoryController::handleGetAll(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
-    auto inventories = service_->getAll();
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
+    auto items = service->getAll();
     json j = json::array();
-    for (const auto& inv : inventories) {
+    for (const auto& inv : items) {
         j.push_back(inv.toJson());
     }
     return j.dump();
@@ -108,8 +121,9 @@ std::string InventoryController::handleGetAll(http::HttpContext& ctx) {
 std::string InventoryController::handleGetById(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string id = ctx.routeParams["id"];
-    auto inventory = service_->getById(id);
+    auto inventory = service->getById(id);
     if (!inventory) {
         throw http::NotFoundException("Inventory not found: " + id);
     }
@@ -119,8 +133,9 @@ std::string InventoryController::handleGetById(http::HttpContext& ctx) {
 std::string InventoryController::handleGetByProduct(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string productId = ctx.routeParams["productId"];
-    auto inventories = service_->getByProductId(productId);
+    auto inventories = service->getByProductId(productId);
     json j = json::array();
     for (const auto& inv : inventories) {
         j.push_back(inv.toJson());
@@ -131,8 +146,9 @@ std::string InventoryController::handleGetByProduct(http::HttpContext& ctx) {
 std::string InventoryController::handleGetByWarehouse(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string warehouseId = ctx.routeParams["warehouseId"];
-    auto inventories = service_->getByWarehouseId(warehouseId);
+    auto inventories = service->getByWarehouseId(warehouseId);
     json j = json::array();
     for (const auto& inv : inventories) {
         j.push_back(inv.toJson());
@@ -143,8 +159,9 @@ std::string InventoryController::handleGetByWarehouse(http::HttpContext& ctx) {
 std::string InventoryController::handleGetByLocation(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string locationId = ctx.routeParams["locationId"];
-    auto inventories = service_->getByLocationId(locationId);
+    auto inventories = service->getByLocationId(locationId);
     json j = json::array();
     for (const auto& inv : inventories) {
         j.push_back(inv.toJson());
@@ -160,7 +177,8 @@ std::string InventoryController::handleGetLowStock(http::HttpContext& ctx) {
         threshold = std::stoi(ctx.queryParams.get("threshold"));
     }
 
-    auto inventories = service_->getLowStock(threshold);
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
+    auto inventories = service->getLowStock(threshold);
     json j = json::array();
     for (const auto& inv : inventories) {
         j.push_back(inv.toJson());
@@ -171,7 +189,8 @@ std::string InventoryController::handleGetLowStock(http::HttpContext& ctx) {
 std::string InventoryController::handleGetExpired(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
-    auto inventories = service_->getExpired();
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
+    auto inventories = service->getExpired();
     json j = json::array();
     for (const auto& inv : inventories) {
         j.push_back(inv.toJson());
@@ -182,9 +201,10 @@ std::string InventoryController::handleGetExpired(http::HttpContext& ctx) {
 std::string InventoryController::handleCreate(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     auto body = ctx.getBodyAsJson();
     auto inventory = models::Inventory::fromJson(body);
-    auto created = service_->create(inventory);
+    auto created = service->create(inventory);
     
     ctx.response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
     return created.toJson().dump();
@@ -193,6 +213,7 @@ std::string InventoryController::handleCreate(http::HttpContext& ctx) {
 std::string InventoryController::handleUpdate(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string id = ctx.routeParams["id"];
     auto body = ctx.getBodyAsJson();
     auto inventory = models::Inventory::fromJson(body);
@@ -201,15 +222,16 @@ std::string InventoryController::handleUpdate(http::HttpContext& ctx) {
         throw http::BadRequestException("ID in path does not match ID in body");
     }
 
-    auto updated = service_->update(inventory);
+    auto updated = service->update(inventory);
     return updated.toJson().dump();
 }
 
 std::string InventoryController::handleDelete(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string id = ctx.routeParams["id"];
-    bool deleted = service_->remove(id);
+    bool deleted = service->remove(id);
     
     if (deleted) {
         ctx.response.setStatus(Poco::Net::HTTPResponse::HTTP_NO_CONTENT);
@@ -222,6 +244,7 @@ std::string InventoryController::handleDelete(http::HttpContext& ctx) {
 std::string InventoryController::handleReserve(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string id = ctx.routeParams["id"];
     auto body = ctx.getBodyAsJson();
     
@@ -230,13 +253,14 @@ std::string InventoryController::handleReserve(http::HttpContext& ctx) {
     }
 
     int quantity = body["quantity"].get<int>();
-    auto result = service_->reserve(id, quantity);
+    auto result = service->reserve(id, quantity);
     return result.toJson().dump();
 }
 
 std::string InventoryController::handleRelease(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string id = ctx.routeParams["id"];
     auto body = ctx.getBodyAsJson();
     
@@ -245,13 +269,14 @@ std::string InventoryController::handleRelease(http::HttpContext& ctx) {
     }
 
     int quantity = body["quantity"].get<int>();
-    auto result = service_->release(id, quantity);
+    auto result = service->release(id, quantity);
     return result.toJson().dump();
 }
 
 std::string InventoryController::handleAllocate(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string id = ctx.routeParams["id"];
     auto body = ctx.getBodyAsJson();
     
@@ -260,13 +285,14 @@ std::string InventoryController::handleAllocate(http::HttpContext& ctx) {
     }
 
     int quantity = body["quantity"].get<int>();
-    auto result = service_->allocate(id, quantity);
+    auto result = service->allocate(id, quantity);
     return result.toJson().dump();
 }
 
 std::string InventoryController::handleDeallocate(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string id = ctx.routeParams["id"];
     auto body = ctx.getBodyAsJson();
     
@@ -275,13 +301,14 @@ std::string InventoryController::handleDeallocate(http::HttpContext& ctx) {
     }
 
     int quantity = body["quantity"].get<int>();
-    auto result = service_->deallocate(id, quantity);
+    auto result = service->deallocate(id, quantity);
     return result.toJson().dump();
 }
 
 std::string InventoryController::handleAdjust(http::HttpContext& ctx) {
     requireServiceAuth(ctx);
     
+    auto service = getScopedProvider(ctx).getService<services::IInventoryService>();
     std::string id = ctx.routeParams["id"];
     auto body = ctx.getBodyAsJson();
     
@@ -294,7 +321,7 @@ std::string InventoryController::handleAdjust(http::HttpContext& ctx) {
 
     int quantityChange = body["quantityChange"].get<int>();
     std::string reason = body["reason"].get<std::string>();
-    auto result = service_->adjust(id, quantityChange, reason);
+    auto result = service->adjust(id, quantityChange, reason);
     return result.toJson().dump();
 }
 

@@ -9,7 +9,10 @@
 #include <any>
 #include <optional>
 #include <sstream>
+#include <memory>
 #include <nlohmann/json.hpp>
+#include "IServiceScope.hpp"
+#include "IServiceProvider.hpp"
 
 using json = nlohmann::json;
 
@@ -74,6 +77,9 @@ struct HttpContext {
     
     // Parsed URI
     Poco::URI uri;
+    
+    // Service scope for this request (created by ServiceScopeMiddleware)
+    std::shared_ptr<IServiceScope> serviceScope;
     
     /**
      * @brief Constructor
@@ -156,6 +162,33 @@ struct HttpContext {
      * @brief Check if request has header
      */
     bool hasHeader(const std::string& name) const;
+    
+    /**
+     * @brief Set the service scope for this request
+     * This is called by ServiceScopeMiddleware
+     */
+    void setServiceScope(std::shared_ptr<IServiceScope> scope);
+    
+    /**
+     * @brief Get the service scope for this request
+     * Returns the scope created by ServiceScopeMiddleware
+     * @return Shared pointer to IServiceScope (may be nullptr if middleware not used)
+     */
+    std::shared_ptr<IServiceScope> getServiceScope() const;
+    
+    /**
+     * @brief Get a service from the request scope (convenience method)
+     * @tparam T Service interface type
+     * @return Shared pointer to the service
+     * @throws std::runtime_error if service not found or scope not set
+     */
+    template<typename T>
+    std::shared_ptr<T> getService() {
+        if (!serviceScope) {
+            throw std::runtime_error("Service scope not set. Ensure ServiceScopeMiddleware is added to the pipeline.");
+        }
+        return serviceScope->getServiceProvider().getService<T>();
+    }
 
 private:
     bool bodyRead_ = false;

@@ -4,6 +4,7 @@
 #include "inventory/controllers/ClaimsController.hpp"
 #include "inventory/utils/Logger.hpp"
 #include <http-framework/Middleware.hpp>
+#include <http-framework/ServiceScopeMiddleware.hpp>
 #include <atomic>
 #include <csignal>
 #include <chrono>
@@ -35,14 +36,15 @@ Server::~Server() {
     stop();
 }
 
-void Server::setInventoryService(std::shared_ptr<services::InventoryService> service) {
-    inventoryService_ = service;
+void Server::setServiceProvider(std::shared_ptr<http::IServiceProvider> provider) {
+    serviceProvider_ = provider;
 }
 
 void Server::start() {
     httpHost_ = std::make_unique<http::HttpHost>(port_);
     
-    // Add middleware
+    // Add middleware - ServiceScopeMiddleware FIRST so scope is available to all others
+    httpHost_->use(std::make_shared<http::ServiceScopeMiddleware>(serviceProvider_));
     httpHost_->use(std::make_shared<http::LoggingMiddleware>());
     httpHost_->use(std::make_shared<http::CorsMiddleware>());
     httpHost_->use(std::make_shared<http::ErrorHandlingMiddleware>());
@@ -50,7 +52,7 @@ void Server::start() {
     // Register controllers
     httpHost_->addController(std::make_shared<controllers::HealthController>());
     httpHost_->addController(std::make_shared<controllers::ClaimsController>());
-    httpHost_->addController(std::make_shared<controllers::InventoryController>(inventoryService_));
+    httpHost_->addController(std::make_shared<controllers::InventoryController>());
     
     // Configure server
     httpHost_->setMaxThreads(16);

@@ -507,3 +507,459 @@ std::string page = ctx.queryParams.get("page", "1");
 // Or use getInt
 int page = ctx.queryParams.getInt("page").value_or(1);
 ```
+
+---
+
+## Part 2: Dependency Injection Migration
+
+### Overview
+
+The framework now includes a complete dependency injection container with:
+- **Service Lifetimes**: Singleton, Scoped (per-request), Transient
+- **Automatic Resolution**: Dependencies injected via constructor
+- **Service Scoping**: Per-request service instances with automatic cleanup
+- **Plugin Support**: Dynamic plugin loading with namespace isolation
+
+### Benefits of Using DI
+
+1. **Testability**: Easy mocking and unit testing
+2. **Loose Coupling**: Replace implementations without changing consumers
+3. **Lifetime Management**: Automatic cleanup and resource management
+4. **Consistency**: Same patterns across all services
+
+### Step 1: Define Service Interfaces
+
+**Before** (Concrete Classes):
+```cpp
+// InventoryService.hpp
+class InventoryService {
+public:
+    InventoryService();
+    std::optional<InventoryItemDto> getById(const std::string& id);
+};
+```
+
+**After** (Abstract Interfaces):
+```cpp
+// IInventoryService.hpp
+class IInventoryService {
+public:
+    virtual ~IInventoryService() = default;
+    virtual std::optional<dtos::InventoryItemDto> getById(const std::string& id) = 0;
+    virtual std::vector<dtos::InventoryItemDto> getAll() = 0;
+};
+
+// InventoryService.hpp
+#include "http-framework/IServiceProvider.hpp"
+
+class InventoryService : public IInventoryService {
+public:
+    // Constructor receives IServiceProvider to resolve dependencies
+    explicit InventoryService(http::IServiceProvider& provider);
+    
+    std::optional<dtos::InventoryItemDto> getById(const std::string& id) override;
+    std::vector<dtos::InventoryItemDto> getAll() override;
+
+private:
+    std::shared_ptr<IInventoryRepository> repository_;
+};
+```
+
+### Step 2: Update Service Implementations
+
+**Before**:
+```cpp
+// InventoryService.cpp
+InventoryService::InventoryService() {
+    // Manually create dependencies
+    auto db = utils::Database::connect();
+    repository_ = std::make_shared<InventoryRepository>(db);
+}
+```
+
+**After**:
+```cpp
+// InventoryService.cpp
+InventoryService::InventoryService(http::IServiceProvider& provider)
+    : repository_(provider.getService<IInventoryRepository>()) {
+    // Dependencies automatically resolved from DI container
+}
+
+std::optional<dtos::InventoryItemDto> InventoryService::getById(const std::string& id) {
+    auto inventory = repository_->findById(id);
+    if (!inventory) return std::nullopt;
+    
+    // TODO: Fetch identity fields from other services
+    return utils::DtoMapper::toInventoryItemDto(*inventory,productSku, warehouseCode, locationCode);
+}
+```
+
+### Step 3: Update Controllers
+
+**Before**:
+```cpp
+class Inventory Controller : public http::ControllerBase {
+public:
+    InventoryController() : ControllerBase("/api/v1/inventory") {
+        service_ = std::make_shared<InventoryService>();
+        
+        Get("/{id}", [this](http::HttpContext& ctx) {
+            return this->getById(ctx);
+        });
+    }
+private:
+    std::shared_ptr<InventoryService> service_;
+};
+```
+
+**After**:
+```cpp
+class InventoryController : public http::ControllerBase {
+public:
+    // Controller receives IServiceProvider
+    explicit InventoryController(http::IServiceProvider& provider)
+        : ControllerBase("/api/v1/inventory")
+        , provider_(provider) {
+        
+        Get("/{id}", [this](http::HttpContext& ctx) {
+            return this->getById(ctx);
+        });
+    }
+
+private:
+    http::IServiceProvider& provider_;
+    
+    std::string getById(http::HttpContext& ctx) {
+        // Resolve service from REQUEST SCOPE (automatic per-request instance)
+        auto service = ctx.getService<IInventoryService>();
+        
+        std::string id = ctx.params().get("id");
+        auto dto = service->getById(id);
+        
+        if (!dto) {
+            return ctx.json({{"error", "Inventory not found"}}, 404);
+        }
+        
+        return ctx.json(dto->toJson());
+    }
+};
+```
+
+**Key Changes**:
+- Controller stores `IServiceProvider&` reference
+- Services resolved via `ctx.getService<T>()` (scoped to request)
+- Services automatically cleaned up after response sent
+
+### Step 4: Register Services in Application
+
+**Before** (Manual Instantiation):
+```cpp
+void Application::run() {
+    http::HttpHost host("0.0.0.0", 8080);
+    
+    // Manual dependency tree
+    auto db = utils::Database::connect();
+    auto repo = std::make_shared<InventoryRepository>(db);
+    auto service = std::make_shared<InventoryService>(repo);
+    auto controller = std::make_shared<InventoryController>(service);
+    
+    host.addController(controller);
+    host.start();
+}
+```
+
+**After** (DI Container):
+```cpp
+#include "http-framework/ServiceCollection.hpp"
+#include "http-framework/ServiceScopeMiddleware.hpp"
+
+void Application::run() {
+    // 1. Create service collection
+    http::ServiceCollection services;
+    
+    // 2. Register infrastructure services (Singleton)
+    services.addService<IDatabase>(
+        [](http::IServiceProvider& provider) {
+            return std::make_shared<PostgresDatabase>(
+                std::getenv("DATABASE_URL")
+            );
+        },
+        http::ServiceLifetime::Singleton
+    );
+    
+    services.addService<ILogger, SpdlogLogger>(
+        http::ServiceLifetime::Singleton
+    );
+    
+    // 3. Register repositories (Scoped - per request)
+    services.addService<IInventoryRepository, InventoryRepository>(
+        http::ServiceLifetime::Scoped
+    );
+    
+    // 4. Register business services (Scoped - per request)
+    services.addService<IInventoryService, InventoryService>(
+        http::ServiceLifetime::Scoped
+    );
+    
+    // 5. Build service provider
+    auto provider = services.buildServiceProvider();
+    
+    // 6. Create HTTP host
+    http::HttpHost host("0.0.0.0", 8080);
+    
+    // 7. Add ServiceScopeMiddleware FIRST (creates scope per request)
+    host.use(std::make_shared<http::ServiceScopeMiddleware>(provider));
+    
+    // 8. Add controllers (resolve dependencies from provider)
+    auto inventoryController = std::make_shared<InventoryController>(*provider);
+    host.addController(inventoryController);
+    
+    // 9. Optional: Load plugins
+    http::PluginManager pluginManager(*provider->getServices());
+    // pluginManager.loadPlugin("/path/to/plugin.so");
+    
+    // 10. Start server
+    spdlog::info("Starting server on port 8080");
+    host.start();
+}
+```
+
+### Service Lifetime Guidelines
+
+Choose the appropriate lifetime for each service:
+
+#### Singleton (Shared Across Application)
+- Database connections
+- Configuration objects
+- Loggers
+- Thread pools
+- Expensive resources
+
+```cpp
+services.addService<IDatabase>(
+    [](auto& p) { return std::make_shared<PostgresDb>(getenv("DATABASE_URL")); },
+    http::ServiceLifetime::Singleton
+);
+```
+
+#### Scoped (Per Request)
+- Business logic services
+- Repositories  
+- Request-specific state
+- Services that should be cleaned up after request
+
+```cpp
+services.addService<IInventoryService, InventoryService>(
+    http::ServiceLifetime::Scoped
+);
+```
+
+#### Transient (New Instance Every Time)
+- Stateless validators
+- DTOmappers
+- Cheap utility classes
+- Services that must not share state
+
+```cpp
+services.addService<IValidator, RequestValidator>(
+    http::ServiceLifetime::Transient
+);
+```
+
+### Step 5: Update Tests
+
+**Before** (Manual Mocks):
+```cpp
+TEST_CASE("InventoryService returns items", "[service]") {
+    auto mockRepo = std::make_shared<MockInventoryRepository>();
+    auto service = std::make_shared<InventoryService>(mockRepo);
+    
+    auto item = service->getById("test-id");
+    REQUIRE(item.has_value());
+}
+```
+
+**After** (DI Container with Mocks):
+```cpp
+#include "http-framework/ServiceCollection.hpp"
+
+TEST_CASE("InventoryService returns DTOs", "[service]") {
+    // Create test container
+    http::ServiceCollection services;
+    
+    // Register mock repository
+    services.addService<IInventoryRepository>(
+        [](http::IServiceProvider& provider) {
+            return std::make_shared<MockInventoryRepository>();
+        },
+        http::ServiceLifetime::Singleton
+    );
+    
+    // Register service under test
+    services.addService<IInventoryService, InventoryService>(
+        http::ServiceLifetime::Singleton
+    );
+    
+    auto provider = services.buildServiceProvider();
+    auto service = provider->getService<IInventoryService>();
+    
+    SECTION("GetById returns DTO for existing item") {
+        auto dto = service->getById("test-id");
+        REQUIRE(dto.has_value());
+        REQUIRE(dto->getId() == "test-id");
+    }
+}
+```
+
+### Common Patterns
+
+#### Pattern 1: Lazy Dependency Resolution
+
+For optional or conditional dependencies:
+
+```cpp
+class InventoryService : public IInventoryService {
+public:
+    explicit InventoryService(http::IServiceProvider& provider)
+        : provider_(provider) {
+        // Don't resolve yet
+    }
+    
+    void doWork() {
+        // Resolve only when needed
+        auto repo = provider_.getService<IInventoryRepository>();
+        repo->findById("123");
+    }
+
+private:
+    http::IServiceProvider& provider_;
+};
+```
+
+#### Pattern 2: Factory Functions
+
+For complex initialization:
+
+```cpp
+services.addService<IDatabase>(
+    [](http::IServiceProvider& provider) {
+        std::string url = std::getenv("DATABASE_URL");
+        int maxConnections = std::stoi(std::getenv("MAX_DB_CONNECTIONS"));
+        
+        auto db = std::make_shared<PostgresDatabase>(url);
+        db->setMaxConnections(maxConnections);
+        db->connect();
+        
+        return db;
+    },
+    http::ServiceLifetime::Singleton
+);
+```
+
+#### Pattern 3: Service Composition
+
+Services can depend on other services:
+
+```cpp
+class OrderService : public IOrderService {
+public:
+    explicit OrderService(http::IServiceProvider& provider)
+        : inventoryService_(provider.getService<IInventoryService>())
+        , warehouseService_(provider.getService<IWarehouseService>())
+        , orderRepo_(provider.getService<IOrderRepository>()) {
+    }
+    
+    void createOrder(const CreateOrderRequest& request) {
+        // Use multiple services
+        auto inventory = inventoryService_->getById(request.productId);
+        auto warehouse = warehouseService_->getById(request.warehouseId);
+        
+        // Create order
+        orderRepo_->create(...);
+    }
+};
+```
+
+### Troubleshooting
+
+#### Issue 1: Service Not Found
+
+**Error**: `Service not registered: IInventoryService`
+
+**Solution**: Ensure service is registered before building provider
+
+```cpp
+services.addService<IInventoryService, InventoryService>(
+    http::ServiceLifetime::Scoped
+);
+auto provider = services.buildServiceProvider();  // AFTER registration
+```
+
+#### Issue 2: Circular Dependencies
+
+**Error**: `Circular dependency detected: A -> B -> A`
+
+**Solution**: Use lazy resolution
+
+```cpp
+class ServiceA {
+    explicit ServiceA(http::IServiceProvider& provider) : provider_(provider) {}
+    
+    void doWork() {
+        // Resolve B only when needed, breaking the cycle
+        auto b = provider_.getService<IServiceB>();
+    }
+};
+```
+
+#### Issue 3: Lifetime Mismatch
+
+**Error**: Cannot store Scoped service in Transient
+
+**Solution**: Match lifetimes or resolve on demand
+
+```cpp
+// Option 1: Make both Scoped
+services.addService<IRepo, Repo>(Scoped);
+services.addService<IService, Service>(Scoped);
+
+// Option 2: Resolve on demand
+class Service {
+    explicit Service(http::IServiceProvider& p) : provider_(p) {}
+    
+    void doWork() {
+        auto repo = provider_.getService<IRepo>();  // Get when needed
+    }
+};
+```
+
+### Migration Checklist
+
+- [ ] Create abstract interfaces for all services (`IServiceName`)
+- [ ] Update constructors to accept `http::IServiceProvider&`
+- [ ] Register services in `ServiceCollection` with appropriate lifetimes
+- [ ] Add `ServiceScopeMiddleware` to HTTP pipeline
+- [ ] Update controllers to resolve services via `ctx.getService<T>()`
+- [ ] Update tests to use DI container with mocks
+- [ ] Remove manual `new` / `make_shared` for services
+- [ ] Verify proper cleanup (check logs for scope destruction)
+
+### Examples
+
+See the following for complete examples:
+- [examples/di_server.cpp](examples/di_server.cpp) - Complete DI-enabled server
+- [tests/ServiceProviderTests.cpp](tests/ServiceProviderTests.cpp) - Unit test patterns
+- [tests/ServiceScopeTests.cpp](tests/ServiceScopeTests.cpp) - Scoped lifetime testing
+- [plugins/TestPlugin.cpp](plugins/TestPlugin.cpp) - Plugin development
+
+### Next Steps
+
+1. Review [PHASES_1_5_COMPLETE.md](PHASES_1_5_COMPLETE.md) for complete framework overview
+2. Study test cases for usage patterns
+3. Migrate one service at a time (infrastructure → repositories → business logic)
+4. Add integration tests with DI
+
+---
+
+**Migration Guide Updated**: February 2026  
+**Includes**: HTTP Framework + Dependency Injection + Plugin System

@@ -167,4 +167,12 @@ bool HttpContext::hasHeader(const std::string& name) const {
     return request.has(name);
 }
 
+void HttpContext::setServiceScope(std::shared_ptr<IServiceScope> scope) {
+    serviceScope = scope;
+}
+
+std::shared_ptr<IServiceScope> HttpContext::getServiceScope() const {
+    return serviceScope;
+}
+
 } // namespace http

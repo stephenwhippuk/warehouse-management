@@ -1,6 +1,7 @@
 #pragma once
 
 #include "inventory/models/Inventory.hpp"
+#include <http-framework/IServiceProvider.hpp>
 #include <pqxx/pqxx>
 #include <memory>
 #include <vector>
@@ -12,7 +13,7 @@ namespace repositories {
 
 class InventoryRepository {
 public:
-    explicit InventoryRepository(std::shared_ptr<pqxx::connection> db);
+    explicit InventoryRepository(http::IServiceProvider& provider);
     
     // CRUD operations
     std::optional<models::Inventory> findById(const std::string& id);

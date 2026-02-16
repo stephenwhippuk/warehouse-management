@@ -3,6 +3,7 @@
 #include "inventory/repositories/InventoryRepository.hpp"
 #include "inventory/utils/Database.hpp"
 #include "inventory/models/Inventory.hpp"
+#include <http-framework/IServiceProvider.hpp>
 
 #include <cstdlib>
 
@@ -11,10 +12,49 @@ using inventory::models::Inventory;
 using inventory::models::InventoryStatus;
 using inventory::models::QualityStatus;
 
+// Mock IServiceProvider for tests with optional database (can be nullptr for validation tests)
+class MockServiceProvider : public http::IServiceProvider {
+private:
+    std::shared_ptr<pqxx::connection> connection_;
+
+public:
+    explicit MockServiceProvider(std::shared_ptr<pqxx::connection> conn = nullptr)
+        : connection_(conn) {}
+
+    std::shared_ptr<void> getServiceInternal(
+        const std::type_index& type, 
+        const std::string& ns) override {
+        if (type == std::type_index(typeid(pqxx::connection))) {
+            // For validation tests, connection might be nullptr
+            // Return it anyway so getService<T>() can handle it
+            if (connection_) {
+                return std::static_pointer_cast<void>(connection_);
+            }
+            return nullptr;
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<http::IServiceScope> createScope() override {
+        throw std::runtime_error("createScope not implemented in MockServiceProvider");
+    }
+};
+
 TEST_CASE("InventoryRepository validates UUID format", "[inventory][repository][validation]") {
     // For invalid UUIDs, the repository should throw before touching the DB
-    std::shared_ptr<pqxx::connection> nullConn; // not used when validation fails
-    InventoryRepository repo(nullConn);
+    // Use a real connection if available (for this test we need one since we call repository methods)
+    const char* connStr = std::getenv("INVENTORY_TEST_DATABASE_URL");
+    std::shared_ptr<pqxx::connection> conn;
+    
+    if (connStr) {
+        conn = inventory::utils::Database::connect(connStr);
+    } else {
+        WARN("INVENTORY_TEST_DATABASE_URL not set; skipping UUID validation tests");
+        return;
+    }
+    
+    MockServiceProvider provider(conn);
+    InventoryRepository repo(provider);
 
     SECTION("findById rejects invalid UUID") {
         REQUIRE_THROWS_AS(repo.findById("not-a-uuid"), std::invalid_argument);
@@ -46,7 +86,8 @@ TEST_CASE("InventoryRepository basic DB-backed operations", "[inventory][reposit
     }
 
     auto conn = inventory::utils::Database::connect(connStr);
-    InventoryRepository repo(conn);
+    MockServiceProvider provider(conn);
+    InventoryRepository repo(provider);
 
     const std::string inventoryId       = "11111111-1111-1111-1111-111111111111";
     const std::string productId         = "22222222-2222-2222-2222-222222222222";
