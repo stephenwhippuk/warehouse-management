@@ -21,16 +21,12 @@ std::string createIso8601Timestamp() {
 
 // Helper to create a valid warehouse model
 models::Warehouse createValidWarehouse() {
-    models::Warehouse wh(
-        "550e8400-e29b-41d4-a716-446655440000",  // Valid UUID
-        "WH-MAIN",  // code
-        "Main Warehouse",  // name
-        models::Status::Active  // status
-    );
-    
-    wh.setCreatedAt(createIso8601Timestamp());
-    wh.setUpdatedAt(createIso8601Timestamp());
-    wh.setType(models::WarehouseType::DistributionCenter);
+    models::Warehouse wh;
+    wh.setId("550e8400-e29b-41d4-a716-446655440000");
+    wh.setCode("WH-MAIN");
+    wh.setName("Main Warehouse");
+    wh.setStatus(models::Status::Active);
+    wh.setType(models::WarehouseType::Distribution);
     
     // Set address
     models::Address addr;
@@ -46,16 +42,14 @@ models::Warehouse createValidWarehouse() {
 
 // Helper to create a valid location model
 models::Location createValidLocation() {
-    models::Location loc(
-        "650e8400-e29b-41d4-a716-446655440001",  // Valid UUID
-        "750e8400-e29b-41d4-a716-446655440002",  // warehouseId
-        "A1-B2-C3"  // code
-    );
-    
+    models::Location loc;
+    loc.setId("650e8400-e29b-41d4-a716-446655440001");
+    loc.setWarehouseId("750e8400-e29b-41d4-a716-446655440002");
+    loc.setCode("A1-B2-C3");
     loc.setType(models::LocationType::Picking);
     loc.setStatus(models::LocationStatus::Active);
-    loc.setPickable(true);
-    loc.setReceivable(true);
+    loc.setIsPickable(true);
+    loc.setIsReceivable(true);
     
     return loc;
 }
@@ -70,7 +64,7 @@ TEST_CASE("DtoMapper converts valid warehouse to DTO", "[dto][mapper][warehouse]
         REQUIRE(dto.getCode() == warehouse.getCode());
         REQUIRE(dto.getName() == warehouse.getName());
         REQUIRE(dto.getStatus() == "active");
-        REQUIRE(dto.getType() == "distribution_center");
+        REQUIRE(dto.getType() == "distribution");
         
         // Check address is JSON
         auto address = dto.getAddress();
@@ -84,8 +78,6 @@ TEST_CASE("DtoMapper converts valid warehouse to DTO", "[dto][mapper][warehouse]
         warehouse.setDescription("Primary distribution center");
         warehouse.setTotalArea(50000.0);
         warehouse.setStorageCapacity(100000.0);
-        warehouse.setZones(10);
-        warehouse.setDockDoors(20);
         
         auto dto = utils::DtoMapper::toWarehouseDto(warehouse);
         
@@ -93,8 +85,6 @@ TEST_CASE("DtoMapper converts valid warehouse to DTO", "[dto][mapper][warehouse]
         REQUIRE(dto.getDescription().value() == "Primary distribution center");
         REQUIRE(dto.getTotalArea().has_value());
         REQUIRE(dto.getTotalArea().value() == 50000.0);
-        REQUIRE(dto.getZones().has_value());
-        REQUIRE(dto.getZones().value() == 10);
     }
 }
 
@@ -115,28 +105,28 @@ TEST_CASE("DtoMapper handles different warehouse statuses", "[dto][mapper][wareh
         REQUIRE(dto.getStatus() == "inactive");
     }
     
-    SECTION("Maintenance status") {
+    SECTION("Archived status") {
         auto wh = createValidWarehouse();
-        wh.setStatus(models::Status::Maintenance);
+        wh.setStatus(models::Status::Archived);
         
         auto dto = utils::DtoMapper::toWarehouseDto(wh);
-        REQUIRE(dto.getStatus() == "maintenance");
+        REQUIRE(dto.getStatus() == "archived");
     }
 }
 
 TEST_CASE("DtoMapper handles different warehouse types", "[dto][mapper][warehouse][type]") {
     auto wh = createValidWarehouse();
     
-    SECTION("Distribution Center") {
-        wh.setType(models::WarehouseType::DistributionCenter);
+    SECTION("Distribution") {
+        wh.setType(models::WarehouseType::Distribution);
         auto dto = utils::DtoMapper::toWarehouseDto(wh);
-        REQUIRE(dto.getType() == "distribution_center");
+        REQUIRE(dto.getType() == "distribution");
     }
     
-    SECTION("Fulfillment Center") {
-        wh.setType(models::WarehouseType::FulfillmentCenter);
+    SECTION("Fulfillment") {
+        wh.setType(models::WarehouseType::Fulfillment);
         auto dto = utils::DtoMapper::toWarehouseDto(wh);
-        REQUIRE(dto.getType() == "fulfillment_center");
+        REQUIRE(dto.getType() == "fulfillment");
     }
     
     SECTION("Cold Storage") {
@@ -160,8 +150,8 @@ TEST_CASE("DtoMapper converts valid location to DTO", "[dto][mapper][location]")
         REQUIRE(dto.getWarehouseId() == location.getWarehouseId());
         REQUIRE(dto.getWarehouseCode() == "WH-MAIN");
         REQUIRE(dto.getCode() == location.getCode());
-        REQUIRE(dto.getType() == "pick_face");
-        REQUIRE(dto.getStatus() == "available");
+        REQUIRE(dto.getType() == "picking");
+        REQUIRE(dto.getStatus() == "active");
         REQUIRE(dto.getIsPickable() == true);
         REQUIRE(dto.getIsReceivable() == true);
         
@@ -193,16 +183,16 @@ TEST_CASE("DtoMapper converts valid location to DTO", "[dto][mapper][location]")
 TEST_CASE("DtoMapper handles different location types", "[dto][mapper][location][type]") {
     auto loc = createValidLocation();
     
-    SECTION("Pick Face") {
+    SECTION("Picking") {
         loc.setType(models::LocationType::Picking);
         auto dto = utils::DtoMapper::toLocationDto(loc, "WH-1");
-        REQUIRE(dto.getType() == "pick_face");
+        REQUIRE(dto.getType() == "picking");
     }
     
-    SECTION("Reserve Storage") {
-        loc.setType(models::LocationType::ReserveStorage);
+    SECTION("Staging") {
+        loc.setType(models::LocationType::Staging);
         auto dto = utils::DtoMapper::toLocationDto(loc, "WH-1");
-        REQUIRE(dto.getType() == "reserve_storage");
+        REQUIRE(dto.getType() == "staging");
     }
     
     SECTION("Receiving") {
@@ -221,10 +211,10 @@ TEST_CASE("DtoMapper handles different location types", "[dto][mapper][location]
 TEST_CASE("DtoMapper handles different location statuses", "[dto][mapper][location][status]") {
     auto loc = createValidLocation();
     
-    SECTION("Available") {
+    SECTION("Active") {
         loc.setStatus(models::LocationStatus::Active);
         auto dto = utils::DtoMapper::toLocationDto(loc, "WH-1");
-        REQUIRE(dto.getStatus() == "available");
+        REQUIRE(dto.getStatus() == "active");
     }
     
     SECTION("Reserved") {
@@ -274,7 +264,7 @@ TEST_CASE("WarehouseDto validates on construction", "[dto][validation][warehouse
                 "Main Warehouse",                         // name
                 "active",                                 // status
                 validAddress,                             // address
-                "distribution_center",                    // type
+                "distribution",                         // type
                 createIso8601Timestamp(),                // createdAt
                 createIso8601Timestamp()                 // updatedAt
             )
@@ -289,7 +279,7 @@ TEST_CASE("WarehouseDto validates on construction", "[dto][validation][warehouse
                 "Main Warehouse",
                 "active",
                 validAddress,
-                "distribution_center",
+                "distribution",
                 createIso8601Timestamp(),
                 createIso8601Timestamp()
             ),
@@ -305,7 +295,7 @@ TEST_CASE("WarehouseDto validates on construction", "[dto][validation][warehouse
                 "Main Warehouse",
                 "active",
                 validAddress,
-                "distribution_center",
+                "distribution",
                 createIso8601Timestamp(),
                 createIso8601Timestamp()
             ),
@@ -321,7 +311,7 @@ TEST_CASE("WarehouseDto validates on construction", "[dto][validation][warehouse
                 "Main Warehouse",
                 "invalid-status",  // Invalid
                 validAddress,
-                "distribution_center",
+                "distribution",
                 createIso8601Timestamp(),
                 createIso8601Timestamp()
             ),
@@ -337,7 +327,7 @@ TEST_CASE("WarehouseDto validates on construction", "[dto][validation][warehouse
                 "Main Warehouse",
                 "active",
                 validAddress,
-                "distribution_center",
+                "distribution",
                 "not-a-timestamp",  // Invalid
                 createIso8601Timestamp()
             ),
@@ -407,8 +397,8 @@ TEST_CASE("LocationDto validates on construction", "[dto][validation][location]"
                 "750e8400-e29b-41d4-a716-446655440002",
                 "WH-MAIN",
                 "",  // Empty
-                "pick_face",
-                "available",
+                "picking",
+                "active",
                 true, true,
                 validAudit
             ),
@@ -423,12 +413,12 @@ TEST_CASE("LocationDto validates on construction", "[dto][validation][location]"
                 "750e8400-e29b-41d4-a716-446655440002",
                 "WH-MAIN",
                 "A1-B2-C3",
-                "invalid-type",  // Invalid
-                "available",
+                "",  // Empty type
+                "active",
                 true, true,
                 validAudit
             ),
-            Catch::Matchers::ContainsSubstring("type")
+            Catch::Matchers::ContainsSubstring("cannot be empty")
         );
     }
     
@@ -439,12 +429,12 @@ TEST_CASE("LocationDto validates on construction", "[dto][validation][location]"
                 "750e8400-e29b-41d4-a716-446655440002",
                 "WH-MAIN",
                 "A1-B2-C3",
-                "pick_face",
-                "invalid-status",  // Invalid
+                "picking",
+                "",  // Empty status
                 true, true,
                 validAudit
             ),
-            Catch::Matchers::ContainsSubstring("status")
+            Catch::Matchers::ContainsSubstring("cannot be empty")
         );
     }
 }

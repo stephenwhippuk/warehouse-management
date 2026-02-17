@@ -146,7 +146,7 @@ public:
 private:
     std::shared_ptr<InventoryService> service_;
     
-    std::string getAll(http::HttpContext& ctx) {
+    std::string getAll(http::HttpContext& /* ctx */) {
         auto items = service_->getAll();
         json j = json::array();
         for (const auto& item : items) {
@@ -258,7 +258,7 @@ public:
     }
 
 private:
-    std::string healthCheck(http::HttpContext& ctx) {
+    std::string healthCheck(http::HttpContext& /* ctx */) {
         json response = {
             {"status", "healthy"},
             {"timestamp", std::chrono::system_clock::now().time_since_epoch().count()}

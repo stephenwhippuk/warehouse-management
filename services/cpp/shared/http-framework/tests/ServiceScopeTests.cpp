@@ -63,9 +63,6 @@ TEST_CASE("ServiceScopeMiddleware creates scope for request", "[scope][middlewar
     auto middleware = std::make_shared<ServiceScopeMiddleware>(provider);
     
     // Test that middleware can be created and called with a working scope
-    bool middlewareCalled = false;
-    bool nextCalled = false;
-    
     // The middleware should create a scope internally when process() is called
     // We can't easily test with real Poco mocks, but we can verify the middleware itself exists
     // and the scoping infrastructure is wired up

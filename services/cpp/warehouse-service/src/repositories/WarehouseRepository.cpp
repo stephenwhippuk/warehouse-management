@@ -5,7 +5,11 @@
 namespace warehouse::repositories {
 
 WarehouseRepository::WarehouseRepository(http::IServiceProvider& provider)
-    : db_(provider.getService<utils::Database>()) {
+    : db_(nullptr) {
+    utils::Logger::info("WarehouseRepository constructor START");
+    utils::Logger::info("Getting Database from provider...");
+    db_ = provider.getService<utils::Database>();
+    utils::Logger::info("WarehouseRepository constructor COMPLETE");
 }
 
 std::optional<models::Warehouse> WarehouseRepository::findById(const std::string& id) {

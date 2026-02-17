@@ -21,7 +21,7 @@ namespace http {
 class ServiceProvider : public IServiceProvider, public std::enable_shared_from_this<ServiceProvider> {
 public:
     explicit ServiceProvider(const std::vector<ServiceDescriptor>& descriptors)
-        : descriptors_(descriptors) {}
+        : descriptors_(descriptors) {}  // Copy the vector!
     
     std::shared_ptr<IServiceScope> createScope() override;
 
@@ -33,7 +33,7 @@ protected:
 private:
     friend class ServiceScope;
     
-    const std::vector<ServiceDescriptor>& descriptors_;
+    std::vector<ServiceDescriptor> descriptors_;  // COPY, not reference!
     
     // Singleton instances (thread-safe)
     std::unordered_map<std::type_index, std::shared_ptr<void>> singletons_;

@@ -16,7 +16,53 @@ This is a microservices-based warehouse management system with:
 
 **IMPORTANT**: This project uses a comprehensive **Contract System** to ensure consistency across services. All services must declare contracts (fulfilments/references), define DTOs/Requests/Events/Endpoints, and maintain a `claims.json` manifest. See "Contract System" section below and `/contracts/docs/overview.md` for full details.
 
-**CRITICAL ARCHITECTURE POLICY**: Services MUST return DTOs, NOT domain models. Domain models remain internal to the service/repository layers. DTOs are the external API contract. See "Data Transfer Objects (DTOs)" section and `/docs/dto-architecture-pattern.md` for complete implementation guide.
+**CRITICAL ARCHITECTURE POLICY**: Services MUST return DTOs, NOT domain models. Domain models remain internal to the service/repository layers. DTOs are the external API contract. See "Data Transfer Objects (DTOs)" section and `/docs/patterns/dto-architecture-pattern.md` for complete implementation guide.
+
+## Documentation Organization
+
+**IMPORTANT**: Keep the repository clean during iteration by organizing documentation properly. All generated reports, status documents, and iteration logs MUST go in appropriate folders, NOT at the repository root.
+
+**Documentation Structure** (maintain this organization):
+```
+docs/
+├── api.md                           # API reference (core - no move)
+├── contributing.md                  # Contributing guidelines (core - no move)
+├── architecture/
+│   └── design.md                   # System architecture & design decisions
+├── patterns/
+│   ├── dto-architecture-pattern.md
+│   ├── dto-implementation-checklist.md
+│   └── dto-implementation-summary.md
+├── database/
+│   └── database-scaling-consistency.md
+├── deployment/
+│   └── index.md                    # Deployment guides
+├── services/cpp/
+│   ├── migrations.md               # Database migrations
+│   ├── framework-migration.md       # HTTP framework migration status
+│   ├── cpp-database-migrations.md   # C++ migration patterns
+│   ├── cpp-swagger-openapi.md       # Swagger/OpenAPI documentation
+│   └── shared-libraries/
+│       └── shared-messaging-library-design.md
+└── reports/                         # Iteration reports, test results, validations
+    ├── PHASE_2_COMPLETION.md
+    ├── PHASE_3_COMPLETION.md
+    ├── DI_SYSTEM_VALIDATION_REPORT.md
+    ├── DOCKER_BUILD_RESULTS.md
+    ├── MESSAGE_FLOW_TEST_RESULTS.md
+    ├── PRODUCT_SERVICE_REVIEW.md
+    └── SERVICE_COMPARISON.md
+```
+
+**Rules for Documentation**:
+1. **Core docs** (api.md, contributing.md): Stay at repo root reference point
+2. **Iteration reports**: Always go to `docs/reports/` (e.g., test results, build reports, completion reports)
+3. **Architecture/Design**: Goes to `docs/architecture/` or `docs/patterns/`
+4. **Service-specific docs**: Goes to `docs/services/{language}/`
+5. **Validation/Test results**: Always into `docs/reports/`
+6. **Never create at root level**: All .md files except README.md and LICENSE should be in docs/
+
+**No root-level markdown files** during iteration - keep the repository root clean with only essential project files (README.md, LICENSE, package.json, docker-compose.yml, etc.)
 
 ## C++ Project Guidelines
 
@@ -3219,9 +3265,9 @@ When you update one service's architecture (e.g., Database singleton), update AL
 - C++ Core Guidelines: https://isocpp.github.io/CppCoreGuidelines/
 - Sqitch Documentation: https://sqitch.org/
 - Poco Documentation: https://pocoproject.org/docs/
-- Project Architecture: `/docs/architecture.md`
-- Database Migrations: `/docs/cpp-database-migrations.md`
-- **DTO Architecture Pattern**: `/docs/dto-architecture-pattern.md` (REQUIRED READING for all service development)
+- Project Architecture: `/docs/architecture/design.md`
+- Database Migrations: `/docs/services/cpp/cpp-database-migrations.md`
+- **DTO Architecture Pattern**: `/docs/patterns/dto-architecture-pattern.md` (REQUIRED READING for all service development)
 - Contract System: `/contracts/docs/overview.md` (REQUIRED READING)
 - Contracts Directory: `/contracts/README.md`
 

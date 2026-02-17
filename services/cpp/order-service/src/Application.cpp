@@ -135,8 +135,8 @@ void Application::initializeDI() {
     contractConfig.swaggerVersion = utils::Config::instance().getString("service.version", "1.0.0");
     contractConfig.swaggerDescription = "Order management and fulfillment service";
 
-    contract::ContractPlugin contractPlugin(contractConfig);
-    http::HttpHost::registerPlugin(services, contractPlugin);
+    contractPlugin_ = std::make_shared<contract::ContractPlugin>(contractConfig);
+    http::HttpHost::registerPlugin(services, *contractPlugin_);
     
     // Build service provider
     serviceProvider_ = services.buildServiceProvider();
@@ -147,23 +147,14 @@ void Application::initializeDI() {
 void Application::initializeHttpServer() {
     utils::Logger::info("Initializing HTTP server...");
     
-    contract::ContractConfig contractConfig = contract::ContractConfig::fromEnvironment();
-    contractConfig.claimsPath = utils::Config::instance().getString("contracts.claimsPath", "claims.json");
-    contractConfig.contractsPath = utils::Config::instance().getString("contracts.contractsPath", "contracts");
-    contractConfig.globalContractsPath = utils::Config::instance().getString("contracts.globalContractsPath", "../../contracts");
-    contractConfig.enableClaims = utils::Config::instance().getBool("contracts.enableClaims", true);
-    contractConfig.enableSwagger = utils::Config::instance().getBool("contracts.enableSwagger", true);
-    contractConfig.enableValidation = utils::Config::instance().getBool("contracts.enableValidation", false);
-
-    contractConfig.swaggerTitle = utils::Config::instance().getString("service.name", "order-service") + " API";
-    contractConfig.swaggerVersion = utils::Config::instance().getString("service.version", "1.0.0");
-    contractConfig.swaggerDescription = "Order management and fulfillment service";
-    
-    contract::ContractPlugin contractPlugin(contractConfig);
+    // ContractPlugin already created and registered in initializeDI()
+    // Just use the member variable here
     
     httpHost_ = std::make_unique<http::HttpHost>(serverPort_, serviceProvider_, serverHost_);
     
-    httpHost_->usePlugin(contractPlugin, *serviceProvider_);
+    if (contractPlugin_) {
+        httpHost_->usePlugin(*contractPlugin_, *serviceProvider_);
+    }
     
     // TODO: Add other middleware (logging, auth, cors)
     

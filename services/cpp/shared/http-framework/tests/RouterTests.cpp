@@ -4,7 +4,7 @@
 using namespace http;
 
 TEST_CASE("Route matches exact path", "[router][route]") {
-    Route route("GET", "/api/v1/inventory", [](HttpContext& ctx) { 
+    Route route("GET", "/api/v1/inventory", [](HttpContext& /* ctx */) { 
         return "test"; 
     });
     
@@ -22,7 +22,7 @@ TEST_CASE("Route matches exact path", "[router][route]") {
 }
 
 TEST_CASE("Route matches with parameters", "[router][route][params]") {
-    Route route("GET", "/api/v1/inventory/{id}", [](HttpContext& ctx) {
+    Route route("GET", "/api/v1/inventory/{id}", [](HttpContext& /* ctx */) {
         return "test";
     });
     
@@ -39,7 +39,7 @@ TEST_CASE("Route matches with parameters", "[router][route][params]") {
 
 TEST_CASE("Route extracts parameters", "[router][route][params]") {
     Route route("GET", "/api/v1/inventory/{id}/location/{locationId}", 
-        [](HttpContext& ctx) { return "test"; });
+        [](HttpContext& /* ctx */) { return "test"; });
     
     auto params = route.extractParameters("/api/v1/inventory/123/location/456");
     
@@ -49,7 +49,7 @@ TEST_CASE("Route extracts parameters", "[router][route][params]") {
 }
 
 TEST_CASE("Route with UUID constraint", "[router][route][constraint]") {
-    Route route("GET", "/api/v1/inventory/{id:uuid}", [](HttpContext& ctx) {
+    Route route("GET", "/api/v1/inventory/{id:uuid}", [](HttpContext& /* ctx */) {
         return "test";
     });
     
@@ -64,7 +64,7 @@ TEST_CASE("Route with UUID constraint", "[router][route][constraint]") {
 }
 
 TEST_CASE("Route with int constraint", "[router][route][constraint]") {
-    Route route("GET", "/api/v1/page/{page:int}", [](HttpContext& ctx) {
+    Route route("GET", "/api/v1/page/{page:int}", [](HttpContext& /* ctx */) {
         return "test";
     });
     
@@ -83,7 +83,7 @@ TEST_CASE("Router adds and finds routes", "[router]") {
     Router router;
     
     int callCount = 0;
-    auto handler = [&callCount](HttpContext& ctx) { 
+    auto handler = [&callCount](HttpContext& /* ctx */) { 
         callCount++;
         return "test"; 
     };
@@ -117,7 +117,7 @@ TEST_CASE("Router with multiple parameters", "[router][params]") {
     Router router;
     
     router.addRoute("GET", "/api/v1/{resource}/{id}/sub/{subId}", 
-        [](HttpContext& ctx) { return "test"; });
+        [](HttpContext& /* ctx */) { return "test"; });
     
     auto route = router.findRoute("GET", "/api/v1/inventory/123/sub/456");
     REQUIRE(route != nullptr);
@@ -132,10 +132,10 @@ TEST_CASE("RouteBuilder fluent API", "[router][builder]") {
     Router router;
     
     RouteBuilder(router)
-        .get("/inventory", [](HttpContext& ctx) { return "get"; })
-        .post("/inventory", [](HttpContext& ctx) { return "post"; })
-        .put("/inventory/{id}", [](HttpContext& ctx) { return "put"; })
-        .del("/inventory/{id}", [](HttpContext& ctx) { return "delete"; });
+        .get("/inventory", [](HttpContext& /* ctx */) { return "get"; })
+        .post("/inventory", [](HttpContext& /* ctx */) { return "post"; })
+        .put("/inventory/{id}", [](HttpContext& /* ctx */) { return "put"; })
+        .del("/inventory/{id}", [](HttpContext& /* ctx */) { return "delete"; });
     
     REQUIRE(router.size() == 4);
     REQUIRE(router.findRoute("GET", "/inventory") != nullptr);

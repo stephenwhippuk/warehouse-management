@@ -90,11 +90,11 @@ void WarehouseDto::validateDateTime(const std::string& dateTime, const std::stri
 
 void WarehouseDto::validateStatus(const std::string& status) const {
     static const std::vector<std::string> validStatuses = {
-        "active", "inactive", "maintenance"
+        "active", "inactive", "archived"
     };
     
     if (std::find(validStatuses.begin(), validStatuses.end(), status) == validStatuses.end()) {
-        throw std::invalid_argument("status must be one of: active, inactive, maintenance");
+        throw std::invalid_argument("status must be one of: active, inactive, archived");
     }
 }
 

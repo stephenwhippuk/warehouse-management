@@ -18,6 +18,13 @@ if(Catch2_FOUND)
         DtoMapperTests.cpp
     )
     
+    # Model sources needed by DTOs and tests
+    set(MODEL_SOURCES
+        ${CMAKE_SOURCE_DIR}/src/models/Warehouse.cpp
+        ${CMAKE_SOURCE_DIR}/src/models/Location.cpp
+        ${CMAKE_SOURCE_DIR}/src/models/Common.cpp
+    )
+    
     # DTO sources needed for tests
     set(DTO_SOURCES
         ${CMAKE_SOURCE_DIR}/src/dtos/WarehouseDto.cpp
@@ -28,7 +35,7 @@ if(Catch2_FOUND)
         ${CMAKE_SOURCE_DIR}/src/utils/DtoMapper.cpp
     )
     
-    add_executable(warehouse-service-tests ${TEST_SOURCES} ${DTO_SOURCES})
+    add_executable(warehouse-service-tests ${TEST_SOURCES} ${MODEL_SOURCES} ${DTO_SOURCES})
     
     target_link_libraries(warehouse-service-tests
         PRIVATE

@@ -127,8 +127,8 @@ void Application::initialize() {
     contractConfig.swaggerVersion = utils::Config::getString("service.version", "1.0.0");
     contractConfig.swaggerDescription = "Product master data management service";
 
-    contract::ContractPlugin contractPlugin(contractConfig);
-    http::HttpHost::registerPlugin(services, contractPlugin);
+    contractPlugin_ = std::make_shared<contract::ContractPlugin>(contractConfig);
+    http::HttpHost::registerPlugin(services, *contractPlugin_);
 
     // Build service provider
     serviceProvider_ = services.buildServiceProvider();
@@ -142,7 +142,9 @@ void Application::initialize() {
     
     httpHost_ = std::make_unique<http::HttpHost>(port, serviceProvider_, host);
 
-    httpHost_->usePlugin(contractPlugin, *serviceProvider_);
+    if (contractPlugin_) {
+        httpHost_->usePlugin(*contractPlugin_, *serviceProvider_);
+    }
 
     // TODO: Add other middleware (Logging, Auth, CORS) here
     

@@ -2,6 +2,9 @@
 #include "warehouse/services/IWarehouseService.hpp"
 #include "warehouse/models/Warehouse.hpp"
 #include "warehouse/utils/Logger.hpp"
+#include "warehouse/utils/Database.hpp"
+#include "warehouse/repositories/WarehouseRepository.hpp"
+#include <warehouse/messaging/EventPublisher.hpp>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -38,12 +41,21 @@ WarehouseController::WarehouseController()
 }
 
 std::string WarehouseController::handleGetAll(http::HttpContext& ctx) {
-    auto service = ctx.getService<services::IWarehouseService>();
-    auto dtos = service->getAll();
-    json j = json::array();
-    for (const auto& dto : dtos) {
-        j.push_back(dto.toJson());
+    auto scope = ctx.getServiceScope();
+    if (!scope) {
+        throw std::runtime_error("Service scope not available");
     }
+    
+    auto& provider = scope->getServiceProvider();
+    auto service = provider.getService<services::IWarehouseService>();
+    
+    auto warehouses = service->getAll();
+    
+    json j = json::array();
+    for (const auto& warehouse : warehouses) {
+        j.push_back(warehouse.toJson());
+    }
+    
     return j.dump();
 }
 

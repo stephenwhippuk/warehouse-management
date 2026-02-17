@@ -6,41 +6,45 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     git \
+    pkg-config \
     libboost-all-dev \
     libpoco-dev \
     libpq-dev \
     libssl-dev \
     nlohmann-json3-dev \
-    libspdlog-dev \    sqitch \
+    libspdlog-dev \
+    librabbitmq-dev \
+    catch2 \
+    sqitch \
     libdbd-pg-perl \
-    postgresql-client \    && rm -rf /var/lib/apt/lists/*
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /build
 
-# Copy source code
-COPY . .
+# Copy shared libraries first
+COPY shared ./shared
+
+# Copy service code
+COPY warehouse-service ./warehouse-service
+WORKDIR /build/warehouse-service
 
 # Build the application
 RUN mkdir -p build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF && \
     cmake --build . --parallel $(nproc)
 
 # Runtime stage
 FROM ubuntu:22.04
 
-# Install runtime dependencies
+# Install runtime dependencies 
+# Using available package versions from Ubuntu 22.04
 RUN apt-get update && apt-get install -y \
     libboost-system1.74.0 \
     libboost-thread1.74.0 \
-    libpoco-net1.11 \
-    libpoco-netssl1.11 \
-    libpoco-util1.11 \
-    libpoco-foundation1.11 \
     libpq5 \
     libspdlog1 \
-    sqitch \
-    libdbd-pg-perl \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
@@ -65,7 +69,7 @@ COPY --from=builder /build/../../../contracts /app/contracts/
 USER warehouse
 
 # Copy entrypoint script (must be after USER command for proper permissions)
-COPY --chown=warehouse:warehouse docker-entrypoint.sh /app/
+COPY --chown=warehouse:warehouse warehouse-service/docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
 
 # Expose port

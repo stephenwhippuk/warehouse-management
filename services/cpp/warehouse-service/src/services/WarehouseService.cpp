@@ -7,7 +7,11 @@
 namespace warehouse::services {
 
 WarehouseService::WarehouseService(http::IServiceProvider& provider)
-    : repo_(provider.getService<repositories::WarehouseRepository>()) {
+    : repo_(nullptr) {
+    utils::Logger::info("WareHouseService constructor START");
+    utils::Logger::info("Getting WarehouseRepository from provider...");
+    repo_ = provider.getService<repositories::WarehouseRepository>();
+    utils::Logger::info("WarehouseService constructor COMPLETE");
 }
 
 std::optional<dtos::WarehouseDto> WarehouseService::getById(const std::string& id) {

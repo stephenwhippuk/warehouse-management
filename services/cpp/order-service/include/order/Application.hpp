@@ -2,6 +2,7 @@
 
 #include <http-framework/HttpHost.hpp>
 #include <http-framework/IServiceProvider.hpp>
+#include <contract-plugin/ContractPlugin.hpp>
 #include <memory>
 #include <string>
 
@@ -32,6 +33,7 @@ private:
     
     std::shared_ptr<http::IServiceProvider> serviceProvider_;
     std::unique_ptr<http::HttpHost> httpHost_;
+    std::shared_ptr<contract::ContractPlugin> contractPlugin_;  // Must be member to keep alive!
 };
 
 } // namespace order

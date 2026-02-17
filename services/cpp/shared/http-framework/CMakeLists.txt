@@ -74,7 +74,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -Werror
 )
 
-# Export library
+# Export library properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION 1
@@ -87,9 +87,9 @@ if(BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-# Optional: Build tests
+# Optional: Build tests (only when built as main project, not as subdirectory)
 option(BUILD_TESTS "Build tests" ON)
-if(BUILD_TESTS)
+if(BUILD_TESTS AND CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
     add_subdirectory(tests)
 endif()

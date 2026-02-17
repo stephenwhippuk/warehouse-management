@@ -13,7 +13,6 @@
 #include "warehouse/controllers/HealthController.hpp"
 #include "http-framework/ServiceCollection.hpp"
 #include "http-framework/HttpHost.hpp"
-#include "http-framework/ServiceScopeMiddleware.hpp"
 #include "http-framework/Middleware.hpp"
 #include "contract-plugin/ContractPlugin.hpp"
 #include <warehouse/messaging/EventPublisher.hpp>
@@ -74,24 +73,96 @@ void Application::initialize() {
     services.addService<utils::Database>([](http::IServiceProvider& /* provider */) {
         utils::Logger::info("Creating Database singleton");
         
-        // Get database URL from environment or use default
-        const char* dbUrlEnv = std::getenv("DATABASE_URL");
-        std::string dbUrl = dbUrlEnv ? dbUrlEnv : 
-            "postgresql://warehouse:warehouse@localhost:5432/warehouse_db";
-        
         utils::Database::Config dbConfig;
-        // TODO: Parse connection string to config properly
-        // For now, using simplified approach
+        
+        // UNIFIED CONFIG: Primary source is DATABASE_URL (PostgreSQL standard)
+        // Format: postgresql://user:pass@host:port/dbname
+        const char* dbUrl = std::getenv("DATABASE_URL");
+        
+        if (dbUrl && std::strlen(dbUrl) > 0) {
+            // Parse DATABASE_URL connection string
+            std::string url(dbUrl);
+            utils::Logger::info("Using DATABASE_URL for configuration");
+            
+            // Simple parser for postgresql://user:pass@host:port/dbname
+            size_t protocolPos = url.find("://");
+            if (protocolPos != std::string::npos) {
+                size_t authStart = protocolPos + 3;
+                size_t atPos = url.find('@', authStart);
+                
+                if (atPos != std::string::npos) {
+                    // Extract user:pass
+                    std::string auth = url.substr(authStart, atPos - authStart);
+                    size_t colonPos = auth.find(':');
+                    if (colonPos != std::string::npos) {
+                        dbConfig.user = auth.substr(0, colonPos);
+                        dbConfig.password = auth.substr(colonPos + 1);
+                    }
+                    
+                    // Extract host:port/dbname
+                    size_t hostStart = atPos + 1;
+                    size_t slashPos = url.find('/', hostStart);
+                    if (slashPos != std::string::npos) {
+                        std::string hostPort = url.substr(hostStart, slashPos - hostStart);
+                        size_t portPos = hostPort.find(':');
+                        if (portPos != std::string::npos) {
+                            dbConfig.host = hostPort.substr(0, portPos);
+                            dbConfig.port = std::stoi(hostPort.substr(portPos + 1));
+                        } else {
+                            dbConfig.host = hostPort;
+                            dbConfig.port = 5432; // Default PostgreSQL port
+                        }
+                        
+                        // Extract database name
+                        dbConfig.database = url.substr(slashPos + 1);
+                    }
+                }
+            }
+        } else {
+            // Fallback to individual environment variables for flexibility
+            utils::Logger::info("DATABASE_URL not set, using individual environment variables");
+            
+            const char* dbHost = std::getenv("DATABASE_HOST");
+            dbConfig.host = dbHost ? dbHost : "localhost";
+            
+            const char* dbPort = std::getenv("DATABASE_PORT");
+            dbConfig.port = dbPort ? std::stoi(dbPort) : 5432;
+            
+            const char* dbName = std::getenv("DATABASE_NAME");
+            dbConfig.database = dbName ? dbName : "warehouse_db";
+            
+            const char* dbUser = std::getenv("DATABASE_USER");
+            dbConfig.user = dbUser ? dbUser : "warehouse";
+            
+            const char* dbPassword = std::getenv("DATABASE_PASSWORD");
+            dbConfig.password = dbPassword ? dbPassword : "warehouse";
+        }
+        
+        utils::Logger::info("Database config - host={}, port={}, db={}, user={}",
+            dbConfig.host, dbConfig.port, dbConfig.database, dbConfig.user);
+        
         auto db = std::make_shared<utils::Database>(dbConfig);
-        db->connect();
+        if (!db->connect()) {
+            utils::Logger::error("Failed to connect to database!");
+            // Don't throw, let the service return the failed db object
+            // Error will be caught when methods try to use it
+        } else {
+            utils::Logger::info("Database connection successful");
+        }
         return db;
     }, http::ServiceLifetime::Singleton);
     
     services.addService<warehouse::messaging::EventPublisher>([](http::IServiceProvider& /* provider */) {
         utils::Logger::info("Creating EventPublisher (Singleton)");
-        return std::shared_ptr<warehouse::messaging::EventPublisher>(
-            warehouse::messaging::EventPublisher::create("warehouse-service")
-        );
+        try {
+            return std::shared_ptr<warehouse::messaging::EventPublisher>(
+                warehouse::messaging::EventPublisher::create("warehouse-service")
+            );
+        } catch (const std::exception& e) {
+            utils::Logger::error("Failed to create EventPublisher: {}", e.what());
+            utils::Logger::warn("Service will continue without event publishing capability");
+            return std::shared_ptr<warehouse::messaging::EventPublisher>(nullptr);
+        }
     }, http::ServiceLifetime::Singleton);
     
     // Scoped services (per-request)
@@ -118,8 +189,8 @@ void Application::initialize() {
     contractConfig.swaggerVersion = utils::Config::instance().getString("service.version", "1.0.0");
     contractConfig.swaggerDescription = "Warehouse and location management service";
 
-    contract::ContractPlugin contractPlugin(contractConfig);
-    http::HttpHost::registerPlugin(services, contractPlugin);
+    contractPlugin_ = std::make_shared<contract::ContractPlugin>(contractConfig);
+    http::HttpHost::registerPlugin(services, *contractPlugin_);
     
     // Build service provider
     serviceProvider_ = services.buildServiceProvider();
@@ -135,8 +206,14 @@ void Application::initialize() {
     
     httpHost_ = std::make_unique<http::HttpHost>(port, serviceProvider_, host);
 
-    httpHost_->usePlugin(contractPlugin, *serviceProvider_);
-
+    // NOTE: ServiceScopeMiddleware is automatically added by HttpHost constructor
+    // Do NOT manually add it again or it will be duplicated!
+    
+    // Add plugin middleware and controllers (this adds ContractValidationMiddleware)
+    if (contractPlugin_) {
+        httpHost_->usePlugin(*contractPlugin_, *serviceProvider_);
+    }
+    
     // TODO: Add other middleware (Logging, Auth, CORS) here
     
     // Register controllers

@@ -47,7 +47,8 @@ std::string getServiceApiKey() {
     return keyEnv ? std::string(keyEnv) : std::string();
 }
 
-std::string generateRandomUuid() {
+// Helper to generate UUIDs (currently unused but kept for potential future use)
+[[maybe_unused]] std::string generateRandomUuid() {
     static thread_local std::mt19937 rng{std::random_device{}()};
     static const char* hex = "0123456789abcdef";
 

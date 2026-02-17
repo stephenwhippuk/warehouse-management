@@ -317,7 +317,7 @@ public:
 private:
     http::IServiceProvider& provider_;
     
-    std::string health(http::HttpContext& ctx) {
+    std::string health(http::HttpContext& /* ctx */) {
         auto db = provider_.getService<IDatabase>();
         
         json response = {
